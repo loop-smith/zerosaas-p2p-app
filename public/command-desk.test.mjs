@@ -1,12 +1,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { validateState, safeDocumentUrl, request, speak, refresh, runStep, REFUSALS, startRecording, stopRecording } from "./app.js";
+import { validateState, safeDocumentUrl, request, speak, refresh, runStep, REELS, REFUSALS, startRecording, stopRecording } from "./app.js";
 
-const snapshot = {step: 1, systems: {wms: {ok: true}}, journal: [], scans: []};
+const snapshot = {
+  steps: Array.from({length: 8}, (_, index) => ({n: index + 1, status: index === 0 ? 'complete' : 'pending'})),
+  item: {onHandFt: 0, stdTotalUsd: 23120}, scans: [],
+  sandbox: {sources: {wms: 'seed', crm: 'seed', hrm: 'seed', coa: 'seed'}},
+  journal: {balanced: true, debitUsd: 0, creditUsd: 0, entries: []},
+};
 
 test("snapshots require a valid server step and validated financial rows", () => {
-  assert.equal(validateState({state: snapshot}).step, 1);
-  for (const value of [null, {}, {step: -1}, {step: 9}, {step: 1.5}, {step: "1"}, {step: 1, journal: [{debit: -1, credit: 0}]}, {step: 1, journal: [{debit: 1, credit: "bad"}]}, {step: 1, scans: ["unexpected"]}]) {
+  assert.equal(validateState({state: snapshot}), snapshot);
+  for (const value of [null, {}, {step: 1}, {...snapshot, steps: []}, {...snapshot, journal: []}, {...snapshot, scans: ['unexpected']}]) {
     assert.throws(() => validateState(value));
   }
 });
@@ -22,13 +27,13 @@ test("requests preserve exact refusal codes and send same-origin JSON", async ()
   const original = globalThis.fetch;
   try {
     globalThis.fetch = async (path, options) => {
-      assert.equal(path, "/api/step");
+      assert.equal(path, "/api/step/3");
       assert.equal(options.credentials, "same-origin");
       assert.equal(options.headers["Content-Type"], "application/json");
-      assert.deepEqual(JSON.parse(options.body), {step: 3, actor: "EMP-AI-KAL"});
+      assert.deepEqual(JSON.parse(options.body), {actor: "EMP-AI-KAL"});
       return new Response(JSON.stringify({code: "AI_STEWARD_ZERO_AUTHORITY", message: "No signing authority"}), {status: 403, headers: {"Content-Type": "application/json"}});
     };
-    await assert.rejects(request("/api/step", {method: "POST", body: {step: 3, actor: "EMP-AI-KAL"}}), error => error.code === "AI_STEWARD_ZERO_AUTHORITY" && error.status === 403);
+    await assert.rejects(request("/api/step/3", {method: "POST", body: {actor: "EMP-AI-KAL"}}), error => error.code === "AI_STEWARD_ZERO_AUTHORITY" && error.status === 403);
     assert.equal(REFUSALS.MATCH_VARIANCE_HOLD.status, 409);
   } finally { globalThis.fetch = original; }
 });
@@ -50,10 +55,10 @@ test("disconnected or out-of-order human actions cannot write", async () => {
     await refresh();
     await assert.rejects(runStep(3, "EMP-0005"), /checkpoint|step/i);
     await assert.rejects(runStep(2, "EMP-AI-KAL"), /human|actor|authority/i);
-    assert.equal(calls.filter(([path]) => path === "/api/step").length, 0);
+    assert.equal(calls.filter(([path]) => path.startsWith("/api/step/")).length, 0);
     await runStep(2, "EMP-0021");
-    const write = calls.find(([path]) => path === "/api/step");
-    assert.deepEqual(JSON.parse(write[1].body), {step: 2, actor: "EMP-0021"});
+    const write = calls.find(([path]) => path.startsWith("/api/step/"));
+    assert.deepEqual(JSON.parse(write[1].body), {actor: "EMP-0021"});
   } finally { globalThis.fetch = original; }
 });
 
@@ -98,10 +103,13 @@ test("cancelling one voice request never aborts the next request", async () => {
 
 test("snapshot validation rejects malformed status, documents and out-of-image OCR", () => {
   for (const extra of [
-    {systems: {wms: {ok: "yes"}}}, {stockFt: NaN}, {totalUsd: -1}, {paid: "yes"},
-    {documents: [{}]}, {scans: ["ENC-GS1-884192-R01", "ENC-GS1-884192-R01"]},
+    {sandbox: {sources: []}}, {item: {onHandFt: NaN}}, {po: {unitUsd: 2.7, totalUsd: -1}}, {payment: {stamp: 'PAID'}},
+    {documents: [{}]}, {scans: [{barcode: REELS[0], ft: 2000}, {barcode: REELS[0], ft: 2000}]},
+    {scans: [{barcode: REELS[0], ft: 1}]},
+    {steps: snapshot.steps.map(step => ({...step, status: step.n === 3 ? 'complete' : step.status}))},
+    {journal: {...snapshot.journal, entries: [{legs: [{account: '121100', debitUsd: -1, creditUsd: 0}]}]}},
     {ocr: {imageUrl: "/invoice.png", width: 100, height: 100, boxes: [{x: 95, y: 0, width: 10, height: 5, text: "outside"}]}}
-  ]) assert.throws(() => validateState({step: 1, ...extra}));
+  ]) assert.throws(() => validateState({...snapshot, ...extra}));
 });
 
 test("a cancelled pending display permission cannot restart capture", async () => {
@@ -126,5 +134,65 @@ test("a cancelled pending display permission cannot restart capture", async () =
   } finally {
     stopRecording();
     for (const [key, descriptor] of saved) { if (descriptor) Object.defineProperty(globalThis, key, descriptor); else delete globalThis[key]; }
+  }
+});
+
+
+test("real server snapshots and client actions share the kernel contract", async () => {
+  const {startServer} = await import('../src/sor_3panel_server.mjs');
+  const {mkdtempSync, rmSync} = await import('node:fs');
+  const {tmpdir} = await import('node:os');
+  const {join} = await import('node:path');
+  const dir = mkdtempSync(join(tmpdir(), 'wo04-client-'));
+  const original = globalThis.fetch;
+  let service;
+  try {
+    service = await startServer({port: 0, offline: true, sandboxDir: join(dir, 'sandbox'), seedsDir: join(dir, 'missing-seeds'), hledgerBin: false});
+    const writes = [];
+    // Resolve browser-relative URLs at the network boundary; the app and kernel remain real.
+    globalThis.fetch = (route, options) => {
+      if (options?.method === 'POST') writes.push([route, JSON.parse(options.body)]);
+      return original(new URL(route, service.url), options);
+    };
+    const read = async () => validateState(await request('/api/state'));
+    const initial = await read();
+    assert.equal(initial.steps.filter(step => step.status === 'complete').length, 0);
+    assert.equal(initial.item.onHandFt, 0);
+    assert.deepEqual(initial.journal.entries, []);
+    await refresh();
+    for (const [step, actor] of [[1, 'SYSTEM'], [2, 'EMP-0021'], [3, 'EMP-0005'], [4, 'EMP-0002'], [5, 'EMP-0002']]) await runStep(step, actor);
+    assert.deepEqual(writes[0], ['/api/step/1', {actor: 'SYSTEM'}]);
+    await assert.rejects(request('/api/step/6', {method: 'POST', body: {actor: 'EMP-0002', barcode: REELS[0]}}), error => error.code === 'SOX_SOD_VIOLATION' && error.status === 403);
+    for (const [index, barcode] of REELS.entries()) {
+      await runStep(6, 'EMP-0003', {barcode});
+      const snapshot = await read();
+      assert.deepEqual(snapshot.scans.map(scan => scan.barcode), REELS.slice(0, index + 1));
+      assert.equal(snapshot.steps[5].status, index < 3 ? 'in_progress' : 'complete');
+      if (index === 0) await assert.rejects(runStep(6, 'EMP-0003', {barcode}), /already scanned/);
+    }
+    const received = await read();
+    assert.equal(received.item.onHandFt, 8000);
+    assert.equal(received.journal.entries.length, 1);
+    assert.equal(received.journal.balanced, true);
+    assert.equal(received.journal.debitUsd, 23120);
+    await assert.rejects(request('/api/step/7', {method: 'POST', body: {actor: 'EMP-0001', invoice: {totalUsd: received.po.totalUsd + 500}}}), error => error.code === 'MATCH_VARIANCE_HOLD' && error.status === 409);
+    await runStep(7, 'EMP-0001');
+    await assert.rejects(request('/api/step/8', {method: 'POST', body: {actor: 'EMP-0007', bankAccount: '101200'}}), error => error.code === 'BANK_POLICY_VIOLATION' && error.status === 403);
+    await runStep(8, 'EMP-0007');
+    const paid = await read();
+    assert.equal(paid.payment.stamp, 'PAID');
+    assert.equal(paid.payment.check, 'Check #10045');
+    assert.equal(paid.steps.filter(step => step.status === 'complete').length, 8);
+    assert.equal(paid.journal.entries.length, 3);
+    assert.deepEqual(writes.at(-1), ['/api/step/8', {actor: 'EMP-0007', bankAccount: '101100'}]);
+    const reset = validateState(await request('/api/reset', {method: 'POST', body: {}}));
+    assert.equal(reset.steps.filter(step => step.status === 'complete').length, 0);
+    assert.deepEqual(reset.scans, []);
+    assert.deepEqual(reset.journal.entries, []);
+    assert.equal(reset.payment, null);
+  } finally {
+    globalThis.fetch = original;
+    if (service) await new Promise(resolve => service.server.close(resolve));
+    rmSync(dir, {recursive: true, force: true});
   }
 });

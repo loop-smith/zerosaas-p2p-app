@@ -9,6 +9,7 @@ from pathlib import Path
 from threading import Thread
 import copy
 import json
+import subprocess
 import time
 
 import pytest
@@ -21,7 +22,12 @@ DOCS = [value for value in CONTRACT["primaryItem"]["tradeDocuments"].values() if
 
 @pytest.fixture
 def desk():
-    fixture = {"step": 0, "systems": {name: {"ok": True} for name in ["wms", "crm", "hrm", "ledger"]}, "journal": [], "scans": [], "stockFt": 0, "documents": []}
+    fixture = {
+        "steps": [{"n": n, "status": "pending"} for n in range(1, 9)],
+        "sandbox": {"sources": {key: "seed" for key in ["wms", "crm", "hrm", "coa"]}},
+        "journal": {"balanced": True, "debitUsd": 0, "creditUsd": 0, "entries": []},
+        "scans": [], "item": {"onHandFt": 0, "stdTotalUsd": 23120}, "documents": [], "payment": None,
+    }
     boundary = {"state": copy.deepcopy(fixture), "requests": [], "offline": False}
 
     class Handler(SimpleHTTPRequestHandler):
@@ -53,39 +59,40 @@ def desk():
                 return self.send_json({"code": "VOICE_UNCONFIGURED"}, 503)
             if self.path == "/api/reset":
                 boundary["state"] = copy.deepcopy(fixture)
-                boundary["state"]["step"] = 0
                 boundary["state"]["scans"] = []
-                return self.send_json(boundary["state"])
-            if self.path != "/api/step":
+                return self.send_json({"ok": True, "state": boundary["state"]})
+            if not self.path.startswith("/api/step/"):
                 return self.send_json({"code": "NOT_FOUND"}, 404)
+            step = int(self.path.rsplit("/", 1)[1])
             code = None
             if payload.get("actor") == "EMP-AI-KAL": code = "AI_STEWARD_ZERO_AUTHORITY"
-            elif payload.get("step") == 3 and payload.get("actor") == "EMP-0021": code = "DOA_LIMIT_EXCEEDED"
-            elif payload.get("step") == 6 and payload.get("actor") == "EMP-0002": code = "SOX_SOD_VIOLATION"
-            elif payload.get("invoiceDeltaUsd"): code = "MATCH_VARIANCE_HOLD"
+            elif step == 3 and payload.get("actor") == "EMP-0021": code = "DOA_LIMIT_EXCEEDED"
+            elif step == 6 and payload.get("actor") == "EMP-0002": code = "SOX_SOD_VIOLATION"
+            elif payload.get("invoice"): code = "MATCH_VARIANCE_HOLD"
             elif payload.get("bankAccount") == "101200": code = "BANK_POLICY_VIOLATION"
             if code:
                 return self.send_json({"code": code}, 409 if code == "MATCH_VARIANCE_HOLD" else 403)
-            step = payload["step"]
             state = boundary["state"]
             if step == 6:
-                state["scans"].append(payload["barcode"])
+                state["scans"].append({"barcode": payload["barcode"], "ft": 2000})
+                state["steps"][5]["status"] = "in_progress"
                 if len(state["scans"]) < 4:
-                    return self.send_json(state)
-                state["stockFt"] = 8000
-            state["step"] = step
-            if step >= 4: state.update(totalUsd=21600, unitPriceUsd=2.70)
+                    return self.send_json({"ok": True, "state": state})
+                state["item"]["onHandFt"] = 8000
+            state["steps"][step - 1]["status"] = "complete"
+            if step >= 4: state.update(po={"totalUsd": 21600, "unitUsd": 2.70, "comex": {"live": False}})
             if step >= 5: state["documents"] = [{"name": name, "url": "/docs/" + name} for name in DOCS]
+            entries = []
             if step >= 6:
-                state["journal"] = [{"account": "121100", "description": "Inventory stock", "debit": 23120, "credit": 0}, {"account": "201200", "description": "GRNI", "debit": 0, "credit": 21600}, {"account": "501900", "description": "Favorable PPV", "debit": 0, "credit": 1520}]
+                entries.append({"memo": "Dock receipt", "legs": [{"account": "121100", "debitUsd": 23120, "creditUsd": 0}, {"account": "201200", "debitUsd": 0, "creditUsd": 21600}, {"account": "501900", "debitUsd": 0, "creditUsd": 1520}]})
             if step >= 7:
                 state["ocr"] = {"width": 600, "height": 800, "imageUrl": "/invoice.svg", "boxes": [{"text": f"Field {i+1}", "x": 30 + (i % 4) * 130, "y": 40 + (i // 4) * 90, "width": 100, "height": 30} for i in range(28)]}
-            if step >= 7:
-                state["journal"].extend([{"account": "201200", "description": "GRNI clearing", "debit": 21600, "credit": 0}, {"account": "201100", "description": "Trade AP", "debit": 0, "credit": 21600}])
+                entries.append({"memo": "Match", "legs": [{"account": "201200", "debitUsd": 21600, "creditUsd": 0}, {"account": "201100", "debitUsd": 0, "creditUsd": 21600}]})
             if step == 8:
-                state["journal"].extend([{"account": "201100", "description": "AP settlement", "debit": 21600, "credit": 0}, {"account": "101100", "description": "Operating #8801", "debit": 0, "credit": 21600}])
-                state["paid"] = True
-            self.send_json(state)
+                entries.append({"memo": "Settlement", "legs": [{"account": "201100", "debitUsd": 21600, "creditUsd": 0}, {"account": "101100", "debitUsd": 0, "creditUsd": 21600}]})
+                state["payment"] = {"stamp": "PAID", "check": "Check #10045", "amountUsd": 21600}
+            state["journal"] = {"balanced": True, "entries": entries, **{key: sum(leg[key] for entry in entries for leg in entry["legs"]) for key in ["debitUsd", "creditUsd"]}}
+            self.send_json({"ok": True, "state": state})
 
     server = ThreadingHTTPServer(("127.0.0.1", 0), partial(Handler, directory=str(ROOT / "public")))
     thread = Thread(target=server.serve_forever, daemon=True)
@@ -151,10 +158,10 @@ def test_eight_steps_four_explicit_gates_real_dom_ocr_and_refusal(desk):
     for step in range(1, 6):
         page.locator(f'[data-run="{step}"]').click()
         page.wait_for_function(f"document.querySelector('[data-step=\"{step}\"]').classList.contains('done')")
-        assert len([item for item in desk["requests"] if item[0] == "/api/step"]) == step
+        assert len([item for item in desk["requests"] if item[0].startswith("/api/step/")]) == step
     page.locator('[data-trap="sod"]').click()
     page.wait_for_function("document.querySelector('#status').textContent.includes('SOX_SOD_VIOLATION')")
-    assert desk["state"]["step"] == 5
+    assert desk["state"]["steps"][4]["status"] == "complete"
     for index, barcode in enumerate(REELS):
         page.locator('#barcode').fill(barcode)
         page.locator('[data-run="6"]').click()
@@ -176,8 +183,8 @@ def test_eight_steps_four_explicit_gates_real_dom_ocr_and_refusal(desk):
     page.locator('#close-ocr').click()
     page.locator('[data-run="8"]').click()
     page.wait_for_function("document.querySelector('#settlement').textContent.includes('PAID')")
-    writes = [payload for path, payload in desk["requests"] if path == '/api/step']
-    assert writes[-1] == {"step": 8, "actor": "EMP-0007", "bankAccount": "101100"}
+    writes = [payload for path, payload in desk["requests"] if path.startswith('/api/step/')]
+    assert writes[-1] == {"actor": "EMP-0007", "bankAccount": "101100"}
     assert 'BALANCED' in page.locator('#ledger-balance').inner_text()
     assert page.locator('#documents a[href]').count() == 5
     for width, height in [(1440, 900), (1280, 720), (960, 640)]:
@@ -196,7 +203,7 @@ def test_disconnected_and_untrusted_state_cannot_fake_success(desk):
     assert page.locator('.step-action:enabled').count() == 0
     assert page.locator('#actual-total').inner_text() == '—'
     desk["offline"] = False
-    desk["state"].update(documents=[{"name": DOCS[0], "url": "javascript:alert(1)"}], journal=[{"account": '<img src=x onerror=alert(1)>', "description": '<script>alert(1)</script>', "debit": 1, "credit": 0}])
+    desk["state"].update(documents=[{"name": DOCS[0], "url": "javascript:alert(1)"}], journal={"balanced": False, "debitUsd": 1, "creditUsd": 0, "entries": [{"memo": "<script>alert(1)</script>", "legs": [{"account": "<img src=x onerror=alert(1)>", "debitUsd": 1, "creditUsd": 0}]}]})
     page.locator('#refresh').click()
     page.wait_for_function("document.querySelector('#ledger-balance').textContent.includes('UNBALANCED')")
     assert page.locator('#journal img, #journal script').count() == 0
@@ -218,7 +225,7 @@ def test_recorder_real_webm_tracks_cleanup_voice_no_approval_and_render_budget(d
     page.locator('#kal-mic').dispatch_event('keydown', {"key": 'Enter'})
     page.locator('#kal-mic').dispatch_event('keyup', {"key": 'Enter'})
     page.wait_for_function("document.querySelector('#kal-line').textContent.includes('Human officers authorize')")
-    assert not [path for path, payload in desk["requests"] if path == '/api/step']
+    assert not [path for path, payload in desk["requests"] if path.startswith('/api/step/')]
     page.locator('#record').click()
     page.wait_for_function("document.querySelector('#record').classList.contains('recording')")
     time.sleep(1.1)
@@ -253,11 +260,11 @@ def test_probe_reconciliation_blocks_overlapping_refresh_and_reset_is_explicit(d
     assert len(pending) == 1, 'probe reconciliation must retain its pending lock'
     pending.pop().fulfill(status=200, content_type='application/json', body=json.dumps(desk['state']))
     page.unroute('**/api/state')
-    for trap, code in [('doa', 'DOA_LIMIT_EXCEEDED'), ('sod', 'SOX_SOD_VIOLATION'), ('invoice', 'MATCH_VARIANCE_HOLD'), ('bank', 'BANK_POLICY_VIOLATION')]:
+    for trap, code in [('doa', 'DOA_LIMIT_EXCEEDED'), ('sod', 'SOX_SOD_VIOLATION'), ('bank', 'BANK_POLICY_VIOLATION')]:
         page.locator(f'[data-trap="{trap}"]').click()
         page.wait_for_function(f"document.querySelector('#status').textContent.includes('{code}')")
-        assert desk['state']['step'] == 0
-        assert desk['state']['journal'] == []
+        assert all(step['status'] == 'pending' for step in desk['state']['steps'])
+        assert desk['state']['journal']['entries'] == []
     page.locator('[data-run="1"]').click()
     page.wait_for_function("document.querySelector('#progress-label').textContent.includes('1 / 8')")
     page.locator('#reset').click()
@@ -267,8 +274,8 @@ def test_probe_reconciliation_blocks_overlapping_refresh_and_reset_is_explicit(d
     page.locator('#confirm-reset').click()
     page.wait_for_function("document.querySelector('#status').textContent.includes('Server reset confirmed')")
     assert len([path for path, payload in desk['requests'] if path == '/api/reset']) == 1
-    assert desk['state']['step'] == 0
-    assert desk['state']['journal'] == []
+    assert all(step['status'] == 'pending' for step in desk['state']['steps'])
+    assert desk['state']['journal']['entries'] == []
     assert desk['errors'] == []
 
 def test_page_teardown_does_not_upload_microphone_audio(desk):
@@ -303,5 +310,113 @@ def test_teardown_ignores_late_native_speech_result(desk):
     page.evaluate("window.dispatchEvent(new Event('pagehide'))")
     page.wait_for_timeout(150)
     assert not [path for path, payload in desk['requests'] if path == '/api/kal/speak']
-    assert not [path for path, payload in desk['requests'] if path == '/api/step']
+    assert not [path for path, payload in desk['requests'] if path.startswith('/api/step/')]
     assert desk['errors'] == []
+
+
+def test_real_kernel_http_dom_progress_probes_journal_payment_reset(tmp_path):
+    """Exercise the shipped app and real server; only capture browser observations."""
+    script = """
+      import {startServer} from './src/sor_3panel_server.mjs';
+      const service = await startServer({port:0, offline:true, sandboxDir:process.argv[1]+'/sandbox', seedsDir:process.argv[1]+'/missing-seeds', hledgerBin:false});
+      console.log(service.url);
+      process.on('SIGTERM', () => service.server.close(() => process.exit(0)));
+    """
+    server = subprocess.Popen(['node', '--input-type=module', '-e', script, str(tmp_path)], cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    try:
+        url = server.stdout.readline().strip()
+        assert url.startswith('http://127.0.0.1:'), server.stderr.read() if server.poll() is not None else url
+        with playwright.sync_playwright() as runtime:
+            browser = runtime.chromium.launch()
+            try:
+                page = browser.new_page(viewport={"width": 1440, "height": 900})
+                errors, writes = [], []
+                page.on('pageerror', lambda error: errors.append(str(error)))
+                def console(message):
+                    if message.type == 'error' and not any(f'status of {code}' in message.text for code in [403, 409]):
+                        errors.append(message.text)
+                page.on('console', console)
+                page.on('request', lambda request: writes.append((request.url.removeprefix(url), request.post_data_json)) if request.method == 'POST' else None)
+                page.goto(url)
+                page.wait_for_function("document.querySelector('#connection').textContent.includes('SERVER CONNECTED')")
+                assert page.locator('#progress-label').inner_text() == '0 / 8 COMPLETE'
+                assert page.locator('.system-status').all_text_contents() == ['BOOTSTRAP'] * 4
+                assert 'hledger absent' in page.locator('[data-system="coa"]').get_attribute('title')
+                # Missing source/health must be explicit, never synthesized as LIVE.
+                def absent_sources(route):
+                    response = route.fetch()
+                    snapshot = response.json()
+                    snapshot['sandbox'].pop('sources')
+                    route.fulfill(response=response, json=snapshot)
+                page.route('**/api/state', absent_sources)
+                page.locator('#refresh').click()
+                page.wait_for_function("[...document.querySelectorAll('.system-status')].every(node => node.textContent === 'ABSENT')")
+                page.unroute('**/api/state', absent_sources)
+                page.locator('#refresh').click()
+                page.wait_for_function("document.querySelectorAll('.system-status.ok').length === 4")
+                for trap, code in [('kal', 'AI_STEWARD_ZERO_AUTHORITY'), ('doa', 'DOA_LIMIT_EXCEEDED'), ('sod', 'SOX_SOD_VIOLATION'), ('bank', 'BANK_POLICY_VIOLATION')]:
+                    page.locator(f'[data-trap="{trap}"]').click()
+                    page.wait_for_function(f"document.querySelector('#status').textContent.includes('PROBE BLOCKED') && document.querySelector('#status').textContent.includes('{code}')")
+                    page.wait_for_function("!document.querySelector('#refresh').disabled")
+                before = len(writes)
+                page.locator('[data-trap="invoice"]').click()
+                page.wait_for_function("document.querySelector('#status').textContent.includes('Invoice probe needs')")
+                assert len(writes) == before
+                for step in range(1, 6):
+                    page.locator(f'[data-run="{step}"]').click()
+                    page.wait_for_function(f"document.querySelector('[data-step=\"{step}\"]').classList.contains('done')")
+                assert ('/api/step/1', {'actor': 'SYSTEM'}) in writes
+                for index, barcode in enumerate(REELS):
+                    page.locator('#barcode').fill(barcode)
+                    page.locator('[data-run="6"]').click()
+                    page.wait_for_function(f"document.querySelector('#scan-count').textContent === '{index + 1} / 4 reels'")
+                    if index < 3:
+                        assert page.locator('#progress-label').inner_text() == '5 / 8 COMPLETE'
+                        assert page.locator('[data-step="6"] .step-state').inner_text() == 'IN PROGRESS'
+                        assert page.locator('[data-run="6"]').is_enabled()
+                page.locator('[data-trap="invoice"]').click()
+                page.wait_for_function("document.querySelector('#status').textContent.includes('PROBE BLOCKED') && document.querySelector('#status').textContent.includes('MATCH_VARIANCE_HOLD')")
+                snapshot = page.request.get(url + '/api/state').json()
+                invoice = next(body for path, body in writes if path == '/api/step/7')
+                assert invoice == {'actor': 'EMP-0001', 'invoice': {'totalUsd': snapshot['po']['totalUsd'] + 500}}
+                assert page.locator('#stock').inner_text() == '8,000'
+                assert 'BALANCED' in page.locator('#ledger-balance').inner_text()
+                assert '$23,120.00' == page.locator('#debit-total').inner_text()
+                assert page.locator('#documents a[href]').count() == 0
+                assert page.locator('#open-ocr').is_disabled()
+                for step in [7, 8]:
+                    page.locator(f'[data-run="{step}"]').click()
+                    page.wait_for_function(f"document.querySelector('[data-step=\"{step}\"]').classList.contains('done')")
+                assert page.locator('#settlement').inner_text() == 'PAID · Check #10045'
+                assert page.locator('#journal td[title]').count() == 5
+                assert page.locator('#progress-label').inner_text() == '8 / 8 COMPLETE'
+                assert writes[-1] == ('/api/step/8', {'actor': 'EMP-0007', 'bankAccount': '101100'})
+                assert page.locator('#journal tr').count() == 5
+                durations = page.evaluate("""async () => {
+                    const {render} = await import('/app.js'), snapshot = await (await fetch('/api/state')).json(), samples = [];
+                    for (let i=0; i<30; i++) {const start = performance.now(); render(snapshot); samples.push(performance.now()-start);}
+                    return samples;
+                }""")
+                assert max(durations) < 16, durations
+                print(f'real kernel populated render max={max(durations):.2f}ms')
+                for width, height in [(1440, 900), (1280, 720), (960, 640)]:
+                    page.set_viewport_size({'width': width, 'height': height})
+                    assert check_visible_panel_bounds(page) == []
+                page.screenshot(path=str(tmp_path / 'real-kernel-paid.png'))
+                page.locator('#reset').click()
+                page.locator('#confirm-reset').click()
+                page.wait_for_function("document.querySelector('#progress-label').textContent === '0 / 8 COMPLETE'")
+                assert page.locator('[data-step="8"] .step-state').inner_text() == 'HUMAN REQUIRED'
+                assert page.locator('#settlement').inner_text() == 'Awaiting CFO approval'
+                assert page.locator('#scan-count').inner_text() == '0 / 4 reels'
+                assert page.locator('#ledger-balance').inner_text() == 'NO POSTINGS'
+                assert errors == []
+            finally:
+                browser.close()
+    finally:
+        server.terminate()
+        try:
+            server.communicate(timeout=5)
+        except subprocess.TimeoutExpired:
+            server.kill()
+            server.communicate()

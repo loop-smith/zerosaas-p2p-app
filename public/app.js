@@ -13,8 +13,8 @@ const OFFICERS = [
   ['Duncan Vance', 'Controller', '$250,000'], ['Meredith Hale', 'CFO', '$500,000'],
   ['KAL', 'Voice steward', '$0.00'],
 ];
-const SYSTEMS = [['wms', 'WM', 'InvenTree', 'Inventory & dock receipts'], ['crm', 'CR', 'Django-CRM', 'Vendor & customer records'], ['hrm', 'HR', 'Headless HRM', 'Authority & duty separation'], ['ledger', 'GL', 'GAAP ledger', 'Double-entry journal']];
-const ACTORS = {1: 'EMP-0021', 2: 'EMP-0021', 3: 'EMP-0005', 4: 'EMP-0002', 5: 'EMP-0002', 6: 'EMP-0003', 7: 'EMP-0001', 8: 'EMP-0007'};
+const SYSTEMS = [['wms', 'WM', 'InvenTree', 'Inventory & dock receipts'], ['crm', 'CR', 'Django-CRM', 'Vendor & customer records'], ['hrm', 'HR', 'Headless HRM', 'Authority & duty separation'], ['coa', 'GL', 'GAAP ledger', 'Double-entry journal']];
+const ACTORS = {1: 'SYSTEM', 2: 'EMP-0021', 3: 'EMP-0005', 4: 'EMP-0002', 5: 'EMP-0002', 6: 'EMP-0003', 7: 'EMP-0001', 8: 'EMP-0007'};
 export const REFUSALS = {
   AI_STEWARD_ZERO_AUTHORITY: {status: 403, text: 'KAL has $0.00 signing authority.'},
   DOA_LIMIT_EXCEEDED: {status: 403, text: 'Darius must escalate the $23,120 request to Devon.'},
@@ -48,16 +48,25 @@ function node(tag, text, className) {
 export function validateState(value) {
   const result = value?.state ?? value;
   const invalid = () => { throw new Error('Invalid server snapshot; previous evidence retained.'); };
-  if (!result || typeof result !== 'object' || Array.isArray(result) || !Number.isInteger(result.step) || result.step < 0 || result.step > 8) invalid();
+  if (!result || typeof result !== 'object' || Array.isArray(result)) invalid();
   const amount = value => typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1e12;
-  for (const key of ['stockFt', 'unitPriceUsd', 'totalUsd']) if (result[key] !== undefined && !amount(result[key])) invalid();
-  if (result.paid !== undefined && typeof result.paid !== 'boolean') invalid();
-  if (result.systems !== undefined) {
-    if (!result.systems || typeof result.systems !== 'object' || Array.isArray(result.systems)) invalid();
-    for (const system of Object.values(result.systems)) if (!system || typeof system.ok !== 'boolean') invalid();
+  const object = value => value && typeof value === 'object' && !Array.isArray(value);
+  if (!Array.isArray(result.steps) || result.steps.length !== 8) invalid();
+  let incomplete = false;
+  for (const [index, step] of result.steps.entries()) {
+    if (!step || step.n !== index + 1 || !['pending', 'in_progress', 'complete'].includes(step.status)) invalid();
+    if (incomplete && step.status !== 'pending') invalid();
+    if (step.status !== 'complete') incomplete = true;
   }
-  if (result.journal !== undefined && (!Array.isArray(result.journal) || result.journal.length > 10000 || result.journal.some(row => !row || !amount(row.debit) || !amount(row.credit)))) invalid();
-  if (result.scans !== undefined && (!Array.isArray(result.scans) || result.scans.some(code => !REELS.includes(code)) || new Set(result.scans).size !== result.scans.length)) invalid();
+  if (!object(result.item) || !amount(result.item.onHandFt)) invalid();
+  for (const key of ['stdUnitUsd', 'stdTotalUsd']) if (result.item[key] !== undefined && !amount(result.item[key])) invalid();
+  if (result.po != null && (!object(result.po) || !amount(result.po.unitUsd) || !amount(result.po.totalUsd))) invalid();
+  if (result.payment != null && (!object(result.payment) || result.payment.stamp !== 'PAID' || typeof result.payment.check !== 'string' || !amount(result.payment.amountUsd))) invalid();
+  const journal = result.journal;
+  if (!object(journal) || typeof journal.balanced !== 'boolean' || !amount(journal.debitUsd) || !amount(journal.creditUsd) || !Array.isArray(journal.entries) || journal.entries.length > 10000) invalid();
+  if (journal.entries.some(entry => !entry || !Array.isArray(entry.legs) || entry.legs.length > 1000 || entry.legs.some(leg => !leg || typeof leg.account !== 'string' || !amount(leg.debitUsd) || !amount(leg.creditUsd)))) invalid();
+  if (!Array.isArray(result.scans) || result.scans.some(scan => !scan || !REELS.includes(scan.barcode) || scan.ft !== 2000) || new Set(result.scans.map(scan => scan.barcode)).size !== result.scans.length) invalid();
+  if (result.sandbox !== undefined && (!object(result.sandbox) || (result.sandbox.sources !== undefined && !object(result.sandbox.sources)))) invalid();
   if (result.documents !== undefined && (!Array.isArray(result.documents) || result.documents.some(doc => !doc || typeof doc.name !== 'string' || typeof doc.url !== 'string'))) invalid();
   if (result.ocr !== undefined && result.ocr !== null) {
     const ocr = result.ocr;
@@ -86,7 +95,7 @@ export async function request(path, options = {}) {
   let data;
   try { data = await response.json(); }
   catch { throw new Error(`HTTP ${response.status}: expected JSON from the command server.`); }
-  if (!response.ok) {
+  if (!response.ok || data?.ok === false) {
     const code = data?.code ?? data?.error?.code ?? (typeof data?.error === 'string' ? data.error : 'REQUEST_REFUSED');
     const message = data?.message ?? data?.error?.message ?? REFUSALS[code]?.text ?? 'Request refused by server.';
     throw Object.assign(new Error(`${code}: ${message}`), {code, status: response.status});
@@ -114,21 +123,21 @@ export async function refresh() {
 export async function runStep(step, actor, extra = {}) {
   if (!connected || !state) throw new Error('Connect to the command server before authorizing a step.');
   if (pending) throw new Error('A server action is already pending.');
-  if (step !== state.step + 1 || !ACTORS[step]) throw new Error('This checkpoint is not the next server step.');
+  if (step !== state.steps.filter(step => step.status === 'complete').length + 1 || !ACTORS[step]) throw new Error('This checkpoint is not the next server step.');
   if (actor !== ACTORS[step]) throw new Error('The required human actor must authorize this step.');
-  const payload = {step, actor};
+  const payload = {actor};
   if (step === 6) {
     if (!REELS.includes(extra.barcode)) throw new Error('Scan one of the four exact ENC-GS1-884192-R01…R04 barcodes.');
-    if (state.scans?.includes(extra.barcode)) throw new Error('This reel was already scanned. Scan the next unique reel.');
+    if (state.scans.some(scan => scan.barcode === extra.barcode)) throw new Error('This reel was already scanned. Scan the next unique reel.');
     payload.barcode = extra.barcode;
   }
   if (step === 8) payload.bankAccount = '101100';
   pending = true; ++epoch; render(state);
   status(`Step ${step} submitted · waiting for authoritative server confirmation.`);
   try {
-    accept(await request('/api/step', {method: 'POST', body: payload}));
+    accept(await request(`/api/step/${step}`, {method: 'POST', body: payload}));
     if (step === 6 && $('barcode')) $('barcode').value = '';
-    status(`Step ${step} response received · ${state.paid === true ? 'Check #10045 released by server.' : 'next human gate remains explicit.'}`);
+    status(`Step ${step} response received · ${state.payment?.stamp === 'PAID' ? `${state.payment.check} released by server.` : 'next human gate remains explicit.'}`);
   } catch (error) {
     if (!error.status) connected = false;
     status(error.message, true);
@@ -154,7 +163,8 @@ function buildStaticRows() {
 }
 
 function renderJournal(snapshot) {
-  const rows = snapshot?.journal;
+  const report = snapshot?.journal;
+  const rows = report?.entries.flatMap(entry => entry.legs.map(leg => ({account: leg.account, description: entry.memo, debit: leg.debitUsd, credit: leg.creditUsd})));
   const journal = $('journal'); journal.replaceChildren();
   if (!rows?.length) {
     const row = node('tr'), cell = node('td', rows ? 'No journal entries posted.' : 'Connect the ledger to see real postings.', 'empty');
@@ -168,45 +178,49 @@ function renderJournal(snapshot) {
     debit += Math.round(row.debit * 100); credit += Math.round(row.credit * 100); accounts.set(key, group);
   }
   for (const [account, group] of [...accounts].slice(0, 6)) {
-    const row = node('tr'), cell = node('td'); cell.append(node('strong', account), node('small', group.description));
+    const row = node('tr'), cell = node('td'); cell.title = `${account} · ${group.description}`; cell.append(node('strong', account), node('small', group.description));
     row.append(cell, node('td', group.debit ? money(group.debit / 100) : '—'), node('td', group.credit ? money(group.credit / 100) : '—')); journal.append(row);
   }
   if (accounts.size > 6) { const row = node('tr'), cell = node('td', `${accounts.size - 6} additional accounts included in totals`); cell.colSpan = 3; row.append(cell); journal.append(row); }
   setText('debit-total', rows ? money(debit / 100) : '—'); setText('credit-total', rows ? money(credit / 100) : '—');
-  setText('ledger-balance', !rows ? 'AWAITING LEDGER' : debit !== credit ? 'UNBALANCED · HOLD' : rows.length ? 'DR = CR · BALANCED' : 'NO POSTINGS');
+  setText('ledger-balance', !rows ? 'AWAITING LEDGER' : !report.balanced || debit !== credit ? 'UNBALANCED · HOLD' : rows.length ? 'DR = CR · BALANCED' : 'NO POSTINGS');
 }
 
 export function render(snapshot) {
   if (!globalThis.document) return;
   const active = connected && !pending;
+  const completed = snapshot?.steps.filter(step => step.status === 'complete').length;
   const connection = $('connection'); connection.classList.toggle('online', connected); connection.replaceChildren(node('i'), document.createTextNode(connected ? 'SERVER CONNECTED' : 'DISCONNECTED'));
-  setText('progress-label', snapshot ? `${snapshot.step} / 8 COMPLETE` : '— / 8 COMPLETE');
-  setText('actual-total', money(snapshot?.totalUsd));
-  setText('spot-detail', snapshot?.unitPriceUsd !== undefined ? `${money(snapshot.unitPriceUsd)} / FT · server-locked rate` : 'Awaiting COMEX price lock');
-  const ppv = snapshot?.totalUsd === undefined ? null : snapshot.totalUsd - 23120;
+  setText('progress-label', snapshot ? `${completed} / 8 COMPLETE` : '— / 8 COMPLETE');
+  setText('actual-total', money(snapshot?.po?.totalUsd));
+  setText('spot-detail', snapshot?.po?.unitUsd !== undefined ? `${money(snapshot.po.unitUsd)} / FT · ${snapshot.po.comex?.live ? 'live COMEX' : 'offline reference'}` : 'Awaiting COMEX price lock');
+  const ppv = snapshot?.po?.totalUsd === undefined ? null : snapshot.po.totalUsd - snapshot.item.stdTotalUsd;
   setText('ppv', ppv === null ? '—' : money(ppv)); setText('ppv-detail', ppv === null ? '501900 · awaiting actual cost' : `501900 · ${ppv <= 0 ? 'favorable' : 'unfavorable'} vs standard`);
   $('ppv').style.color = ppv > 0 ? 'var(--red)' : 'var(--green)';
-  setText('stock', snapshot?.stockFt === undefined ? '—' : new Intl.NumberFormat('en-US').format(snapshot.stockFt));
+  setText('stock', snapshot?.item?.onHandFt === undefined ? '—' : new Intl.NumberFormat('en-US').format(snapshot.item.onHandFt));
   let live = 0;
   for (const [key] of SYSTEMS) {
-    const value = snapshot?.systems?.[key], row = document.querySelector(`[data-system="${key}"]`);
-    const indicator = row.querySelector('.system-status'); const ok = connected && value?.ok === true;
-    indicator.textContent = !connected ? 'OFFLINE' : value === undefined ? 'UNKNOWN' : ok ? 'LIVE' : 'DOWN'; indicator.classList.toggle('ok', ok);
-    row.title = connected && value?.detail ? String(value.detail) : 'No verified live status'; if (ok) live++;
+    const source = snapshot?.sandbox?.sources?.[key], row = document.querySelector(`[data-system="${key}"]`);
+    const indicator = row.querySelector('.system-status');
+    const available = connected && ['seed', 'contract-bootstrap'].includes(source);
+    indicator.textContent = !connected ? 'OFFLINE' : source === 'seed' ? 'SEED' : source === 'contract-bootstrap' ? 'BOOTSTRAP' : 'ABSENT';
+    indicator.classList.toggle('ok', available);
+    row.title = available ? `${source} · local sandbox source; live service health is not reported${key === 'coa' ? `; hledger ${snapshot.sandbox.hledger ? 'available' : 'absent'}` : ''}` : 'SoR source/health absent from server snapshot';
+    if (available) live++;
   }
-  setText('system-count', `${live} / 4`);
+  setText('system-count', `${live} / 4 LOCAL`);
   for (const row of document.querySelectorAll('[data-step]')) {
-    const step = Number(row.dataset.step), done = snapshot && step <= snapshot.step, current = snapshot && step === snapshot.step + 1;
+    const step = Number(row.dataset.step), done = snapshot && step <= completed, current = snapshot && step === completed + 1;
     row.classList.toggle('done', Boolean(done)); row.classList.toggle('current', Boolean(current));
     row.querySelector('button').disabled = !active || !current;
-    if (done) row.querySelector('.step-state').textContent = '✓ CONFIRMED';
+    row.querySelector('.step-state').textContent = done ? '✓ CONFIRMED' : snapshot?.steps[step - 1].status === 'in_progress' ? 'IN PROGRESS' : row.hasAttribute('data-checkpoint') ? 'HUMAN REQUIRED' : 'WAITING';
   }
   const scans = snapshot?.scans ?? [];
-  setText('scan-count', `${scans.length} / 4 reels`); setText('reels', REELS.map(code => scans.includes(code) ? '●' : '○').join(' '));
-  $('barcode').disabled = !active || snapshot?.step !== 5;
+  setText('scan-count', `${scans.length} / 4 reels`); setText('reels', REELS.map(code => scans.some(scan => scan.barcode === code) ? '●' : '○').join(' '));
+  $('barcode').disabled = !active || completed !== 5;
   for (const button of document.querySelectorAll('[data-trap]')) button.disabled = !active;
   $('reset').disabled = !active || Boolean(recorder) || recordingPending; $('refresh').disabled = pending;
-  setText('settlement', snapshot?.paid === true ? 'PAID · Check #10045' : 'Awaiting CFO approval');
+  setText('settlement', snapshot?.payment?.stamp === 'PAID' ? `PAID · ${snapshot.payment.check}` : 'Awaiting CFO approval');
   renderJournal(snapshot);
   for (const link of document.querySelectorAll('[data-document]')) {
     const doc = snapshot?.documents?.find(doc => doc.name === link.dataset.document), url = safeDocumentUrl(doc?.url);
@@ -231,8 +245,9 @@ function renderOcr(ocr) {
 
 function briefing() {
   if (!connected || !state) return 'I am KAL, your zero-authority voice steward. The command server is disconnected. I cannot confirm stock, ledger balances, or approvals.';
-  const next = ['Query stock', 'Darius must confirm and escalate the need', 'VP Devon must approve the request', 'Purchasing may lock the COMEX spot rate', 'Purchasing may issue the purchase order', 'Marcus must scan four unique GS1 reels', 'Run invoice OCR and the three-way match', 'CFO Meredith must authorize Check number 10045', 'The server reports all eight steps complete'][state.step];
-  return `${state.step} of 8 steps confirmed. ${next}. My signing limit is zero dollars. Human officers authorize every checkpoint.`;
+  const completed = state.steps.filter(step => step.status === 'complete').length;
+  const next = ['Query stock', 'Darius must confirm and escalate the need', 'VP Devon must approve the request', 'Purchasing may lock the COMEX spot rate', 'Purchasing may issue the purchase order', 'Marcus must scan four unique GS1 reels', 'Run invoice OCR and the three-way match', 'CFO Meredith must authorize Check number 10045', 'The server reports all eight steps complete'][completed];
+  return `${completed} of 8 steps confirmed. ${next}. My signing limit is zero dollars. Human officers authorize every checkpoint.`;
 }
 function stopVoice() {
   ++voiceEpoch; voiceController?.abort(); voiceController = null; voiceAudio?.pause(); voiceAudio = null;
@@ -380,12 +395,17 @@ export function stopRecording() {
 
 async function probe(name) {
   if (!connected || pending) return;
-  const {code, ...body} = TRAPS[name]; pending = true; ++epoch; render(state);
+  const {code, step, invoiceDeltaUsd, ...body} = TRAPS[name];
+  if (invoiceDeltaUsd !== undefined) {
+    if (!state.po || state.steps[5].status !== 'complete' || state.steps[6].status === 'complete') { status('Invoice probe needs completed dock receipt and an unmatched invoice.', true); return; }
+    body.invoice = {totalUsd: state.po.totalUsd + invoiceDeltaUsd};
+  }
+  pending = true; ++epoch; render(state);
   try {
-    await request('/api/step', {method: 'POST', body});
+    await request(`/api/step/${step}`, {method: 'POST', body});
     status(`GUARDRAIL FAILURE: ${code} was expected but the server accepted the probe. Inspect the server ledger.`, true);
   } catch (error) {
-    status(error.code === code && error.status === REFUSALS[code].status ? `PROBE BLOCKED · HTTP ${error.status} ${code} · ${REFUSALS[code].text}` : `Probe inconclusive · expected ${code}; received ${error.message}`, error.code !== code);
+    status(error.code === code && error.status === REFUSALS[code].status ? `PROBE BLOCKED · HTTP ${error.status} ${error.message}` : `Probe inconclusive · expected ${code}; received ${error.message}`, error.code !== code);
   } finally {
     // Preserve probe outcome in the status bar while reconciling authoritative state.
     try { accept(await request('/api/state')); } catch { connected = false; }

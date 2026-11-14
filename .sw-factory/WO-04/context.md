@@ -3,7 +3,7 @@
 # Work Order Entity Index: WO-04
 
 **Initialized At (UTC):** 2026-11-14T02:48:07Z
-**Current Status:** client_ready_for_integration (remote status unchanged)
+**Current Status:** followup_verified_native_contract_with_hara_unavailable (remote status unchanged)
 
 
 ## Work Order
@@ -41,13 +41,17 @@ Blueprints reached through `@…` mentions and links while reading linked bluepr
 - Scope authority: user task HARA-06.WO-04-A and local WO-04 acceptance criteria.
 - Reuse authority: contracts/p2p-lineage-contract.json (four reels overrides older README eight-reel description).
 - No connected Software Factory MCP or linked blueprint content is available; remote traceability and status updates cannot be performed.
-- This checkout contains no src/, seeds/, sidecar/, hara/, tests/ or public/ at baseline. Server implementation is outside the fence.
-- Client transport proposal and acceptance tracking are in implementation-plan.md; live integration remains required.
+- This checkout contains src/, seeds/, sidecar/, tests/ and public/. src/sor_3panel_server.mjs provides the HTTP API over src/lineage_core.mjs; both are read-only dependencies outside this fence. hara/ is absent.
+- Native server contracts and follow-up requirements F1–F5 are tracked in implementation-plan.md. Regression tests boot startServer with temporary sandbox and missing-seed roots.
 - No commit, push, landing, compression, or commit receipt is authorized.
 
-## Handoff
-- Client-only independent review: APPROVED; full end-to-end integration is blocked by missing server/proxies, real PDF/OCR and HARA package.
-- New assets: public/index.html, public/styles.css, public/app.js. Verification: public/test_command_desk.py, public/command-desk.test.mjs, public/test_browser_command_desk.py.
-- Fresh combined verification: 10 pytest tests passed, including nine Node cases and seven Chromium checks. Render max 1.00ms with populated journal and 28-box overlay. See review-log.md for exact failed infrastructure checks and replay setup.
-- No existing backend routes/signatures could be verified. The server lane must supply the exact documented /api/state, /api/step, /api/reset, /api/kal/speak and /api/kal/transcribe contracts or adapt the explicit client boundary after integration.
-- Follow-up integration: authenticate human seats server-side, enforce every refusal against real SoRs, serve five actual PDFs and invoice image/coordinates, configure ElevenLabs/Scribe on server, rerun end-to-end and HARA checks.
+## Follow-up HARA-06.WO-04-A.f1
+- Qualify finding: the previous client rejected real snapshots and posted to /api/step (405). Reproduced with a temporary kernel root; added a real-server regression that failed before app changes.
+- Reuse: validateState/request/accept/refresh/runStep/render/renderJournal/probe plus real startServer. No second state adapter, server changes or production dependencies.
+- Contracts: GET /api/state returns steps[], scans:{barcode,ft}[], item, po, payment, journal report and sandbox source provenance. Writes use POST /api/step/:n; Step 1 uses SYSTEM; invoice variance uses invoice.totalUsd. Step/reset {state} wrappers remain supported.
+- Missing source/health is shown as ABSENT; seed/bootstrap provenance never becomes a LIVE claim. Missing PDF/OCR artifacts remain pending.
+- Remaining external integrations: authenticated officer identity and ElevenLabs/Scribe proxies; real PDF/OCR artifact delivery. Remote requirements/blueprints unavailable through tools; no remote status changes.
+- Required HARA checks attempted fresh: manifest fails with ModuleNotFoundError (hara absent); pytest hara/blocks fails with missing path (no tests collected). These remain unverified, not waived passes.
+- See review-log.md for fresh tests, independent review and Lean delta. No commit/push/landing/rebase or own receipt; launcher owns publication.
+
+Fresh verification: 11 combined public pytest tests passed (10 nested Node cases, 8 Chromium cases); kernel regression passed 26 selfchecks plus 10 red-team checks. Real-kernel render max 1.30ms; fixture plus 28-box OCR max 0.90ms. Required HARA/manifest checks remain unavailable as recorded above.
