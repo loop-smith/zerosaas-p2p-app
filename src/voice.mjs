@@ -81,6 +81,8 @@ export function normalizeKalSpeech(raw) {
     .replace(/\bSaaS\b/g, 'sass')
     .replace(/\bKAL\b/g, 'Cal')
     .replace(/\bInvenTree\b/gi, 'Inven-Tree')
+    .replace(/\.sqlite3\b/gi, ' Sequel-Lite')
+    .replace(/\bSQLite3\b/gi, 'Sequel-Lite')
     .replace(/\bSQLite\b/gi, 'Sequel-Lite')
     .replace(/\bSQL\b/g, 'Sequel')
     .replace(/\bGAAP\b/g, 'gap')

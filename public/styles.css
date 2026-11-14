@@ -937,6 +937,60 @@ pre.ledger-pre {
 }
 
 /* LAPTOP & SMALLER-MONITOR COMPACT FIT (PLACED AT END OF CASCADE TO WIN SPECIFICITY) */
+/* END-TO-END SUMMARY: PHYSICAL QUANTITIES + 4 HEADLESS DATABASES HIT */
+.qty-summary-strip {
+  background: #f0fdfa;
+  border: 1px solid #99f6e4;
+  border-left: 3px solid #0d9488;
+  border-radius: 6px;
+  padding: 4px 8px;
+  margin-bottom: 5px;
+}
+.db-hit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 5px;
+}
+.db-hit-item {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-left: 3px solid #2563eb;
+  border-radius: 6px;
+  padding: 5px 8px;
+}
+.db-hit-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.4px;
+  color: #0f172a;
+}
+.db-hit-head > strong {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.db-hit-head code {
+  font-family: var(--mono);
+  font-size: 9.6px;
+  color: #334155;
+}
+.db-hit-body {
+  font-size: 9.9px;
+  color: #334155;
+  line-height: 1.3;
+  margin-top: 2px;
+}
+.db-hit-body code {
+  font-family: var(--mono);
+  font-size: 9.3px;
+  color: #0f172a;
+  font-weight: 700;
+}
+
 @media (max-width: 1460px) {
   .shell { grid-template-columns: 196px minmax(0, 1fr) 324px; }
   .steps-head > div:last-child { display: none; }
@@ -1016,6 +1070,20 @@ pre.ledger-pre {
   .live-ocr-inner { max-width: 286px; }
   .corp-check-paper { padding: 6px 12px 4px; }
   .corp-check-stub { padding: 4.5px 11px; gap: 8px; }
+  .fin-stmt { padding: 6px 10px; overflow-y: auto; }
+  .stmt-hdr { padding-bottom: 3.5px; }
+  .stmt-title { font-size: 11px; }
+  .stmt-sub { font-size: 8.8px; }
+  .stmt-sec-lbl { font-size: 8.6px; margin-top: 3px; margin-bottom: 1px; }
+  .stmt-row { font-size: 10px; padding: 1.5px 0; }
+  .stmt-amt { font-size: 10px; }
+  .stmt-total { font-size: 10.6px; padding: 3px 0 2px; }
+  .stmt-total span:last-child { font-size: 11px; }
+  .qty-summary-strip { padding: 3px 6px; margin-bottom: 3px; }
+  .db-hit-list { gap: 4px; margin-top: 4px; }
+  .db-hit-item { padding: 4px 7px; }
+  .db-hit-head { font-size: 9.8px; }
+  .db-hit-body { font-size: 9.2px; line-height: 1.24; margin-top: 1px; }
 }
 
 @media (max-height: 750px) {

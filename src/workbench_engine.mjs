@@ -2042,7 +2042,9 @@ export function createWorkbenchEngine({
       });
 
       st.activeVoiceRole = 'treasury_steward';
-      st.lastVoiceBrief = `Check #10045 signed by CFO Meredith Hale for ${fmtUsd(deal.receiptAmount)}. Balance Sheet and P&L are balanced—inventory is ${fmtUsd(deal.catalogEstimateUsd)} at standard cost with a ${fmtUsd(Math.abs(deal.ppvTotalUsd))} favorable purchase price variance.`;
+      const absFinalPpv = Math.abs(deal.ppvTotalUsd || (deal.catalogEstimateUsd - deal.poAmount));
+      const isFavFinal = (deal.ppvTotalUsd ?? -1) <= 0.005;
+      st.lastVoiceBrief = `Check #10045 signed by CFO Meredith Hale for ${fmtUsd(deal.receiptAmount)}, settling 8,000 feet of 2/0 AWG bare copper across 4 barcoded 2,000-foot reels—3,288 pounds net copper stocked at ${fmtUsd(deal.catalogEstimateUsd)} standard cost with a ${fmtUsd(absFinalPpv)} ${isFavFinal ? 'favorable' : 'unfavorable'} purchase price variance. Four headless databases were hit on local disk: InvenTree WMS SQLite, HRM and Django CRM SQLite, our 89-account hledger GAAP journal, and the SHA-256 lineage SQLite ledger.`;
       recordAuditEvent(
         dealId,
         'STEP-8-CHECK-PAID',
@@ -2647,7 +2649,8 @@ export function createWorkbenchEngine({
     let role = 'ops_steward';
     if (st.wf4_ach_released) {
       role = 'treasury_steward';
-      reply = `PO-25800 and INV-25800 are stamped PAID via ${st.checkNumber} (${st.achTrace}) for ${fmtUsd(d.receiptAmount)}. 8,000 feet of bare copper is in stock, saving ${fmtUsd(st.spotSavingsLockedUsd || d.spotSavingsPotentialUsd)} under standard, with all GL clearing accounts balanced at zero.`;
+      const absSaved = Math.abs(st.spotSavingsLockedUsd || d.spotSavingsPotentialUsd);
+      reply = `PO-25800 and INV-25800 are stamped PAID via ${st.checkNumber} (${st.achTrace}) for ${fmtUsd(d.receiptAmount)}. Physically, 8,000 feet of 2/0 AWG bare copper—4 barcoded 2,000-foot reels weighing 3,288 pounds—moved from 0 feet into stock at ${fmtUsd(d.catalogEstimateUsd)} standard cost, saving ${fmtUsd(absSaved)}. Four local databases were hit: InvenTree WMS SQLite for the PO and 4 reel stock rows, HRM and Django CRM SQLite for supplier and signing limits, our 89-account hledger GAAP journal for 3 balanced entries, and SHA-256 lineage SQLite across ${lens.hopCount} audit hops.`;
     } else if (st.wf4_match_status === 'voucher_posted') {
       role = 'treasury_steward';
       reply = `RapidOCR tagged Encore Invoice INV-25800 and verified a $0.00 3-Way Match at ${fmtUsd(d.receiptAmount)}. Waiting at Human Checkpoint 4 for CFO Meredith Hale to approve payment.`;

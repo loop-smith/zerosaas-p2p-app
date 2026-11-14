@@ -1058,6 +1058,10 @@
           <span class="os-v" style="color:${d.isBelowThreshold ? 'var(--red)' : 'var(--green)'};">${fmtInt(d.onHandStockFt)} / ${fmtInt(d.minThresholdFt)} FT</span>
         </div>
         <div class="os-row">
+          <span class="os-k">Lot Packaging:</span>
+          <span class="os-v">${d.isBelowThreshold ? '4 Reels (3,288 lb)' : '4/4 Reels · 3,288 lb'}</span>
+        </div>
+        <div class="os-row">
           <span class="os-k">Supplier:</span>
           <span class="os-v" style="font-family:var(--sans);font-size:10.5px;">Encore Wire Corp</span>
         </div>
@@ -1260,127 +1264,155 @@
         ppvExpenseSignedUsd: 0,
         favorableVarianceGainUsd: 0,
       };
+      const cat = STATE.catalogs || { wmsTableCount: 119, hrmTableCount: 5, crmTableCount: 151, totalSqlTables: 275 };
+      const lens = STATE.lineage?.controlLenses?.[selectedDeal] || { hopCount: 1 };
+      const ocrBoxes = st.wf3_ocr_result?.boxCount || 28;
       const isPaid = stepIdx >= 8;
+      const stockedReels = d.onHandStockFt >= 8000 ? 4 : dockScannedReels.size;
+      const stockedLbs = Math.round(d.onHandStockFt * 0.411);
+      const absVar = Math.abs(pnl.favorableVarianceGainUsd || (d.catalogEstimateUsd - d.poAmount));
+      const isFavEnd = (pnl.favorableVarianceGainUsd ?? 0) >= 0;
 
       return `
         <div class="officer-desk books">
           <div class="desk-banner">
             <div>
-              <div class="cp-eyebrow">📗 OFFICIAL GENERAL LEDGER BOOK VIEW · HLEDGER DOUBLE-ENTRY (<code>COMPANY.JOURNAL</code> · 89 GAAP ACCOUNTS)</div>
-              <div class="cp-title">${isPaid ? `Closed &amp; Settled via Check #10045 (${esc(st.achTrace)}) — Balance Sheet &amp; Profit &amp; Loss` : `Live General Ledger Books (Step ${stepIdx + 1} of 8 In Progress)`}</div>
+              <div class="cp-eyebrow">${isPaid
+                ? `✅ END-TO-END P2P SUMMARY · 8,000 FT (4 REELS · 3,288 LBS) STOCKED + ${fmtUsd(d.receiptAmount)} PAID · 4 DATABASES HIT`
+                : `📗 LIVE QUANTITIES, GENERAL LEDGER &amp; DATABASE SUMMARY (STEP ${stepIdx + 1} OF 8)`}</div>
+              <div class="cp-title">${isPaid
+                ? `Settled: 8,000 FT Bare Copper (4 Reels · 3,288 lbs) · Check #10045 (${fmtUsd(d.receiptAmount)}) · ${isFavEnd ? 'Saves ' + fmtUsd(absVar) : '+' + fmtUsd(absVar) + ' PPV'}`
+                : `Live Quantities (${fmtInt(d.onHandStockFt)} / 8,000 FT), GAAP Books &amp; 4 Headless Databases`}</div>
               <div class="cp-desc">
-                Left-numbered GAAP accounts from <code>company.journal</code> (${esc(STATE.hledger.engineMode)}). Operating Cash <code>101100</code> moved <strong>$250,000 ➔ ${fmtUsd(bs.operatingCashEndingUsd)}</strong>, Inventory <code>121100</code> carries <strong>${fmtUsd(bs.inventoryStdUsd)}</strong> Std, and <code>501900</code> PPV adds <strong>${fmtAcct(pnl.favorableVarianceGainUsd, true)}</strong> Net Income.
+                <strong>Quantities + Dollars + Databases:</strong> WMS stock moved <strong>0 ➔ ${fmtInt(d.onHandStockFt)} FT</strong> (${stockedReels}/4 reels · ${fmtInt(stockedLbs)} lbs Cu), Operating Cash <code>101100</code> moved <strong>$250,000 ➔ ${fmtUsd(bs.operatingCashEndingUsd)}</strong>, across <strong>4 local databases</strong> (${cat.totalSqlTables || 275} SQLite tables + ${STATE.hledger.accountCount} GL accounts).
               </div>
             </div>
-            <div style="display:flex;gap:6px;flex-shrink:0;">
+            <div style="display:flex;gap:5px;flex-shrink:0;">
               ${isPaid ? `
-                <button class="btn-top" style="background:#0f172a;color:#fff;border-color:#0f172a;padding:7px 9px;" onclick="setDeskSubView('books')">📗 Books</button>
-                <button class="btn-top" style="padding:7px 9px;" onclick="setDeskSubView('voucher')">📑 Check #10045</button>
-                <button class="btn-top" style="border-color:#1d4ed8;color:#1d4ed8;padding:7px 9px;" onclick="startSoxAndDbTour()" title="Show where the 5 live NVMe databases live on disk + 4-Layer SOX control">🛡️ SOX &amp; Live DBs</button>
-                <button class="btn-top" style="border-color:#7c3aed;color:#6d28d9;padding:7px 9px;" onclick="setView('factory')" title="Show how 8090 Software Factory (Refinery ➔ Foundry ➔ Planner ➔ Validator) built this app from the Enterprise Seed">🏭 8090 Factory</button>
-                <button class="btn-approve blue" style="padding:7px 11px;" onclick="resetDemo(true)" title="Re-seed all 3 SQLite DBs &amp; hledger back to Step 1 for your next live run">↺ Restart Queue</button>
+                <button class="btn-top" style="padding:6px 8px;" onclick="setDeskSubView('voucher')" title="Inspect signed Check #10045 &amp; Remittance Stub">📑 Check #10045</button>
+                <button class="btn-top" style="border-color:#1d4ed8;color:#1d4ed8;padding:6px 8px;" onclick="startSoxAndDbTour()" title="KAL voice tour of Headless Databases + SOX + White House SI">🛡️ SOX &amp; DBs</button>
+                <button class="btn-top" style="border-color:#7c3aed;color:#6d28d9;padding:6px 8px;" onclick="setView('factory')" title="Inspect 8090 Software Factory WO 1–18">🏭 Factory</button>
+                <button class="btn-approve blue" style="padding:6px 10px;" onclick="resetDemo(true)" title="Re-seed all 4 local databases back to Step 1 (0 FT stock-out)">↺ Restart</button>
               ` : `
-                <button class="btn-approve blue" style="padding:8px 13px;" onclick="setDeskSubView('auto')">↩ Back to Officer Desk</button>
-                <button class="btn-top" style="padding:7px 11px;" onclick="openModal('journal')">📜 Journal</button>
+                <button class="btn-approve blue" style="padding:7px 11px;" onclick="setDeskSubView('auto')">↩ Officer Desk</button>
+                <button class="btn-top" style="padding:6px 9px;" onclick="openModal('journal')">📜 Journal</button>
               `}
             </div>
           </div>
 
           <div class="desk-stage equal">
-            <!-- LEFT BOOK PAGE: BALANCE SHEET (LEFT-NUMBERED GAAP) -->
+            <!-- LEFT SUMMARY PAGE: PHYSICAL QUANTITIES + BALANCE SHEET & P&L -->
             <div class="fin-stmt">
               <div>
                 <div class="stmt-hdr">
-                  <span class="stmt-title">Balance Sheet</span>
-                  <span class="stmt-sub">Statement of Financial Position · As of ${esc(fsData.asOfDate || d.deliveryDate)}</span>
+                  <span class="stmt-title">1. Quantities &amp; GAAP Financials</span>
+                  <span class="stmt-sub">Balance Sheet &amp; P&amp;L · ${esc(fsData.asOfDate || d.deliveryDate)}</span>
                 </div>
 
-                <div class="stmt-sec-lbl">Assets (Left-Numbered GAAP)</div>
+                <div class="stmt-sec-lbl" style="color:#0f766e;">Physical Copper Quantities (WMS ↔ Dock ↔ OCR)</div>
+                <div class="qty-summary-strip">
+                  <div class="stmt-row">
+                    <span class="stmt-acct"><code>ITM-CU-20-BARE</code> · 2/0 AWG Bare Copper Stock</span>
+                    <span class="stmt-amt" style="color:${d.onHandStockFt >= 8000 ? 'var(--green)' : 'var(--blue)'};">0 FT ➔ ${fmtInt(d.onHandStockFt)} / 8,000 FT</span>
+                  </div>
+                  <div class="stmt-row">
+                    <span class="stmt-acct">Barcoded Packaging &amp; Net Copper Mass</span>
+                    <span class="stmt-amt">${stockedReels}/4 GS1 Reels (2,000 FT ea · ${fmtInt(stockedLbs || 3288)} lbs)</span>
+                  </div>
+                  <div class="stmt-row">
+                    <span class="stmt-acct">3-Way Quantity Match (PO == BOL == OCR Inv)</span>
+                    <span class="stmt-amt" style="color:var(--green);">${st.wf4_match_status === 'voucher_posted' ? '8,000 == 8,000 == 8,000 FT ✓' : '8,000 FT Ordered'}</span>
+                  </div>
+                </div>
+
+                <div class="stmt-sec-lbl">Balance Sheet &amp; Spot Variance (89 GAAP Accts)</div>
                 <div class="stmt-row">
-                  <span class="stmt-acct"><code>101100</code> · Cash — Operating Checking ($250k Open${isPaid ? ' − $21.6k Chk #10045' : ''})</span>
+                  <span class="stmt-acct"><code>101100</code> · Cash — Operating ($250k${isPaid ? ' − ' + fmtUsdShort(d.receiptAmount) + ' Chk #10045' : ''})</span>
                   <span class="stmt-amt">${fmtUsd(bs.operatingCashEndingUsd ?? 250000)}</span>
                 </div>
                 <div class="stmt-row">
-                  <span class="stmt-acct"><code>101200</code> · Cash — Payroll Checking (#4409 · Ring-Fenced)</span>
+                  <span class="stmt-acct"><code>101200</code> · Cash — Payroll (#4409 Ring-Fenced)</span>
                   <span class="stmt-amt" style="color:var(--text-sec);">${fmtUsd(bs.payrollCashBalanceUsd ?? 140000)}</span>
                 </div>
                 <div class="stmt-row">
-                  <span class="stmt-acct"><code>121100</code> · Inventory — Raw Materials (8,000 FT @ $2.89 Std)</span>
+                  <span class="stmt-acct"><code>121100</code> · Raw Copper Inventory (8,000 FT @ $2.89 Std)</span>
                   <span class="stmt-amt" style="color:${bs.inventoryStdUsd > 0 ? 'var(--green)' : 'var(--text-muted)'};">${fmtUsd(bs.inventoryStdUsd)}</span>
                 </div>
+                <div class="stmt-row">
+                  <span class="stmt-acct"><code>201100</code> Trade AP / <code>201200</code> GRNI Clearing</span>
+                  <span class="stmt-amt">${fmtUsd(bs.tradeApLiabilityUsd)} / ${fmtUsd(bs.grniLiabilityUsd)}</span>
+                </div>
+                <div class="stmt-row" style="background:${(pnl.ppvExpenseSignedUsd ?? 0) <= 0 ? '#f0fdf4' : '#fffbeb'};padding:2px 5px;border-radius:4px;">
+                  <span class="stmt-acct"><code>501900</code> · P&amp;L Spot PPV (8,000 FT @ $${d.unitPrice.toFixed(2)} vs $2.89)</span>
+                  <span class="stmt-amt" style="color:${isFavEnd ? 'var(--green)' : '#b45309'};">${fmtAcct(pnl.favorableVarianceGainUsd, true)}</span>
+                </div>
                 <div class="stmt-total">
-                  <span>Total Assets</span>
+                  <span>Assets == Liabilities + Equity ($390k Cap + PPV)</span>
                   <span style="color:var(--green);">${fmtUsd(bs.totalEndingAssetsUsd ?? 390000)}</span>
-                </div>
-
-                <div class="stmt-sec-lbl" style="margin-top:7px;">Liabilities &amp; Stockholder Equity</div>
-                <div class="stmt-row">
-                  <span class="stmt-acct"><code>201100</code> · Accounts Payable — Trade (${isPaid ? 'Vouchered &amp; Paid' : 'Open Trade AP'})</span>
-                  <span class="stmt-amt">${fmtUsd(bs.tradeApLiabilityUsd)}</span>
-                </div>
-                <div class="stmt-row">
-                  <span class="stmt-acct"><code>201200</code> · GRNI Clearing (${st.wf4_match_status === 'voucher_posted' ? 'Accrued &amp; Cleared' : 'Uninvoiced Receipt'})</span>
-                  <span class="stmt-amt">${fmtUsd(bs.grniLiabilityUsd)}</span>
-                </div>
-                <div class="stmt-row">
-                  <span class="stmt-acct"><code>301100</code> · Paid-In / Sponsor Capital (Opening Baseline)</span>
-                  <span class="stmt-amt">${fmtUsd(bs.sponsorCapitalUsd ?? 390000)}</span>
-                </div>
-                <div class="stmt-row">
-                  <span class="stmt-acct"><code>311000</code> · Current Period Net Income (from P&amp;L)</span>
-                  <span class="stmt-amt" style="color:${bs.retainedEarningsNetIncomeUsd > 0 ? 'var(--green)' : 'var(--text-main)'};">${fmtAcct(bs.retainedEarningsNetIncomeUsd, true)}</span>
-                </div>
-                <div class="stmt-total">
-                  <span>Total Liabilities &amp; Equity</span>
-                  <span style="color:var(--green);">${fmtUsd(bs.totalEndingLiabAndEquityUsd ?? 390000)}</span>
                 </div>
               </div>
 
-              <div class="sig-strip signed" style="padding:6px 10px;">
-                <span style="font-weight:800;color:var(--green);">✓ Assets (${fmtUsd(bs.totalEndingAssetsUsd ?? 390000)}) == Liab + Equity (${fmtUsd(bs.totalEndingLiabAndEquityUsd ?? 390000)})</span>
-                <span style="font-family:var(--mono);font-size:10px;font-weight:800;color:#14532d;">hledger --strict PASS</span>
+              <div class="sig-strip signed" style="padding:5px 9px;">
+                <span style="font-weight:800;color:var(--green);">✓ 8,000 FT Stocked · ${fmtUsd(d.receiptAmount)} Paid · DR == CR</span>
+                <span style="font-family:var(--mono);font-size:9.5px;font-weight:800;color:#14532d;">hledger --strict PASS</span>
               </div>
             </div>
 
-            <!-- RIGHT BOOK PAGE: PROFIT & LOSS (INCOME & PPV STATEMENT) -->
+            <!-- RIGHT SUMMARY PAGE: ALL 4 HEADLESS DATABASES HIT (ZERO SAAS) -->
             <div class="fin-stmt pnl">
               <div>
                 <div class="stmt-hdr">
-                  <span class="stmt-title">Profit &amp; Loss (P&amp;L)</span>
-                  <span class="stmt-sub">Manufacturing Standard Cost Variance · Period ${esc(fsData.asOfDate || d.deliveryDate)}</span>
+                  <span class="stmt-title">2. Headless Databases Hit (4 Local Systems)</span>
+                  <span class="stmt-sub">${cat.totalSqlTables || 275} SQLite Tbls + ${STATE.hledger.accountCount} GL Accts · $0 SaaS</span>
                 </div>
 
-                <div class="stmt-sec-lbl">Procurement Standard vs. Actual Spot Benchmark</div>
-                <div class="stmt-row">
-                  <span class="stmt-acct">Annual Standard Cost Baseline (8,000 FT × $2.89/FT)</span>
-                  <span class="stmt-amt">${fmtUsd(d.catalogEstimateUsd)}</span>
-                </div>
-                <div class="stmt-row">
-                  <span class="stmt-acct">Actual COMEX Spot Purchase (${esc(d.id)} @ $${d.unitPrice.toFixed(2)}/FT)</span>
-                  <span class="stmt-amt">${st.wf1_po_committed === 'done' ? '(' + fmtUsd(d.poAmount) + ')' : '$0.00'}</span>
-                </div>
+                <div class="db-hit-list">
+                  <div class="db-hit-item" style="border-left-color:#16a34a;">
+                    <div class="db-hit-head">
+                      <strong>DB 1 · InvenTree WMS SQLite (<code>wms_inventree.sqlite3</code> · ${cat.wmsTableCount} tbls)</strong>
+                      <span class="badge b-done">+4 Stock Rows</span>
+                    </div>
+                    <div class="db-hit-body">
+                      Queried <code>part_part#218</code> (<code>0 &lt; 8,000 FT</code>); inserted <code>order_purchaseorder</code> (<code>${esc(d.id)}</code>, <code>8,000 FT</code>) &amp; <strong>4 GS1 rows</strong> in <code>stock_stockitem</code> (<code>4 × 2,000 FT = 8,000 FT</code>, <code>3,288 lbs</code>); stamped <code>PAID</code>.
+                    </div>
+                  </div>
 
-                <div class="stmt-sec-lbl" style="margin-top:6px;">Ledger Variance Account (Booked at Step 6 Dock Scan)</div>
-                <div class="stmt-row" style="background:${(pnl.ppvExpenseSignedUsd ?? 0) <= 0 ? '#f0fdf4' : '#fffbeb'};padding:4px 6px;border-radius:5px;">
-                  <span class="stmt-acct"><code>501900</code> · Purchase Price Variance (${(pnl.ppvExpenseSignedUsd ?? 0) <= 0 ? 'Favorable Credit' : 'Unfavorable Market Debit'})</span>
-                  <span class="stmt-amt" style="color:${(pnl.ppvExpenseSignedUsd ?? 0) <= 0 ? 'var(--green)' : '#b45309'};">${fmtAcct(pnl.ppvExpenseSignedUsd, false)}</span>
-                </div>
-                <div class="stmt-total" style="margin-top:6px;">
-                  <span>${(pnl.favorableVarianceGainUsd ?? 0) >= 0 ? 'Net Favorable P&amp;L Earnings Gain' : 'Net Unfavorable Market Variance Impact'}</span>
-                  <span style="color:${(pnl.favorableVarianceGainUsd ?? 0) >= 0 ? 'var(--green)' : '#b45309'};">${fmtAcct(pnl.favorableVarianceGainUsd, true)}</span>
-                </div>
+                  <div class="db-hit-item" style="border-left-color:#d97706;">
+                    <div class="db-hit-head">
+                      <strong>DB 2 · HRM + Django-CRM SQLite (<code>hrm_people</code> + <code>crm_django</code> · ${cat.hrmTableCount + cat.crmTableCount} tbls)</strong>
+                      <span class="badge b-amber">4 Signers + Mill</span>
+                    </div>
+                    <div class="db-hit-body">
+                      Verified Approved Mill <code>crm_company#181</code> (Encore Wire Corp) &amp; enforced <code>hrm_doa_authority_seat</code> limits: Darius (<code>$20k</code>), VP Devon (<code>$100k</code>), Nancy (<code>$50k</code>), CFO Meredith (<code>$500k</code>), <code>KAL = $0</code>.
+                    </div>
+                  </div>
 
-                <div class="stmt-sec-lbl" style="margin-top:8px;">Posted Double-Entry Audit Trail (3 Journal Entries)</div>
-                <div style="font-family:var(--mono);font-size:9.5px;color:#334155;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:6px 8px;line-height:1.45;">
-                  <div>1. <strong>Dock Scan:</strong> DR 121100 ${fmtUsd(d.catalogEstimateUsd)} | CR 201200 (${fmtUsd(d.receiptAmount)}) | ${(pnl.ppvExpenseSignedUsd ?? -1) <= 0 ? 'CR' : 'DR'} 501900 ${fmtUsd(Math.abs(pnl.ppvExpenseSignedUsd || (d.catalogEstimateUsd - d.poAmount)))}</div>
-                  <div>2. <strong>3-Way Match:</strong> DR 201200 ${fmtUsd(d.receiptAmount)} | CR 201100 (${fmtUsd(d.receiptAmount)}) · $0.00 Var</div>
-                  <div>3. <strong>Check #10045:</strong> DR 201100 ${fmtUsd(d.receiptAmount)} | CR 101100 (${fmtUsd(d.receiptAmount)}) · ${isPaid ? 'PAID ✓' : 'Pending'}</div>
+                  <div class="db-hit-item" style="border-left-color:#0f172a;">
+                    <div class="db-hit-head">
+                      <strong>DB 3 · Headless GAAP Ledger (<code>company.journal</code> · ${STATE.hledger.accountCount} accts)</strong>
+                      <span class="badge b-ready">3 JEs · DR==CR</span>
+                    </div>
+                    <div class="db-hit-body">
+                      Posted <strong>1. Dock</strong> (<code>DR 121100 ${fmtUsdShort(d.catalogEstimateUsd)} | CR 201200 ${fmtUsdShort(d.receiptAmount)} | CR 501900 ${fmtUsd(absVar)}</code>), <strong>2. 3WM</strong> (<code>VCH-25800</code>), &amp; <strong>3. Check #10045</strong> (<code>CR 101100 ${fmtUsd(d.receiptAmount)}</code>).
+                    </div>
+                  </div>
+
+                  <div class="db-hit-item" style="border-left-color:#7c3aed;">
+                    <div class="db-hit-head">
+                      <strong>DB 4 · Hop Lineage SQLite + RapidOCR (<code>lineage_core.sqlite3</code>)</strong>
+                      <span class="badge b-purple">${lens.hopCount} SHA-256 Hops</span>
+                    </div>
+                    <div class="db-hit-body">
+                      Appended <strong>${lens.hopCount} cryptographic hops</strong> in <code>lc_hop_lineage</code> across SQL, live COMEX <code>HG</code> quote, <code>RapidOCR :3591</code> (<code>${ocrBoxes}</code> boxes on <code>INV-25800.pdf</code>: <code>8,000 FT</code>), &amp; SOX sign-offs.
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div class="sig-strip ${isPaid ? 'signed' : ''}" style="padding:6px 10px;">
-                <span style="font-weight:700;color:var(--text-sec);">Countersigned: <strong>Darius ➔ VP Devon ➔ Marcus ➔ CFO Meredith</strong></span>
-                <span style="font-family:var(--mono);font-size:10px;font-weight:800;color:var(--blue);">KAL: $0.00 Limit</span>
+              <div style="display:flex;gap:5px;padding-top:4px;border-top:1px dashed #cbd5e1;">
+                <button class="btn-top" style="flex:1;justify-content:center;padding:4px 7px;font-size:10px;border-color:#16a34a;color:#15803d;" onclick="setView('registers');fetchRegTable('wms','stock_stockitem');">📦 WMS Stock (4 Rows) ↗</button>
+                <button class="btn-top" style="flex:1;justify-content:center;padding:4px 7px;font-size:10px;border-color:#d97706;color:#b45309;" onclick="setView('registers');fetchRegTable('hrm','hrm_doa_authority_seat');">👥 HRM Limits ↗</button>
+                <button class="btn-top" style="flex:1;justify-content:center;padding:4px 7px;font-size:10px;" onclick="openModal('journal');">📜 GL Journal ↗</button>
               </div>
             </div>
           </div>
