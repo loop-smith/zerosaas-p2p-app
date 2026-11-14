@@ -83,7 +83,7 @@ export async function fetchComexSpot({ offline = false, fetchImpl = globalThis.f
   const attempts = [];
   for (const [source, url, pick] of sources) {
     try {
-      const res = await fetchImpl(url, { signal: AbortSignal.timeout(timeoutMs), headers: { accept: 'application/json', 'user-agent': '8090-p2p-app/0.1' } });
+      const res = await fetchImpl(url, { signal: AbortSignal.timeout(timeoutMs), headers: { accept: 'application/json', 'user-agent': 'zerosaas-p2p-app/0.1' } });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const spotPerLb = Number(pick(await res.json()));
       if (!(spotPerLb > 0.5 && spotPerLb < 50)) throw new Error(`implausible spot ${spotPerLb}`);
@@ -749,7 +749,7 @@ export class P2PKernel {
   }
 
   health() {
-    return { ok: true, service: '8090-p2p-app sor_3panel_server', schema: CONTRACT.schema, sandbox: this.dir, sources: this.sources, hledger: Boolean(this.hledgerBin), offlineComex: this.offline, ocrUrl: this.ocrUrl, audit: this.verifyChain() };
+    return { ok: true, service: 'zerosaas-p2p-app sor_3panel_server', schema: CONTRACT.schema, sandbox: this.dir, sources: this.sources, hledger: Boolean(this.hledgerBin), offlineComex: this.offline, ocrUrl: this.ocrUrl, audit: this.verifyChain() };
   }
 
   journalReport() { return usdView({ ...this.verifyJournal({ hledger: true }), ledger: fs.readFileSync(this.ledgerPath, 'utf8') }); }
