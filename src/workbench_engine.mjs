@@ -542,6 +542,7 @@ export function createWorkbenchEngine({
   function makeInitialRuntimeFor(sc) {
     return {
       kal_started: false,
+      wf0_signal_routed: false,
       wf0_req_status: 'stock_out_alert',
       wf0_req_approved: 'pending',
       reqRef: sc.upstreamWo,
@@ -1014,14 +1015,31 @@ export function createWorkbenchEngine({
         throw new Error('WMS stock is above minimum — no stock-out signal exists.');
       }
       st.kal_started = true;
+      st.wf0_signal_routed = false;
       st.lastGuardrailBlock = null;
       st.activeVoiceRole = 'ops_steward';
-      st.lastVoiceBrief = `Good day. We have a stock-out demand signal from Supply Chain—0 feet of 2/0 AWG bare copper on hand against our 8,000-foot minimum—now in Darius Mercer's queue. Review Requisition REQ-25800 on screen and click Approve to confirm.`;
+      st.lastVoiceBrief = `Good day. Our warehouse management database has an active under-stock warning—0 feet of 2/0 AWG bare copper on hand against our 8,000-foot minimum stock level, valued at ${fmtUsd(sqlStock.standardTotalUsd)} annual standard cost. Click Proceed to route Requisition REQ-25800 over to Supply Chain Planner Darius Mercer.`;
       recordAuditEvent(
         dealId,
         'STEP-1-KAL-START',
         'KAL (Read-Only Steward) + SQL:WMS-STOCK-MONITOR',
-        `Verified InvenTree stock-out (${sqlStock.onHandFt} FT < ${fmtInt(sqlStock.minFt)} FT min · ${fmtUsd(sqlStock.standardTotalUsd)} standard). Nudged Supply Chain Planner ${deal.scPlanner.name} ($20,000 Signing Limit).`,
+        `Verified WMS under-stock signal (${sqlStock.onHandFt} FT < ${fmtInt(sqlStock.minFt)} FT min · ${fmtUsd(sqlStock.standardTotalUsd)} standard). Ready to route REQ-25800 to Supply Chain Planner ${deal.scPlanner.name}.`,
+        sha256FileSafe(wmsDbPath)
+      );
+      return;
+    }
+
+    if (action === 'wf0_route_to_darius') {
+      st.kal_started = true;
+      st.wf0_signal_routed = true;
+      st.lastGuardrailBlock = null;
+      st.activeVoiceRole = 'ops_steward';
+      st.lastVoiceBrief = `Under-stock signal routed to Supply Chain. Requisition REQ-25800 for 8,000 feet at ${fmtUsd(deal.catalogEstimateUsd)} standard cost is now in Planner Darius Mercer's queue. Darius, click Approve to confirm the replenishment need.`;
+      recordAuditEvent(
+        dealId,
+        'STEP-1B-SIGNAL-ROUTED',
+        `KAL (Read-Only Steward) -> ${deal.scPlanner.empId} (${deal.scPlanner.name})`,
+        `Routed WMS under-stock signal (0 FT < ${fmtInt(deal.minThresholdFt)} FT min) as ${sc.upstreamWo} (${fmtUsd(deal.catalogEstimateUsd)} standard) into Supply Chain Planner ${deal.scPlanner.name}'s queue ($20,000 Signing Limit).`,
         sha256FileSafe(wmsDbPath)
       );
       return;
@@ -1062,6 +1080,7 @@ export function createWorkbenchEngine({
 
     if (action === 'wf0_submit_req' && st.wf0_req_status === 'stock_out_alert') {
       st.kal_started = true;
+      st.wf0_signal_routed = true;
       st.activeVoiceRole = 'ops_steward';
       st.lastGuardrailBlock = null;
       st.wf0_req_status = 'pending_manager_doa';
@@ -2727,8 +2746,12 @@ export function createWorkbenchEngine({
       reply = `VP Devon Brooks signed the ${fmtUsd(d.catalogEstimateUsd)} requisition ceiling. Centralized Purchasing is ready to check live COMEX copper and place PO-25800.`;
     } else if (st.wf0_req_status === 'pending_manager_doa') {
       reply = `Planner Darius Mercer confirmed the 8,000-foot buy (${fmtUsd(d.catalogEstimateUsd)} standard). Because that exceeds his $20,000 Signing Limit, we are paused at Human Checkpoint 2 for VP Devon Brooks ($100,000 Signing Limit).`;
+    } else if (st.wf0_signal_routed) {
+      reply = `Under-stock Requisition REQ-25800 for 8,000 feet (${fmtUsd(d.catalogEstimateUsd)} standard) is now in Supply Chain Planner Darius Mercer's queue at Step 2. Click Approve to confirm.`;
+    } else if (st.kal_started) {
+      reply = `WMS under-stock signal verified on Step 1: our warehouse database shows 0 feet of 2/0 AWG bare copper on hand against an 8,000-foot minimum (${fmtUsd(d.catalogEstimateUsd)} standard). Click Proceed to route REQ-25800 to Supply Chain Planner Darius Mercer.`;
     } else {
-      reply = `WMS stock-out active: our warehouse database shows 0 feet of 2/0 AWG bare copper on hand against an 8,000-foot minimum (${fmtUsd(d.catalogEstimateUsd)} standard). Paused at Human Checkpoint 1 for Supply Chain Planner Darius Mercer.`;
+      reply = `WMS under-stock warning active: our warehouse database shows 0 feet of 2/0 AWG bare copper on hand against an 8,000-foot minimum (${fmtUsd(d.catalogEstimateUsd)} standard). Click Start KAL to inspect the WMS signal on Step 1.`;
     }
 
     return {

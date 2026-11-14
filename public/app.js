@@ -18,7 +18,7 @@
     let currentTtsBlobUrl = null;
     let kalSpeaking = false;
     let kalMuted = false;
-    let kalSubtitle = 'Click "▶ Start KAL · P2P Steward" — KAL runs automated blocks & speaks live, pausing at every step for your review.';
+    let kalSubtitle = '🚨 WMS Under-Stock Warning: 0 FT bare copper on hand (< 8,000 FT min). Click "▶ Start KAL · P2P Steward" to inspect the WMS signal on Step 1.';
     let kalBadgeText = 'KAL · P2P STEWARD ($0 SIGNING LIMIT)';
     let dockScannedReels = new Set();
     let lastFlashedReelSeq = 0;
@@ -177,8 +177,8 @@
       if (st.wf1_po_committed === 'done') return 4;           // Step 5: Order Ack (pauses for OK to Proceed)
       if (st.wf0_req_status === 'approved') return 3;         // Step 4: Live Spot & PO (pauses for OK to Proceed)
       if (st.wf0_req_status === 'pending_manager_doa') return 2; // Step 3: VP Devon Signing Limit
-      if (st.kal_started) return 1;                           // Step 2: Darius Supply Chain Confirm
-      return 0;                                               // Step 1: WMS Stock-Out Signal
+      if (st.wf0_signal_routed) return 1;                     // Step 2: Darius Supply Chain Confirm
+      return 0;                                               // Step 1: WMS Stock-Out Signal (starts & pauses here until Proceed!)
     }
 
     function inspectStepCell(idx) {
@@ -645,19 +645,27 @@
       return { ok: res.ok, status: res.status, data };
     }
 
-    // Click "▶ Start KAL · P2P Steward" -> Runs Step 1 SQL check, speaks, and stops at Human Checkpoint #1 (Darius)
+    // Click "▶ Start KAL · P2P Steward" -> Runs Step 1 WMS SQL check, speaks ON Box 1 (WMS Signal), and pauses for Proceed to Darius!
     async function startKalSteward() {
       if (busyAction) return;
       setView('workflow');
       activeDocTab = 'auto';
+      deskSubView = 'auto';
       const st = STATE?.runtimeState?.[selectedDeal];
       if (!st || !st.kal_started) {
         await executeStewardSequence([
-          { action: 'wf0_detect_stockout', label: 'KAL reading InvenTree WMS stock-out signal…' },
+          { action: 'wf0_detect_stockout', label: 'KAL reading live WMS under-stock signal (0 FT < 8,000 FT min)…' },
         ]);
       } else {
         await askKalPreset('status');
       }
+    }
+
+    // Step 1 -> Step 2: Click "Proceed" on WMS Signal (Box 1) -> Routes REQ-25800 into Supply Chain Planner Darius Mercer's queue (Box 2)!
+    function proceedStep1RouteToDarius() {
+      executeStewardSequence([
+        { action: 'wf0_route_to_darius', label: 'Routing WMS under-stock signal (REQ-25800) into Supply Chain for Darius Mercer…' },
+      ]);
     }
 
     // Runs 1 human checkpoint + any immediate downstream automated blocks cleanly while updating screen live!
@@ -974,7 +982,7 @@
         const res = await fetch('/api/reset', { method: 'POST' });
         STATE = await res.json();
         kalBadgeText = 'KAL · P2P STEWARD ($0 SIGNING LIMIT)';
-        kalSubtitle = 'Queue & all 3 headless databases reset to Step 1 (0 FT stock-out). Click "▶ Start KAL · P2P Steward" whenever you are ready.';
+        kalSubtitle = '🚨 Queue & all headless databases reset to Step 1: WMS Under-Stock Warning flashing (0 / 8,000 FT). Click "▶ Start KAL · P2P Steward" when ready.';
         renderAll();
       } finally {
         if (topBtn) topBtn.textContent = '↺ Reset Queue';
@@ -1045,13 +1053,15 @@
     function renderLeftSummary(d, st) {
       const el = document.getElementById('leftOrderSummary');
       if (!el) return;
+      el.classList.toggle('stockout-flash', Boolean(d.isBelowThreshold));
       const statusBadge = st.wf4_ach_released
         ? '<span class="badge b-done">PAID · Chk #10045</span>'
         : (st.wf4_match_status === 'voucher_posted'
             ? '<span class="badge b-purple">Approved to Pay</span>'
-            : (d.isBelowThreshold ? '<span class="badge b-hold">0 FT Stock-Out</span>' : '<span class="badge b-amber">In Progress</span>'));
+            : (d.isBelowThreshold ? '<span class="badge b-hold">0 FT Stock-Out</span>' : '<span class="badge b-done">8,000 FT In Stock</span>'));
 
       el.innerHTML = `
+        ${d.isBelowThreshold ? `<div class="stockout-alert-pill"><span class="stockout-dot"></span>UNDER-STOCK WARNING · 0 FT</div>` : ''}
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <span style="font-family:var(--mono);font-size:11px;font-weight:800;color:var(--blue);">${esc(d.itemCanonical)}</span>
           ${statusBadge}
@@ -1059,11 +1069,11 @@
         <div style="font-size:11px;font-weight:700;color:var(--text-main);line-height:1.25;">2/0 AWG Bare Copper Wire</div>
         <div class="os-row">
           <span class="os-k">WMS On Hand:</span>
-          <span class="os-v" style="color:${d.isBelowThreshold ? 'var(--red)' : 'var(--green)'};">${fmtInt(d.onHandStockFt)} / ${fmtInt(d.minThresholdFt)} FT</span>
+          <span class="os-v" style="color:${d.isBelowThreshold ? 'var(--red)' : 'var(--green)'};">${fmtInt(d.onHandStockFt)} FT ${d.isBelowThreshold ? '(OUT)' : '✓'}</span>
         </div>
         <div class="os-row">
-          <span class="os-k">Lot Packaging:</span>
-          <span class="os-v">${d.isBelowThreshold ? '4 Reels (3,288 lb)' : '4/4 Reels · 3,288 lb'}</span>
+          <span class="os-k">Min Reorder Lvl:</span>
+          <span class="os-v" style="color:${d.isBelowThreshold ? '#b91c1c' : 'var(--text-main)'};">${fmtInt(d.minThresholdFt)} FT (4 Reels)</span>
         </div>
         <div class="os-row">
           <span class="os-k">Supplier:</span>
@@ -1097,7 +1107,7 @@
       const showingBooks = deskSubView === 'books' || (stepIdx >= 8 && deskSubView !== 'voucher');
 
       const steps = [
-        { num: 1, name: 'WMS Signal',   who: 'SQL Stock Check',  human: false, badge: '⚡ AUTO' },
+        { num: 1, name: 'WMS Signal',   who: '0 < 8k Min-Stock', human: false, badge: '⚡ AUTO+OK' },
         { num: 2, name: 'Supply Chain', who: 'Darius ($20k)',    human: true,  badge: '👤 SIGN' },
         { num: 3, name: 'VP Approval',  who: 'Devon ($100k)',    human: true,  badge: '👤 SIGN' },
         { num: 4, name: 'Spot & PO',    who: 'Nancy (Spot OK)',  human: false, badge: '⚡ AUTO+OK' },
@@ -1140,9 +1150,9 @@
             ${steps.map((s, idx) => {
               const isDone = idx < stepIdx;
               const isNow = idx === stepIdx;
-              const cls = isDone ? 'done' : (isNow ? 'now' : '');
+              const cls = isDone ? 'done' : (isNow ? (idx === 0 ? 'now signal-flash' : 'now') : '');
               const numLabel = isDone ? `✓ ${s.num}` : (isNow ? `● ${s.num}` : `${s.num}`);
-              const numColor = isDone ? 'var(--green)' : (isNow ? 'var(--blue)' : 'var(--text-muted)');
+              const numColor = isDone ? 'var(--green)' : (isNow ? (idx === 0 ? 'var(--red)' : 'var(--blue)') : 'var(--text-muted)');
               const canClick = isDone || isNow;
               return `
                 <div class="step-cell ${cls}" style="${canClick ? 'cursor:pointer;' : ''}" ${canClick ? `onclick="inspectStepCell(${idx})" title="Click to inspect Step ${s.num} (${esc(s.name)})"` : ''}>
@@ -1203,7 +1213,7 @@
       return `
         <div class="sor-live-spine">
           <!-- DB 1: HEADLESS INVENTREE WMS SQLITE -->
-          <div class="sor-db-card" style="border-left-color:${stockOk ? '#16a34a' : '#dc2626'};"
+          <div class="sor-db-card ${stepIdx === 0 ? 'sor-db-alert' : ''}" style="border-left-color:${stockOk ? '#16a34a' : '#dc2626'};"
                onclick="setView('registers');fetchRegTable('wms','stock_stockitem');"
                title="Live Disk File: ${esc(wmsF.fullPath || 'C:\\8090-sor-data\\copper-p2p\\wms_inventree.sqlite3')} (${esc(wmsF.sizeHuman || '5.48 MB')} · Git-Ignored)">
             <div class="sor-db-top">
@@ -1524,25 +1534,36 @@
         `;
       }
 
-      // STEP 1 (stepIdx === 0): SUPPLY CHAIN DEMAND SIGNAL (LIVE HEADLESS WMS SQLITE QUERY)
+      // STEP 1 (stepIdx === 0): SUPPLY CHAIN DEMAND SIGNAL (LIVE HEADLESS WMS SQLITE QUERY -> PAUSES ON BOX 1 BEFORE DARIUS!)
       if (stepIdx === 0) {
+        const signalVerified = Boolean(st.kal_started);
         return `
           <div class="officer-desk">
-            <div class="desk-banner">
+            <div class="desk-banner" style="background:${signalVerified ? 'linear-gradient(90deg, #fff1f2 0%, #eff6ff 100%)' : 'linear-gradient(90deg, #fef2f2 0%, #fff7ed 100%)'};">
               <div>
-                <div class="cp-eyebrow">📡 STEP 1 OF 8 · HEADLESS WMS SQLITE DEMAND SIGNAL (<code>WO-01 · WFB-P2M-1A</code>)</div>
-                <div class="cp-title">Live SQLite Stock-Out: 0 FT Bare Copper On Hand (&lt; 8,000 FT Min) — Start KAL Steward</div>
+                <div class="cp-eyebrow" style="color:#b91c1c;">${signalVerified
+                  ? `📡 STEP 1 OF 8 · WMS UNDER-STOCK SIGNAL VERIFIED BY KAL — CLICK PROCEED TO SEND TO SUPPLY CHAIN`
+                  : `🚨 STEP 1 OF 8 · WMS UNDER-STOCK DEMAND SIGNAL (0 FT ON HAND &lt; 8,000 FT MIN LEVEL · <code>WO-01</code>)`}</div>
+                <div class="cp-title">${signalVerified
+                  ? `WMS Under-Stock Confirmed: 0 FT On Hand vs. 8,000 FT Min Level (${fmtUsd(d.catalogEstimateUsd)} Std)`
+                  : `Under-Stock Warning Flashing: 0 FT Bare Copper On Hand (&lt; 8,000 FT Min Level)`}</div>
                 <div class="cp-desc">
-                  Live query against headless <code>wms_inventree.sqlite3</code> (119 tables) detected <code>quantity=0 &lt; minimum_stock=8000</code>. Click <strong>Start KAL</strong> — she greets with <em>"Good day…"</em> and routes <strong>REQ-25800</strong> into Darius Mercer's queue.
+                  ${signalVerified
+                    ? `KAL verified the live Warehouse SQLite stock-out (<code>0 FT &lt; 8,000 FT</code> minimum reorder level = <code>4 × 2,000-FT</code> reels needed). Click <strong>Proceed to Supply Chain</strong> to route <strong>REQ-25800</strong> into Darius Mercer's queue (Step 2).`
+                    : `Warehouse SQLite (<code>wms_inventree.sqlite3</code>) is flashing an under-stock warning below our <strong>8,000 FT minimum reorder level</strong> (${fmtUsd(d.catalogEstimateUsd)} Standard Cost). Click <strong>Start KAL</strong> — she explains the WMS signal right here on Step 1 before routing to Darius.`}
                 </div>
               </div>
               <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
                 <button class="btn-guard-inline" onclick="runGuardrailTest('kal_rogue_attempt')" title="Optional Red-Team Demo: Force KAL ($0 limit) to attempt a rogue PO/check write">
-                  🛡️ Demo Block: Rogue KAL (403)
+                  🤖 Rogue KAL (403)
                 </button>
-                <button class="btn-approve blue" onclick="startKalSteward()">
-                  ▶ Start KAL · P2P Steward
-                </button>
+                ${signalVerified
+                  ? `<button class="btn-approve" onclick="proceedStep1RouteToDarius()">
+                       ✓ Proceed · Route to Supply Chain (Darius)
+                     </button>`
+                  : `<button class="btn-approve blue" onclick="startKalSteward()">
+                       ▶ Start KAL · P2P Steward
+                     </button>`}
               </div>
             </div>
             <div class="desk-stage">
@@ -1551,22 +1572,22 @@
                   <div class="sheet-top">
                     <div>
                       <div class="sheet-kicker">Headless WMS DB · wms_inventree.sqlite3 (119 Tables)</div>
-                      <div class="sheet-title">Live SQLite Stock Trigger · part_part JOIN stock_stockitem</div>
+                      <div class="sheet-title">Live Under-Stock Trigger · On Hand (0 FT) vs. Min Level (8,000 FT)</div>
                     </div>
-                    <span class="badge b-hold">0 FT &lt; 8,000 MIN</span>
+                    <span class="badge b-hold">🚨 0 FT &lt; 8,000 MIN</span>
                   </div>
                   <div class="api-terminal" style="margin:6px 0;padding:6px 9px;font-size:9.6px;">
                     <div style="color:#7dd3fc;">SELECT p.id, p.IPN, p.minimum_stock, COALESCE(SUM(s.quantity),0) AS on_hand</div>
                     <div style="color:#94a3b8;">FROM part_part p LEFT JOIN stock_stockitem s ON s.part_id=p.id WHERE p.id=218;</div>
-                    <div style="color:#4ade80;margin-top:3px;">➔ { id: 218, IPN: "${esc(d.itemCanonical)}", min_stock: 8000, on_hand: ${d.onHandStockFt} }</div>
+                    <div style="color:#f87171;font-weight:700;margin-top:3px;">➔ ALERT: { id: 218, IPN: "${esc(d.itemCanonical)}", min_stock: 8000, on_hand: ${d.onHandStockFt} } (UNDER-STOCK!)</div>
                   </div>
                   <div class="kv-list">
-                    <div class="kv-row"><span class="kv-k">Stocked SKU &amp; Spec:</span><span class="kv-v">${esc(d.itemCanonical)} · ASTM B8 2/0 Cu</span></div>
+                    <div class="kv-row"><span class="kv-k">Stocked SKU &amp; Min Level:</span><span class="kv-v" style="color:var(--red);">${esc(d.itemCanonical)} · 0 FT / 8,000 FT Min (4 Reels)</span></div>
                     <div class="kv-row"><span class="kv-k">Annual Standard Cost (Jan 1):</span><span class="kv-v">$${d.catalogUnitPrice.toFixed(2)}/FT × 8,000 FT = ${fmtUsd(d.catalogEstimateUsd)}</span></div>
                     <div class="kv-row"><span class="kv-k">Approved Mill (crm_company#181):</span><span class="kv-v">Encore Wire Corporation (McKinney, TX)</span></div>
                   </div>
                 </div>
-                <div class="sig-strip"><span>Origin: <strong>Live Headless SQLite Trigger</strong> (Zero Direct UI CRUD)</span><span style="font-family:var(--mono);font-size:10px;">Queue: EMP-0021 Darius</span></div>
+                <div class="sig-strip"><span>Signal Origin: <strong>Live Headless WMS Under-Stock Trigger</strong></span><span style="font-family:var(--mono);font-size:10px;color:${signalVerified ? 'var(--green)' : 'var(--red)'};">${signalVerified ? '✓ Signal Verified · Ready to Route' : '● Flashing Under-Stock Alert'}</span></div>
               </div>
 
               <div class="doc-sheet">
@@ -3198,6 +3219,7 @@
       window.highlightBox = highlightBox;
       window.inspectStepCell = inspectStepCell;
       window.openModal = openModal;
+      window.proceedStep1RouteToDarius = proceedStep1RouteToDarius;
       window.proceedStep4CutPo = proceedStep4CutPo;
       window.proceedStep5VerifyAck = proceedStep5VerifyAck;
       window.proceedStep7ConfirmMatch = proceedStep7ConfirmMatch;

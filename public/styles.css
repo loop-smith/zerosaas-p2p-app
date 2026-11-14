@@ -991,7 +991,79 @@ pre.ledger-pre {
   font-weight: 700;
 }
 
+/* FLASHING WMS UNDER-STOCK SIGNAL (LEFT PANEL + STEP 1 BOX + DB 1 SPINE) */
+@keyframes wmsStockoutFlash {
+  0%, 100% {
+    background: #fff1f2;
+    border-color: #ef4444;
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.22), 0 0 12px rgba(220, 38, 38, 0.18);
+  }
+  50% {
+    background: #ffe4e6;
+    border-color: #b91c1c;
+    box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.42), 0 0 18px rgba(220, 38, 38, 0.34);
+  }
+}
+
+@keyframes wmsPillBlink {
+  0%, 100% { background: #dc2626; color: #ffffff; }
+  50% { background: #991b1b; color: #fef2f2; }
+}
+
+@keyframes wmsDotPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.82); }
+}
+
+.order-summary-box.stockout-flash {
+  border-width: 2px;
+  border-color: #ef4444;
+  animation: wmsStockoutFlash 1.15s ease-in-out infinite;
+}
+
+.stockout-alert-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 3px 6px;
+  border-radius: 5px;
+  font-size: 9.5px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  background: #dc2626;
+  color: #ffffff;
+  animation: wmsPillBlink 1.15s ease-in-out infinite;
+}
+
+.stockout-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #ffffff;
+  display: inline-block;
+  animation: wmsDotPulse 0.8s ease-in-out infinite;
+}
+
+.step-cell.now.signal-flash {
+  border: 2px solid #dc2626;
+  animation: wmsStockoutFlash 1.15s ease-in-out infinite;
+}
+
+.sor-db-card.sor-db-alert {
+  animation: wmsStockoutFlash 1.35s ease-in-out infinite;
+}
+
+body.presenter-paused .order-summary-box.stockout-flash,
+body.presenter-paused .stockout-alert-pill,
+body.presenter-paused .stockout-dot,
+body.presenter-paused .step-cell.now.signal-flash,
+body.presenter-paused .sor-db-card.sor-db-alert {
+  animation-play-state: paused !important;
+}
+
 @media (max-width: 1460px) {
+  .stockout-alert-pill { font-size: 8.8px; padding: 2px 5px; }
   .shell { grid-template-columns: 196px minmax(0, 1fr) 324px; }
   .steps-head > div:last-child { display: none; }
   .left-rail { padding: 8px 8px; gap: 6px; }
