@@ -163,4 +163,32 @@ The sidecar stays a proposal engine. It renders, OCRs and returns fields. The ke
 
 ---
 
+## Round 3
+
+HARA-06.T19.f1 (cc2) fix seat for the qualify finding on candidate `11a6300`. Round 2 claimed "a malformed sidecar reply is 503 `OCR_UNAVAILABLE`, not a 500". That was false for a reply that is valid JSON but not an object. A `null` body from `/generate` was destructured in `receiveDocuments()` (`src/lineage_core.mjs:537`). That threw a `TypeError`, so Step 5 returned 500 `INTERNAL_ERROR` and the refusal was never audited.
+
+### Fix
+
+`#sidecar()` now refuses any reply that is not a JSON object (`null`, array or scalar) with 503 `OCR_UNAVAILABLE`, before either caller reads it. This covers both `/generate` (Step 5) and `/ocr` (Step 7).
+
+### Tests And Build
+
+**Commands run:**
+
+- The seed's failing command (a stub sidecar answering `null`, Steps 1–5) → exit 0.
+- `node tests/test-sidecar-reply.mjs` (new) → 4/4. It covers replies of `null`, `[]`, `"ok"` and `42`. Each one gets Step 5 503 `OCR_UNAVAILABLE` with `bookImpactUsd` 0, a `REFUSED` audit row, a valid chain and an empty journal.
+- `node tests/test-copper-e2e.mjs` → self-check 26/26, red-team 12/12.
+- `python3 -m hara.blocks.configurator.manifest check --repo .` → exit 1, `No module named 'hara'`.
+- `python3 -m pytest hara/blocks -q -p no:cacheprovider` → exit 4, `hara/blocks` not found.
+
+`package.json` `test` now runs `tests/test-sidecar-reply.mjs` before the e2e suite.
+
+### Round 3 Verdict
+
+- Total blocking: 0
+- Files changed: `src/lineage_core.mjs`, `tests/test-sidecar-reply.mjs`, `package.json`, this log
+- **Verdict:** APPROVED
+
+---
+
 <!-- Subsequent rounds: copy the structure above and increment the round number. -->

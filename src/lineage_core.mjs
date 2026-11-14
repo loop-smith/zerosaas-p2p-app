@@ -524,6 +524,7 @@ export class P2PKernel {
       throw new Refusal(503, 'OCR_UNAVAILABLE', `OCR sidecar ${this.ocrUrl} ${route} failed: ${e?.message ?? e}`);
     }
     if (!res.ok) throw new Refusal(res.status === 409 ? 409 : 503, res.status === 409 ? 'DOCUMENT_INTEGRITY_HOLD' : 'OCR_UNAVAILABLE', `OCR sidecar ${route}: ${reply?.error ?? res.status} ${reply?.message ?? ''}`.trim());
+    if (reply === null || typeof reply !== 'object' || Array.isArray(reply)) throw new Refusal(503, 'OCR_UNAVAILABLE', `OCR sidecar ${route} reply must be a JSON object, got ${JSON.stringify(reply)}`);
     return reply;
   }
 

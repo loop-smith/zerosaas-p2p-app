@@ -12,6 +12,6 @@
     "start": "node src/sor_3panel_server.mjs",
     "start:ocr": "OCR_URL=http://127.0.0.1:3591 node src/sor_3panel_server.mjs",
     "sidecar": "python3 sidecar/invoice_ocr_engine.py serve",
-    "test": "node tests/test-copper-e2e.mjs"
+    "test": "node tests/test-sidecar-reply.mjs && node tests/test-copper-e2e.mjs"
   }
 }
