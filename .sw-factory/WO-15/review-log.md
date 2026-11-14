@@ -31,3 +31,12 @@
 | Forbidden strings & secrets scan | **PASS** — 0 matches across all tracked files |
 
 **Verdict:** Ready for independent cross-family Qualify Review prior to fast-forwarding `main`.
+
+---
+
+## Round 2 (Independent Cross-Platform & Security Review)
+
+1. **Steward header-spoof hardening on `POST /api/step` (`src/sor_3panel_server.mjs`, `tests/test-golden-master-e2e.mjs`):** Updated `effectiveBody` on `/api/step` to evaluate `isStewardIdentity([body.actingEmpId, body.actor, ...headerIds])` so a request combining `x-actor: EMP-AI-KAL` with a human `actingEmpId` is always caught and audit-chained (`403 AI_STEWARD_ZERO_AUTHORITY`, `$0.00` impact).
+2. **Per-Work-Order `.sw-factory/WO-16..WO-18` execution artifacts:** Added individual `checklist.md`, `context.md`, `implementation-plan.md`, and `review-log.md` packets for `WO-16` (`bd3f7822-1571-4b81-80ca-6a32215a25aa`), `WO-17` (`78e025ce-ac9b-4714-a769-4b38767baa9d`), and `WO-18` (`346dd5b4-37e7-45ed-bca0-6d36528bd0c6`), and verified the full Windows + Linux test matrix (`npm test`, `node --test public/command-desk.test.mjs`, and `pytest`).
+
+**Verdict:** `APPROVED`

@@ -123,7 +123,17 @@ try {
   const blkKalSign = await postStep('wf0_submit_req', { actingEmpId: 'KAL' });
   assert.equal(blkKalSign.status, 403);
   assert.equal(blkKalSign.body.guardrailBlock.code, 'AI_STEWARD_ZERO_AUTHORITY');
-  console.log('[PASS] RED-TEAM 403 #0: Blocked KAL Rogue Token Buy & Checkpoint Signing (AI_STEWARD_ZERO_AUTHORITY · $0.00 impact)');
+  const blkKalCal = await postStep('wf0_submit_req', { actingEmpId: 'Cal' });
+  assert.equal(blkKalCal.status, 403);
+  assert.equal(blkKalCal.body.guardrailBlock.code, 'AI_STEWARD_ZERO_AUTHORITY');
+  const blkKalHeaderSpoof = await fetch(`${BASE}/api/step`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-actor': 'EMP-AI-KAL' },
+    body: JSON.stringify({ dealId: 'PO-25800', action: 'wf0_submit_req', actingEmpId: 'EMP-0021' }),
+  });
+  assert.equal(blkKalHeaderSpoof.status, 403);
+  assert.equal((await blkKalHeaderSpoof.json()).guardrailBlock.code, 'AI_STEWARD_ZERO_AUTHORITY');
+  console.log('[PASS] RED-TEAM 403 #0: Blocked KAL Rogue Token Buy, Header Spoof & Checkpoint Signing (AI_STEWARD_ZERO_AUTHORITY · $0.00 impact)');
 
   // 1. Step 1 (Auto SQL Block): Start KAL Steward & Verify Live WMS Stock-Out Signal + "Good day" Opener
   const pStart = await postStep('wf0_detect_stockout');

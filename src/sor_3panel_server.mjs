@@ -143,7 +143,7 @@ async function route(kernel, workbench, req, res, { publicDir, voiceEnv, voiceFe
 
   if (workbenchStep) {
     const body = await readJson(req);
-    const effectiveBody = isStewardIdentity(headerIds) && !body.actingEmpId
+    const effectiveBody = isStewardIdentity([body.actingEmpId, body.actor, ...headerIds])
       ? { ...body, actingEmpId: 'EMP-AI-KAL' }
       : body;
     try {
