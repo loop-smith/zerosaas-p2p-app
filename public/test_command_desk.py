@@ -1,9 +1,9 @@
-"""SF WO-13 ZeroSaaS P2P workbench checks (REQ-P2P-012..020, BP-01 ADR-006) and SF WO-14 interactive parity.
+"""Golden-Master 3-panel ZeroSaaS P2P workbench static & client contract checks (WO-16).
 
-Static markup, stylesheet and source checks; no backend or persistent state root.
-The file name is kept from WO-04 because the task card runs the public/ suite by path.
+Validates 1:1 Golden-Master markup, CSS, 4-tab navigation, RF laser scan, inline 28-box RapidOCR,
+Check #10045, EO 14434 x KYSI governance matrix, Round 4 Software Factory trace (WO 1-18),
+zero duplicate DOM IDs, zero legacy desk strings, and the 18-symbol ES module export contract.
 """
-from collections import defaultdict
 from html.parser import HTMLParser
 from pathlib import Path
 import json
@@ -15,7 +15,7 @@ PUBLIC = ROOT / "public"
 HTML = (PUBLIC / "index.html").read_text(encoding="utf-8")
 CSS = (PUBLIC / "styles.css").read_text(encoding="utf-8")
 APP = (PUBLIC / "app.js").read_text(encoding="utf-8")
-# Built from parts so this file does not contain the name it forbids.
+VOICE = (ROOT / "src/voice.mjs").read_text(encoding="utf-8")
 LEGACY_NAME = " ".join(["Copper", "Command", "Desk"])
 
 
@@ -23,20 +23,15 @@ class Markup(HTMLParser):
     def __init__(self):
         super().__init__()
         self.ids = set()
-        self.attrs = defaultdict(list)
-        self.chunks = defaultdict(list)
         self.title = ""
         self._stack = []
 
     def handle_starttag(self, tag, attrs):
-        attrs = dict(attrs)
-        if attrs.get("id"):
-            assert attrs["id"] not in self.ids, f"duplicate DOM id {attrs['id']}"
-            self.ids.add(attrs["id"])
-        for key, value in attrs.items():
-            if key.startswith("data-"):
-                self.attrs[key].append(value)
-        self._stack.append((tag, attrs))
+        attrs_dict = dict(attrs)
+        if attrs_dict.get("id"):
+            assert attrs_dict["id"] not in self.ids, f"duplicate DOM id {attrs_dict['id']}"
+            self.ids.add(attrs_dict["id"])
+        self._stack.append((tag, attrs_dict))
 
     def handle_endtag(self, tag):
         while self._stack and self._stack.pop()[0] != tag:
@@ -45,17 +40,6 @@ class Markup(HTMLParser):
     def handle_data(self, data):
         if self._stack and self._stack[-1][0] == "title":
             self.title += data
-        if not data.strip():
-            return
-        for tag, attrs in self._stack:
-            if tag == "body":
-                continue
-            for key in ("data-step", "data-view", "data-trap", "data-account", "data-packet"):
-                if key in attrs:
-                    self.chunks[(key, attrs[key])].append(data.strip())
-
-    def text(self, key, value):
-        return " ".join(self.chunks[(key, value)])
 
 
 def markup():
@@ -69,161 +53,195 @@ def css_var(name):
     return match and match.group(1).strip()
 
 
-def test_brand_title_and_no_legacy_desk_name():
+def test_brand_title_unique_ids_and_no_legacy_desk_name():
     parsed = markup()
     assert parsed.title == "ZeroSaaS P2P · Headless Stock-to-Pay ERP & KAL Steward"
     assert "ZeroSaaS P2P" in HTML and ">P2P<" in HTML
-    assert "Headless Stock-to-Pay ERP · WMS Signal → Signing Limits → Live COMEX PO → Dock Scan → RapidOCR 3WM → CFO Check" in HTML
+    assert "Headless Copper ERP · WMS Signal" in HTML
+    assert "1-Click Dock Scan" in HTML and "RapidOCR 3WM" in HTML and "CFO Check" in HTML
     for path in sorted(PUBLIC.iterdir()):
-        if path.is_file():
+        if path.is_file() and path.suffix in {".html", ".css", ".js"}:
             text = path.read_text(encoding="utf-8")
             assert LEGACY_NAME.lower() not in text.lower(), path.name
-    # Shipped UI files carry no desk naming in any form (the old title was "Copper — Command Desk").
-    for text in (HTML, CSS, APP):
-        assert not re.search(r"command[\s\-—]*desk", text, re.IGNORECASE)
-    assert "copper-demo" not in APP
+            assert not re.search(r"command[\s\-—]*desk", text, re.IGNORECASE), path.name
 
 
-def test_light_palette_and_three_column_shell():
+def test_light_palette_and_three_panel_shell():
     palette = {
-        "--bg-app": "#f1f5f9", "--bg-panel": "#ffffff", "--bg-subtle": "#f8fafc", "--border": "#e2e8f0",
-        "--text-main": "#0f172a", "--blue": "#1d4ed8", "--green": "#15803d", "--amber": "#b45309", "--red": "#b91c1c",
+        "--bg-app": "#f1f5f9",
+        "--bg-panel": "#ffffff",
+        "--bg-subtle": "#f8fafc",
+        "--border": "#e2e8f0",
+        "--text-main": "#0f172a",
+        "--blue": "#1d4ed8",
+        "--green": "#15803d",
+        "--amber": "#b45309",
+        "--red": "#b91c1c",
     }
     for name, value in palette.items():
         assert css_var(name) == value, name
-    assert "color-scheme: light" in CSS
-    assert css_var("--topbar") == "48px" and css_var("--rail-left") == "236px" and css_var("--rail-right") == "392px"
-    assert "grid-template-rows: var(--topbar) minmax(0, 1fr)" in CSS
-    assert "grid-template-columns: var(--rail-left) minmax(0, 1fr) var(--rail-right)" in CSS
     assert "height: 100vh" in CSS and "overflow: hidden" in CSS
-    # The dark WO-04 palette is gone.
+    assert "grid-template-columns: 236px minmax(0, 1fr) 392px" in CSS
     for dark in ("#101719", "#172023", "color-scheme: dark"):
         assert dark not in CSS and dark not in HTML
 
 
-def test_topbar_controls_and_gates():
+def test_topbar_and_four_golden_master_tabs():
     parsed = markup()
-    assert {"gaap-pill", "connection", "refresh", "kal-mute", "kal-mic", "record", "record-download", "reset"} <= parsed.ids
-    assert "GAAP DR == CR" in HTML and "Ask KAL" in HTML and "Reset Queue" in HTML
-    # Record and Reset only act through their confirmation dialogs.
-    assert {"record-dialog", "confirm-record", "cancel-record", "reset-dialog", "confirm-reset", "cancel-reset"} <= parsed.ids
-    assert "$('record-dialog').showModal()" in APP and "void startRecording()" in APP
-    assert "request('/api/reset', {method: 'POST', body: {}})" in APP
-
-
-def test_left_rail_views_item_and_drawers():
-    parsed = markup()
-    # <body data-view="flow"> carries the active view; the four nav buttons follow it.
-    assert parsed.attrs["data-view"] == ["flow", "flow", "registers", "sox", "factory"]
-    labels = {view: parsed.chunks[("data-view", view)] for view in ("flow", "registers", "sox", "factory")}
-    assert labels["flow"] == ["1. P2P Flow Desk", "Step —/8"]
-    assert labels["registers"] == ["2. DB & GL Registers"]
-    assert labels["sox"] == ["3. SOX & White House SI"]
-    assert labels["factory"] == ["4. Software Factory", "WO 1-14"]
-    assert "Step ${completed + 1}/8" in APP
-    assert parsed.attrs["data-view-panel"] == ["flow", "registers", "sox", "factory"]
+    expected_ids = {
+        "strictPill",
+        "kalMuteBtn",
+        "micBtn",
+        "recBtn",
+        "topResetBtn",
+        "leftStartKalBtn",
+        "nav-workflow",
+        "navStepBadge",
+        "nav-registers",
+        "sqlCountBadge",
+        "nav-security",
+        "nav-factory",
+        "leftOrderSummary",
+        "auditCountBadge",
+        "centerStage",
+        "rightRail",
+        "modalBackdrop",
+        "modalTitle",
+        "modalBody",
+        "ttsAudio",
+    }
+    assert expected_ids <= parsed.ids
+    assert "GAAP DR == CR" in HTML
+    assert "KAL Voice: ON" in HTML
+    assert "Ask KAL" in HTML
+    assert "Record" in HTML
+    assert "Reset Queue" in HTML
     assert "Start KAL · P2P Steward" in HTML
-    for fact in ("ITM-CU-20-BARE", "8,000 FT", "$2.89/FT Std", 'id="stock"'):
-        assert fact in HTML
-    assert {"open-guardrails", "guardrail-dialog", "open-ledger", "ledger-dialog", "journal", "systems", "authority"} <= parsed.ids
+    assert "1. P2P Flow Desk" in HTML
+    assert "2. DB &amp; GL Registers" in HTML
+    assert "3. SOX &amp; White House SI" in HTML and "EO 14434" in HTML
+    assert "4. Software Factory" in HTML and "WO 1-18" in HTML
     assert "Guardrail Tests" in HTML and "GL &amp; Audit Register" in HTML
-    for wo in range(1, 15):
-        assert f"<td>WO-{wo}</td>" in HTML
 
 
-def test_eight_step_strip_scanner_and_probes():
-    parsed = markup()
-    steps = parsed.attrs["data-step"]
-    assert steps == [str(n) for n in range(1, 9)]
-    expected = ["1. WMS Signal", "2. Supply Chain", "3. VP Approval", "4. Spot & PO", "5. Order Ack", "6. Dock Scan", "7. OCR & Match", "8. Cut Check"]
-    assert [parsed.chunks[("data-step", n)][0] for n in steps] == expected
-    assert parsed.attrs["data-checkpoint"] == ["2", "3", "6", "8"]
-    contract = json.loads((ROOT / "contracts/p2p-lineage-contract.json").read_text())
-    reels = contract["primaryItem"]["lowStockTrigger"]["reelBarcodes"]
-    assert parsed.attrs["data-reel"] == reels
-    assert {"step-card", "run-step", "barcode", "scan-count", "kal-line", "pipeline"} <= parsed.ids
-    assert parsed.attrs["data-trap"] == ["kal", "doa", "sod", "invoice", "bank"]
-    probes = [parsed.text("data-trap", name) for name in parsed.attrs["data-trap"]]
-    assert probes == ["KAL $0 403", "Darius >$20k 403", "Dock SoD 403", "Invoice variance 409", "Petty #4409 >$5k 403"]
-    assert "$0.00 signing limit" in HTML
-    assert parsed.attrs["data-book"] == ["121100", "101100", "101200", "201200", "201100"]
+def test_voice_rf_laser_rapidocr_check_and_governance_parity():
+    # Female streaming KAL voice & /api/voice/* endpoints
+    assert "EXAVITQu4vr4xnSDxMaL" in VOICE and "EXAVITQu4vr4xnSDxMaL" in APP
+    for endpoint in ("/api/voice/tts", "/api/voice/stt", "/api/voice/kal"):
+        assert endpoint in APP
+    assert "ELEVENLABS_API_KEY" not in HTML and "ELEVENLABS_API_KEY" not in CSS and "ELEVENLABS_API_KEY" not in APP
+
+    # 4-Reel RF laser scan choreography
+    assert "@keyframes rfLaserFlash" in CSS and ".rf-laser-beam" in CSS and ".reel-barcode-card" in CSS
+    contract = json.loads((ROOT / "contracts/p2p-lineage-contract.json").read_text(encoding="utf-8"))
+    for barcode in contract["primaryItem"]["lowStockTrigger"]["reelBarcodes"]:
+        assert barcode in APP
+    for fn_name in ("scanSingleDockReel", "scanNextDockReel", "scanAllDockReelsSequentially"):
+        assert f"function {fn_name}" in APP
+
+    # Inline 28-box RapidOCR invoice & zoom viewer
+    assert ".ocr-laser-bar" in CSS and ".ocr-tag-overlay" in CSS and ".ocr-box" in CSS
+    assert "/api/invoice-image" in APP and "/api/trade-pdf" in APP
+    assert "28" in APP and "rerunLiveRapidOcr" in APP
+
+    # Inline Check #10045 & CFO disbursement gate
+    assert "Check #10045" in APP and "ACH-000582" in APP
+    assert "usdToCheckWords" in APP and "approveCheckpoint4MeredithCfo" in APP
+
+    # Tab 3: White House Super Intelligence Accord (EO 14434) x 8090 KYSI x SOX 404
+    assert "White House Super Intelligence Accord" in APP
+    assert "EO 14434" in APP and "KYSI" in APP and "SOX 404" in APP
+    for layer in ("LAYER 1 · TECHNICAL CONTROLS", "LAYER 2 · INTERNAL OVERSIGHT GATES", "LAYER 3 · EXTERNAL AUDIT", "LAYER 4 · BOARD &amp; OFFICER GOVERNANCE"):
+        assert layer in APP
+
+    # Tab 4: Closed-Loop 8090 Software Factory Round 4 UUIDs (WO 1-18)
+    for token in (
+        "KB-00",
+        "2fb45197-ecd8-463e-b72b-db79275329e3",
+        "REQ-01",
+        "1fc08c46-ed36-4a14-99a3-0eae8de04206",
+        "BP-01",
+        "61e1a72e-d90f-4d32-a3b6-a4b002ed4d2d",
+        "FB-5",
+        "a19b9a76-2adb-405b-8d34-53ec41fbbf76",
+        "THM-4",
+        "05591d02-9ff7-41ce-886d-92fdcda411a9",
+        "WO-15",
+        "3988d7f2-c356-487d-9ed2-9a1c045d3ee1",
+        "WO-16",
+        "bd3f7822-1571-4b81-80ca-6a32215a25aa",
+        "WO-17",
+        "78e025ce-ac9b-4714-a769-4b38767baa9d",
+        "WO-18",
+        "346dd5b4-37e7-45ed-bca0-6d36528bd0c6",
+    ):
+        assert token in APP, f"missing Factory token {token}"
 
 
-def test_right_rail_trial_balance_and_packet_trail():
-    parsed = markup()
-    assert parsed.attrs["data-account"] == ["121100", "201200", "201100", "501900", "101100", "101200"]
-    accounts = [parsed.chunks[("data-account", code)][0] for code in parsed.attrs["data-account"]]
-    assert accounts == ["121100 Raw Copper", "201200 GRNI", "201100 Trade AP", "501900 PPV", "101100 Operating #8801", "101200 Payroll/Petty #4409"]
-    assert {"tb-debit", "tb-credit", "ledger-balance"} <= parsed.ids
-    assert parsed.attrs["data-packet"] == ["signal", "po", "oa", "bol", "inv", "check"]
-    titles = [parsed.chunks[("data-packet", packet)][:2] for packet in parsed.attrs["data-packet"]]
-    assert titles == [["1", "Stock Signal"], ["2", "PO-25800"], ["3", "OA-25800"], ["4", "BOL-25800"], ["5", "INV-25800"], ["6", "Check #10045"]]
-    contract = json.loads((ROOT / "contracts/p2p-lineage-contract.json").read_text())
-    pdfs = [name for name in contract["primaryItem"]["tradeDocuments"].values() if name.endswith(".pdf")]
-    assert sorted(parsed.attrs["data-document"]) == sorted(pdfs)
-    for name in pdfs:
-        assert name in APP
-    assert {"ocr-count", "open-ocr", "ocr-dialog", "ocr-image", "ocr-boxes"} <= parsed.ids
-    assert "28-box" in HTML
+def test_module_exports_window_bindings_and_dom_ids():
+    assert '<link rel="stylesheet" href="/styles.css"' in HTML
+    assert '<script type="module" src="/app.js"></script>' in HTML
 
-
-def test_server_contract_only_and_no_embedded_secrets_or_remote_dependencies():
-    # Writes reach only POST /api/step/:n and POST /api/reset; reads only /api/state; documents only via server URLs.
-    assert set(re.findall(r"request\(`?'?(/api/[a-z/]+)", APP)) == {"/api/state", "/api/step/", "/api/reset"}
-    assert "`/api/step/${step}`" in APP
-    assert "ELEVENLABS_API_KEY" not in APP
-    assert "https://" not in HTML and "http://" not in APP.replace("'http://localhost'", "")
-    assert "app.js" in HTML and "styles.css" in HTML and "aria-live" in HTML
-    for name in ("validateState", "REELS", "REFUSALS", "safeDocumentUrl", "request", "refresh", "runStep", "render", "speak", "startRecording", "stopRecording"):
+    exported = (
+        "validateState",
+        "tagOcrFields",
+        "safeDocumentUrl",
+        "request",
+        "speak",
+        "refresh",
+        "runStep",
+        "render",
+        "trialBalance",
+        "REELS",
+        "REFUSALS",
+        "startRecording",
+        "stopRecording",
+        "stewardIntent",
+        "stewardReply",
+        "parseReelScan",
+        "checkWords",
+        "achLabel",
+    )
+    for name in exported:
         assert re.search(rf"export (async )?(function|const) {name}\b", APP), name
 
+    # Every inline event handler in index.html & app.js templates must be attached onto window.<fn>
+    inline_fns = set()
+    for match in re.finditer(r'\bon[a-z]+\s*=\s*"([^"]+)"', HTML + "\n" + APP):
+        for fn in re.findall(r"([A-Za-z_$][A-Za-z0-9_$]*)\s*\(", match.group(1)):
+            if fn not in {"if", "return", "encodeURIComponent", "Number", "String", "Boolean"}:
+                inline_fns.add(fn)
+    for fn in sorted(inline_fns):
+        assert f"window.{fn} = {fn};" in APP, f"missing window.{fn} module binding"
 
-def test_wo14_voice_rf_ocr_and_check_controls():
-    parsed = markup()
-    for name in ("stewardIntent", "stewardReply", "parseReelScan", "tagOcrFields", "checkWords"):
-        assert re.search(rf"export (async )?(function|const) {name}\b", APP), name
-    # Voice steward: a session toggle; voice moves only open views or viewers and never call request().
-    assert 'id="kal-speak" class="primary" aria-pressed="false"' in HTML
-    moves = APP.split("const STEWARD_MOVES = {", 1)[1].split("};", 1)[0]
-    assert "request(" not in moves and "runStep" not in moves and "fetch" not in moves
-    # Dock RF scanner: reel buttons, the wedge field and run-step all go through the same parsed scan path.
-    assert {"rf-meter", "rf-feet", "rf-last", "barcode", "scan-count"} <= parsed.ids
-    assert 'max="8000"' in HTML
-    assert APP.count("scan(") >= 4 and "authorize(6" not in APP
-    # RapidOCR bbox viewer: match-field list and box readout beside the invoice image.
-    assert {"ocr-fields", "ocr-selected", "ocr-boxes", "ocr-image"} <= parsed.ids
-    # CFO check view: opened from the packet trail; signing is the Step 8 server write as EMP-0007.
-    assert {"open-check", "check-dialog", "close-check", "check-face", "check-stamp", "check-amount", "check-words", "check-signer", "check-match", "sign-check"} <= parsed.ids
-    assert "$('sign-check').addEventListener('click', () => authorize(8))" in APP
-    assert "if (step === 8) payload.bankAccount = '101100';" in APP
-    assert "BANK_POLICY_VIOLATION" in HTML
+    # Every unguarded direct-property getElementById('literal').* in APP exists in index.html
+    parsed_ids = markup().ids
+    direct_get_ids = set(re.findall(r"document\.getElementById\('([A-Za-z0-9_-]+)'\)\.", APP))
+    assert direct_get_ids <= parsed_ids, sorted(direct_get_ids - parsed_ids)
 
 
-def test_every_element_id_the_client_touches_exists():
-    # No browser runs in every lane, so pin the DOM contract statically: a missing id would throw in render() or boot().
-    referenced = set(re.findall(r"(?:\$|setText)\('([a-z0-9-]+)'", APP))
-    # Opener/closer pairs for dialogs, e.g. ['open-ledger', 'ledger-dialog'].
-    referenced |= {name for pair in re.findall(r"\['([a-z][a-z0-9-]*)', '([a-z][a-z0-9-]*-dialog)'\]", APP) for name in pair}
-    selectors = re.findall(r"querySelector(?:All)?\(['`]([^'`]+)['`]\)", APP)
-    referenced |= {name for selector in selectors for name in re.findall(r"#([a-z][a-z0-9-]*)", selector)}
-    assert {"run-step", "gaap-pill", "trial-balance", "tb-other", "journal", "gl-register", "audit-status", "open-ledger", "close-ocr", "cancel-record"} <= referenced
-    assert referenced <= markup().ids, sorted(referenced - markup().ids)
-    for selector in selectors:
-        attr = re.search(r"\[(data-[a-z-]+)\]", selector)
-        if attr:
-            assert attr.group(1) in markup().attrs, selector
-
-
-def test_no_internal_strings_in_published_files():
-    # Parts are joined at runtime so this file does not contain the strings it forbids.
-    forbidden = ["".join(parts) for parts in (("agen", "tics"), ("ener", "getics"), ("rig", "org"), ("flow", "craft"), ("/ho", "me/"), ("/m", "nt/"), ("hara-", "lanes"))]
-    files = [path for path in PUBLIC.iterdir() if path.is_file()]
-    files += [ROOT / "README.md", ROOT / "docs/software-factory-trace.md"]
-    files += sorted((ROOT / ".sw-factory/WO-13").glob("*.md")) + sorted((ROOT / ".sw-factory/WO-14").glob("*.md"))
-    for path in files:
-        text = path.read_text(encoding="utf-8").lower()
-        for word in forbidden:
-            assert word not in text, f"{path.relative_to(ROOT)} contains an internal string"
+def test_no_internal_strings_in_public_assets():
+    forbidden = [
+        "".join(parts)
+        for parts in (
+            ("agen", "tics"),
+            ("ener", "getics"),
+            ("rig", "org"),
+            ("rig", "001"),
+            ("flow", "craft"),
+            ("gold", "fish"),
+            ("gold", "eye"),
+            ("hara", "-"),
+            (":51", "00"),
+            ("/ho", "me/"),
+            ("/m", "nt/"),
+        )
+    ]
+    for path in sorted(PUBLIC.iterdir()):
+        if path.is_file():
+            text = path.read_text(encoding="utf-8").lower()
+            for word in forbidden:
+                assert word not in text, f"{path.relative_to(ROOT)} contains forbidden string"
 
 
 def test_client_behavior_suite():

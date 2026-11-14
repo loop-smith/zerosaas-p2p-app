@@ -1,238 +1,101 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#ffffff">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ZeroSaaS P2P · Headless Stock-to-Pay ERP &amp; KAL Steward</title>
-  <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="/styles.css">
-  <script type="module" src="/app.js"></script>
+  <link rel="stylesheet" href="/styles.css" />
+
 </head>
-<body data-view="flow">
-<div class="shell">
+<body>
+  <!-- CLEAN MINIMAL TOP HEADER -->
   <header class="topbar">
     <div class="brand">
-      <span class="brand-badge" aria-hidden="true">P2P</span>
-      <div class="brand-copy"><strong class="brand-title">ZeroSaaS P2P</strong><span class="brand-flow">Headless Stock-to-Pay ERP · WMS Signal → Signing Limits → Live COMEX PO → Dock Scan → RapidOCR 3WM → CFO Check</span></div>
+      <div class="brand-mark">P2P</div>
+      <span class="brand-title">ZeroSaaS P2P</span>
+      <span class="brand-sep">|</span>
+      <span class="brand-sub">Headless Copper ERP · WMS Signal ➔ Signing Limits ➔ Live COMEX PO ➔ 1-Click Dock Scan ➔ RapidOCR 3WM ➔ CFO Check</span>
     </div>
-    <div class="top-actions">
-      <span id="gaap-pill" class="pill" title="Server journal balance">GAAP DR == CR</span>
-      <span id="connection" class="connection"><i></i>CONNECTING</span>
-      <button id="refresh" class="ghost icon" aria-label="Refresh server state" title="Refresh server state">↻</button>
-      <span class="divider" aria-hidden="true"></span>
-      <button id="kal-mute" class="ghost" aria-pressed="false" title="Mute or unmute KAL voice">KAL Voice: On</button>
-      <button id="kal-mic" class="ghost" aria-label="Hold to ask KAL" title="Hold to talk; release to send">● Ask KAL</button>
-      <button id="record" class="ghost record"><span class="record-dot"></span><span id="record-label">Record</span></button>
-      <a id="record-download" class="ghost" hidden>Save WebM</a>
-      <button id="reset" class="ghost danger-text">Reset Queue</button>
+    <div class="top-controls">
+      <span class="pill pill-green" id="strictPill">GAAP DR == CR</span>
+      <button class="btn-top" id="kalMuteBtn" onclick="handleKalStopOrMute()" title="Stop or Mute KAL Voice (or press Esc)">
+        🔊 KAL Voice: ON
+      </button>
+      <button class="voice-btn" id="micBtn" onclick="toggleVoiceListen()" title="Push-to-Talk to KAL (ElevenLabs Scribe + Turbo v2.5)">
+        🎙️ Ask KAL
+      </button>
+      <button class="btn-top" id="recBtn" onclick="toggleDemoRecorder()" title="Record 60fps Video + Mic + KAL Voice">
+        🎥 Record
+      </button>
+      <button class="btn-top" id="topResetBtn" style="border-color:#94a3b8;font-weight:800;" onclick="resetDemo()" title="1-click self-service reset: wipes &amp; re-seeds all 3 SQLite DBs + hledger journal back to Step 1 (0 FT stock-out)">↺ Reset Queue</button>
     </div>
   </header>
 
-  <main class="workbench">
-    <aside class="rail rail-left" aria-label="Navigation">
-      <button id="kal-speak" class="primary" aria-pressed="false" title="Start a KAL steward session: a briefing now, then narration of each server-confirmed step">Start KAL · P2P Steward</button>
-      <nav class="views" aria-label="Workbench views">
-        <button data-view="flow" aria-pressed="true"><span>1. P2P Flow Desk</span><em id="nav-step" class="tag">Step —/8</em></button>
-        <button data-view="registers" aria-pressed="false"><span>2. DB &amp; GL Registers</span></button>
-        <button data-view="sox" aria-pressed="false"><span>3. SOX &amp; White House SI</span></button>
-        <button data-view="factory" aria-pressed="false"><span>4. Software Factory</span><em class="tag">WO 1-14</em></button>
-      </nav>
-      <section class="item-box" aria-labelledby="item-title">
-        <h2 id="item-title" class="label">WMS Stocked Item</h2>
-        <strong class="sku">ITM-CU-20-BARE</strong>
-        <p class="muted">2/0 AWG bare stranded copper · ASTM B8</p>
-        <dl class="facts">
-          <div><dt>Replenish</dt><dd>8,000 FT</dd></div>
-          <div><dt>Standard</dt><dd>$2.89/FT Std</dd></div>
-          <div><dt>Live stock</dt><dd><span id="stock">—</span> FT</dd></div>
-          <div><dt>Reels</dt><dd>4 × 2,000 FT</dd></div>
-        </dl>
-      </section>
-      <div class="drawers">
-        <button id="open-guardrails" class="ghost block">Guardrail Tests <span>↗</span></button>
-        <button id="open-ledger" class="ghost block">GL &amp; Audit Register <span>↗</span></button>
+  <div class="shell">
+    <!-- PANEL 1: LEFT NAVIGATION RAIL -->
+    <aside class="left-rail">
+      <div class="left-group">
+        <button class="btn-kal-start" id="leftStartKalBtn" onclick="startKalSteward()">
+          ▶ Start KAL · P2P Steward
+        </button>
+
+        <div class="rail-label" style="margin-top:4px;">Navigation</div>
+        <button class="nav-btn active" id="nav-workflow" onclick="setView('workflow')">
+          <span>1. P2P Flow Desk</span>
+          <span class="nav-tag" id="navStepBadge">Step 1/8</span>
+        </button>
+        <button class="nav-btn" id="nav-registers" onclick="setView('registers')">
+          <span>2. DB &amp; GL Registers</span>
+          <span class="nav-tag" id="sqlCountBadge">277 tbls</span>
+        </button>
+        <button class="nav-btn" id="nav-security" onclick="setView('security')">
+          <span>3. SOX &amp; White House SI</span>
+          <span class="nav-tag">EO 14434</span>
+        </button>
+        <button class="nav-btn" id="nav-factory" onclick="setView('factory')">
+          <span>4. Software Factory</span>
+          <span class="nav-tag">WO 1-18</span>
+        </button>
       </div>
-      <p class="rail-note">KAL reads and nudges. Humans authorize.</p>
+
+      <div class="left-group">
+        <div class="rail-label">WMS Stocked Item (1 Item)</div>
+        <div class="order-summary-box" id="leftOrderSummary"></div>
+      </div>
+
+      <div class="left-group">
+        <div class="rail-label">Registers &amp; Guardrails</div>
+        <button class="rail-drawer-btn" onclick="openModal('guardrails')">
+          <span>🧪 Guardrail Tests</span>
+          <span class="badge b-hold">6 Tests</span>
+        </button>
+        <button class="rail-drawer-btn" onclick="openModal('journal')">
+          <span>📜 GL &amp; Audit Register</span>
+          <span class="badge b-ready" id="auditCountBadge">1 Hop</span>
+        </button>
+      </div>
     </aside>
 
-    <section class="stage" aria-label="Center stage">
-      <div class="views-area">
-        <section class="view" data-view-panel="flow" aria-labelledby="flow-title">
-          <div class="view-head"><h1 id="flow-title">P2P Flow Desk</h1><span class="muted">PO-25800 · Encore Wire Corporation</span><span id="progress-label" class="tag">— / 8 COMPLETE</span></div>
-          <ol id="pipeline" class="flow-strip">
-            <li data-step="1"><b>1. WMS Signal</b><span class="step-state">WAITING</span></li>
-            <li data-step="2" data-checkpoint="2"><b>2. Supply Chain</b><span class="step-state">HUMAN GATE</span></li>
-            <li data-step="3" data-checkpoint="3"><b>3. VP Approval</b><span class="step-state">HUMAN GATE</span></li>
-            <li data-step="4"><b>4. Spot &amp; PO</b><span class="step-state">WAITING</span></li>
-            <li data-step="5"><b>5. Order Ack</b><span class="step-state">WAITING</span></li>
-            <li data-step="6" data-checkpoint="6"><b>6. Dock Scan</b><span class="step-state">HUMAN GATE</span></li>
-            <li data-step="7"><b>7. OCR &amp; Match</b><span class="step-state">WAITING</span></li>
-            <li data-step="8" data-checkpoint="8"><b>8. Cut Check</b><span class="step-state">HUMAN GATE</span></li>
-          </ol>
-          <div class="flow-grid">
-            <article id="step-card" class="card step-card" aria-live="polite">
-              <div class="card-top"><span id="card-step" class="label">Step — / 8</span><span id="card-gate" class="tag">—</span></div>
-              <h2 id="card-title">Connect to the P2P server</h2>
-              <p id="card-actor" class="actor">—</p>
-              <p id="card-detail" class="muted">The server owns every approval, stock count and posting.</p>
-              <div id="scanner" class="scanner" aria-label="GS1 reel scanner">
-                <div class="reels">
-                  <button data-reel="ENC-GS1-884192-R01" disabled>R01</button>
-                  <button data-reel="ENC-GS1-884192-R02" disabled>R02</button>
-                  <button data-reel="ENC-GS1-884192-R03" disabled>R03</button>
-                  <button data-reel="ENC-GS1-884192-R04" disabled>R04</button>
-                </div>
-                <label class="sr-only" for="barcode">GS1 reel barcode</label>
-                <input id="barcode" autocomplete="off" spellcheck="false" placeholder="Scan ENC-GS1-884192-R01" disabled>
-                <span id="scan-count" class="tag">0 / 4 reels</span>
-                <div class="rf-readout">
-                  <meter id="rf-meter" min="0" max="8000" value="0" aria-label="Feet received at the dock"></meter>
-                  <span id="rf-feet">0 / 8,000 FT · 0 lbs Cu</span>
-                  <span id="rf-last" aria-live="polite">RF idle · dock opens at Step 6</span>
-                </div>
-              </div>
-              <button id="run-step" class="primary" data-run="1" disabled>Authorize step</button>
-            </article>
-            <article class="card probes" aria-labelledby="probe-title">
-              <h2 id="probe-title" class="label">Probe refusal triggers · server enforced</h2>
-              <div class="probe-grid">
-                <button data-trap="kal">KAL $0 <span>403</span></button>
-                <button data-trap="doa">Darius &gt;$20k <span>403</span></button>
-                <button data-trap="sod">Dock SoD <span>403</span></button>
-                <button data-trap="invoice">Invoice variance <span>409</span></button>
-                <button data-trap="bank">Petty #4409 &gt;$5k <span>403</span></button>
-              </div>
-            </article>
-          </div>
-          <div class="kal-banner"><span class="kal-badge" aria-hidden="true">KAL</span><div><strong>KAL · P2P Steward · $0.00 signing limit · 0 write credentials</strong><p id="kal-line">I brief and nudge. Your officers hold the pen.</p></div></div>
-          <div class="book">
-            <div class="book-col"><h2 class="label">Balance Sheet</h2>
-              <dl>
-                <div><dt>121100 Raw Copper Inventory</dt><dd data-book="121100">—</dd></div>
-                <div><dt>101100 Operating #8801</dt><dd data-book="101100">—</dd></div>
-                <div><dt>101200 Payroll/Petty #4409</dt><dd data-book="101200">—</dd></div>
-                <div><dt>201200 GRNI</dt><dd data-book="201200">—</dd></div>
-                <div><dt>201100 Trade AP</dt><dd data-book="201100">—</dd></div>
-              </dl>
-            </div>
-            <div class="book-col"><h2 class="label">P&amp;L · PO-25800</h2>
-              <dl>
-                <div><dt>Standard cost</dt><dd id="std-total">—</dd></div>
-                <div><dt>Actual commitment</dt><dd id="actual-total">—</dd></div>
-                <div><dt>501900 PPV</dt><dd id="ppv">—</dd></div>
-                <div><dt>Settlement</dt><dd id="settlement">Awaiting CFO approval</dd></div>
-              </dl>
-              <p id="spot-detail" class="muted small">Awaiting COMEX price lock</p>
-              <p id="ppv-detail" class="muted small">501900 · awaiting actual cost</p>
-            </div>
-          </div>
-        </section>
+    <!-- PANEL 2: ONE-SCREEN CENTER STAGE -->
+    <main class="center-stage" id="centerStage"></main>
 
-        <section class="view" data-view-panel="registers" aria-labelledby="registers-title" hidden>
-          <div class="view-head"><h1 id="registers-title">DB &amp; GL Registers</h1><span id="system-count" class="tag">— / 4 LOCAL</span></div>
-          <div class="two-col">
-            <article class="card"><h2 class="label">Headless systems of record</h2><div id="systems" class="systems"></div></article>
-            <article class="card"><h2 class="label">Signing limits · HRM</h2><table id="authority" class="grid-table"><caption class="sr-only">Human signing limits and KAL zero authority</caption><thead><tr><th scope="col">Officer / role</th><th scope="col">Limit</th></tr></thead><tbody></tbody></table></article>
-          </div>
-          <article class="card"><h2 class="label">GL account register · server journal</h2><table class="grid-table"><caption class="sr-only">Balances by GL account from the server journal</caption><thead><tr><th scope="col">Account</th><th scope="col">Debit</th><th scope="col">Credit</th></tr></thead><tbody id="gl-register"></tbody></table></article>
-        </section>
-
-        <section class="view" data-view-panel="sox" aria-labelledby="sox-title" hidden>
-          <div class="view-head"><h1 id="sox-title">SOX 404 &amp; Governance Lenses</h1><span class="muted">Every refusal is a server response; this view only reports it.</span></div>
-          <div id="lenses" class="lenses">
-            <article class="card lens" data-lens="kal"><h2>AI steward zero authority</h2><p>KAL holds a $0.00 limit and no DB, GL or bank write credentials.</p><code>403 AI_STEWARD_ZERO_AUTHORITY</code><span class="lens-state tag">Not probed</span></article>
-            <article class="card lens" data-lens="doa"><h2>Delegation of authority</h2><p>Darius ($20k) must escalate the $23,120 need to VP Devon ($100k).</p><code>403 DOA_LIMIT_EXCEEDED</code><span class="lens-state tag">Not probed</span></article>
-            <article class="card lens" data-lens="sod"><h2>Segregation of duties</h2><p>The buyer who placed PO-25800 cannot receive it at the dock.</p><code>403 SOX_SOD_VIOLATION</code><span class="lens-state tag">Not probed</span></article>
-            <article class="card lens" data-lens="invoice"><h2>Three-way match</h2><p>PO = BOL = INV at $0.00 variance, read by RapidOCR from the invoice pixels.</p><code>409 MATCH_VARIANCE_HOLD</code><span class="lens-state tag">Not probed</span></article>
-            <article class="card lens" data-lens="bank"><h2>Disbursement bank policy</h2><p>Vendor checks leave Operating #8801 only; Payroll/Petty #4409 is refused.</p><code>403 BANK_POLICY_VIOLATION</code><span class="lens-state tag">Not probed</span></article>
-            <article class="card lens" data-lens="ledger"><h2>Balanced, append-only GL</h2><p>Every posting is double-entry; DR must equal CR before the server accepts it.</p><code>DR == CR</code><span id="lens-ledger" class="lens-state tag">Awaiting ledger</span></article>
-          </div>
-        </section>
-
-        <section class="view" data-view-panel="factory" aria-labelledby="factory-title" hidden>
-          <div class="view-head"><h1 id="factory-title">8090 Software Factory · WO-1..WO-14</h1><span class="muted">Refinery → Foundry → Planner → Validator</span></div>
-          <p class="loop">FB-3 → THM-2 → REQ-P2P-012..020 + BP-01 ADR-006 → SF WO-13 (white workbench) → SF WO-14 (interactive parity)</p>
-          <table class="grid-table lineage"><caption class="sr-only">Software Factory work order lineage</caption>
-            <thead><tr><th scope="col">SF WO</th><th scope="col">Planner work order</th><th scope="col">Commit</th><th scope="col">Qualify</th></tr></thead>
-            <tbody>
-              <tr><td>WO-1</td><td>Validate brownfield contracts</td><td>3769d7e6</td><td class="ok">PASS</td></tr>
-              <tr><td>WO-2</td><td>Stocked-copper inventory seeds</td><td>3769d7e6</td><td class="ok">PASS</td></tr>
-              <tr><td>WO-3</td><td>KAL zero-authority steward</td><td>11e6a606</td><td class="ok">PASS</td></tr>
-              <tr><td>WO-4</td><td>Darius / Devon DOA gates</td><td>11e6a606</td><td class="ok">PASS</td></tr>
-              <tr><td>WO-5</td><td>Dock GS1 intake and SoD</td><td>11e6a606</td><td class="ok">PASS</td></tr>
-              <tr><td>WO-6</td><td>28-box three-way reconciliation</td><td>2ba3ae52 · cae71057</td><td class="ok">PASS</td></tr>
-              <tr><td>WO-7</td><td>COMEX HG spot pricing</td><td>11e6a606</td><td class="ok">PASS</td></tr>
-              <tr><td>WO-8</td><td>501900 PPV ledger</td><td>11e6a606</td><td class="ok">PASS</td></tr>
-              <tr><td>WO-9</td><td>Disbursement #8801 vs #4409</td><td>11e6a606</td><td class="ok">PASS</td></tr>
-              <tr><td>WO-10</td><td>Audit recovery and red-team replay</td><td>fca1c225 · cae71057</td><td class="ok">PASS</td></tr>
-              <tr><td>WO-11</td><td>PO-25800 end to end</td><td>cae71057</td><td class="ok">PASS</td></tr>
-              <tr><td>WO-12</td><td>Route contract and replay hardening</td><td>9094b2bb · fca1c225 · cae71057</td><td class="ok">PASS</td></tr>
-              <tr><td>WO-13</td><td>White Enterprise Workbench &amp; brand</td><td>c5026200</td><td class="warn">Qualify pending</td></tr>
-              <tr class="current"><td>WO-14</td><td>Interactive parity: voice, RF scan, OCR boxes, check</td><td>this build</td><td class="warn">In review</td></tr>
-            </tbody>
-          </table>
-        </section>
-      </div>
-      <div id="status" class="status" role="status" aria-live="polite">Connecting to the local P2P server…</div>
-    </section>
-
-    <aside class="rail rail-right" aria-label="Evidence">
-      <article class="card tb">
-        <div class="card-top"><h2 class="label">GAAP Trial Balance · live</h2><span id="ledger-balance" class="tag">AWAITING LEDGER</span></div>
-        <table id="trial-balance" class="grid-table"><caption class="sr-only">Six-account trial balance from the server journal, US dollars</caption>
-          <thead><tr><th scope="col">Account</th><th scope="col">Debit</th><th scope="col">Credit</th></tr></thead>
-          <tbody>
-            <tr data-account="121100"><th scope="row">121100 Raw Copper</th><td>—</td><td>—</td></tr>
-            <tr data-account="201200"><th scope="row">201200 GRNI</th><td>—</td><td>—</td></tr>
-            <tr data-account="201100"><th scope="row">201100 Trade AP</th><td>—</td><td>—</td></tr>
-            <tr data-account="501900"><th scope="row">501900 PPV</th><td>—</td><td>—</td></tr>
-            <tr data-account="101100"><th scope="row">101100 Operating #8801</th><td>—</td><td>—</td></tr>
-            <tr data-account="101200"><th scope="row">101200 Payroll/Petty #4409</th><td>—</td><td>—</td></tr>
-            <tr id="tb-other" hidden><th scope="row">Other accounts</th><td>—</td><td>—</td></tr>
-          </tbody>
-          <tfoot><tr><th scope="row">DR == CR</th><td id="tb-debit">—</td><td id="tb-credit">—</td></tr></tfoot>
-        </table>
-      </article>
-      <article class="card packets">
-        <div class="card-top"><h2 class="label">Live packet trail · 6 documents</h2></div>
-        <ol id="documents" class="packet-trail">
-          <li data-packet="signal"><span class="packet-no">1</span><div><strong>Stock Signal</strong><small>InvenTree · REQ-25800</small></div><span class="packet-state">PENDING</span></li>
-          <li data-packet="po"><span class="packet-no">2</span><div><strong>PO-25800</strong><small><a data-document="PO-25800.pdf" target="_blank" rel="noopener noreferrer" aria-disabled="true">PO-25800.pdf</a></small></div><span class="packet-state">PENDING</span></li>
-          <li data-packet="oa"><span class="packet-no">3</span><div><strong>OA-25800</strong><small><a data-document="ENC-OA-2026-884192.pdf" target="_blank" rel="noopener noreferrer" aria-disabled="true">ENC-OA-2026-884192.pdf</a></small></div><span class="packet-state">PENDING</span></li>
-          <li data-packet="bol"><span class="packet-no">4</span><div><strong>BOL-25800</strong><small><a data-document="BOL-25800.pdf" target="_blank" rel="noopener noreferrer" aria-disabled="true">BOL-25800.pdf</a> · <a data-document="PS-25800.pdf" target="_blank" rel="noopener noreferrer" aria-disabled="true">PS-25800.pdf</a></small></div><span class="packet-state">PENDING</span></li>
-          <li data-packet="inv"><span class="packet-no">5</span><div><strong>INV-25800</strong><small><a data-document="INV-25800.pdf" target="_blank" rel="noopener noreferrer" aria-disabled="true">INV-25800.pdf</a></small></div><span class="packet-state">PENDING</span></li>
-          <li data-packet="check"><span class="packet-no">6</span><div><strong>Check #10045</strong><small>Operating #8801 · ACH-000582</small></div><button id="open-check" class="ghost mini" aria-label="Open the CFO check view">View ↗</button><span class="packet-state">PENDING</span></li>
-        </ol>
-      </article>
-      <article class="card ocr-stage">
-        <div class="ocr-thumb" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
-        <div><h2 class="label">RapidOCR invoice stage</h2><p id="ocr-count">Awaiting pixel OCR evidence</p><button id="open-ocr" class="ghost" disabled>Open 28-box viewer ↗</button></div>
-      </article>
-    </aside>
-  </main>
-</div>
-
-<dialog id="ocr-dialog" class="modal wide" aria-labelledby="ocr-title"><div class="dialog-head"><div><span class="label">INV-25800 · pixel evidence</span><h2 id="ocr-title">Invoice field map</h2></div><button id="close-ocr" class="ghost" aria-label="Close invoice field map">✕</button></div><p id="ocr-summary"></p><div class="ocr-layout"><div class="invoice-viewport"><div id="invoice-image"><img id="ocr-image" alt="Rendered vendor invoice with OCR bounding boxes"><div id="ocr-boxes"></div></div></div><aside class="ocr-side" aria-labelledby="ocr-fields-title"><h3 id="ocr-fields-title" class="label">Three-way match fields</h3><ol id="ocr-fields" class="ocr-fields"></ol><p id="ocr-selected" class="ocr-selected" aria-live="polite">Select a box or a match field to read its text, confidence and pixel position.</p></aside></div><p class="muted small">Boxes use server pixel coordinates. Green boxes are the fields the server matched against PO-25800 and BOL-25800.</p></dialog>
-<dialog id="check-dialog" class="modal check-modal" aria-labelledby="check-title"><div class="dialog-head"><div><span class="label">CFO check view · human gate 4</span><h2 id="check-title">Check #10045 · PO-25800 settlement</h2></div><button id="close-check" class="ghost" aria-label="Close the check view">✕</button></div>
-  <div id="check-face" class="check-face" data-stamp="draft">
-    <div class="check-line"><strong>ZeroSaaS P2P · Accounts Payable</strong><span id="check-no" class="mono">Check #10045</span></div>
-    <div class="check-line pay"><span class="muted small">Pay to the order of</span><strong id="check-payee">Encore Wire Corporation</strong><span id="check-amount" class="check-amount">—</span></div>
-    <p id="check-words" class="check-words">Amount set by the PO-25800 COMEX price lock</p>
-    <div class="check-line small"><span>Memo · PO-25800 · INV-25800 · BOL-25800</span><span id="check-bank">Drawn on Operating #8801 · 101100</span></div>
-    <div class="check-line small"><span id="check-ach" class="mono">ACH trace issued on payment</span><span class="signature">Authorized signature · <b id="check-signer">Awaiting Meredith Hale · CFO</b></span></div>
-    <span id="check-stamp" class="check-stamp">DRAFT</span>
+    <!-- PANEL 3: RIGHT LEDGER & DOCUMENT / INVOICE VIEWER -->
+    <aside class="right-rail" id="rightRail"></aside>
   </div>
-  <dl class="check-facts">
-    <div><dt>Three-way match</dt><dd id="check-match">Pending the Step 7 three-way match</dd></div>
-    <div><dt>Funding policy</dt><dd>Operating #8801 only · Payroll/Petty #4409 is refused above $5,000 (403 BANK_POLICY_VIOLATION)</dd></div>
-    <div><dt>Journal</dt><dd id="check-journal">Posts on signature · DR 201100 Trade AP / CR 101100 Operating #8801</dd></div>
-  </dl>
-  <div class="dialog-actions"><button id="sign-check" class="primary" disabled>Sign as CFO Meredith Hale · Step 8</button></div>
-</dialog>
-<dialog id="reset-dialog" class="modal" aria-labelledby="reset-title"><h2 id="reset-title">Reset the P2P queue?</h2><p>This asks the server to reset stock, documents and the journal for a clean run. Stop any recording first.</p><div class="dialog-actions"><button id="cancel-reset" class="ghost">Keep this run</button><button id="confirm-reset" class="danger">Reset Queue</button></div></dialog>
-<dialog id="record-dialog" class="modal" aria-labelledby="record-title"><h2 id="record-title">Record this screen?</h2><p>Your browser will ask which screen to share and may ask for the microphone. The WebM stays on this computer; nothing is uploaded.</p><div class="dialog-actions"><button id="cancel-record" class="ghost">Cancel</button><button id="confirm-record" class="primary">I consent · start recording</button></div></dialog>
-<dialog id="guardrail-dialog" class="modal drawer" aria-labelledby="guardrail-title"><div class="dialog-head"><h2 id="guardrail-title">Guardrail Tests</h2><button id="close-guardrails" class="ghost" aria-label="Close guardrail tests">✕</button></div><p class="muted">Probe results seen by this browser session. The server decides every outcome.</p><table class="grid-table"><thead><tr><th scope="col">Probe</th><th scope="col">Expected</th><th scope="col">Observed</th></tr></thead><tbody id="guardrail-log"></tbody></table></dialog>
-<dialog id="ledger-dialog" class="modal drawer" aria-labelledby="ledger-title"><div class="dialog-head"><h2 id="ledger-title">GL &amp; Audit Register</h2><button id="close-ledger" class="ghost" aria-label="Close GL and audit register">✕</button></div><p id="audit-status" class="muted">Audit chain: awaiting server</p><table class="grid-table"><caption class="sr-only">Server journal postings in US dollars</caption><thead><tr><th scope="col">Posting / account</th><th scope="col">Debit</th><th scope="col">Credit</th></tr></thead><tbody id="journal"></tbody><tfoot><tr><th scope="row">Total USD</th><td id="debit-total">—</td><td id="credit-total">—</td></tr></tfoot></table></dialog>
+
+  <!-- REGISTER & DOCUMENT ZOOM MODAL -->
+  <div class="modal-backdrop" id="modalBackdrop" onclick="if(event.target===this)closeModal()">
+    <div class="modal-box">
+      <div class="modal-head">
+        <div style="font-size:13.5px;font-weight:800;color:var(--text-main);" id="modalTitle">Register</div>
+        <button class="btn-top" onclick="closeModal()">✕ Close (Esc)</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
+
+  <audio id="ttsAudio" style="display:none"></audio>
+
+  <script type="module" src="/app.js"></script>
 </body>
 </html>
