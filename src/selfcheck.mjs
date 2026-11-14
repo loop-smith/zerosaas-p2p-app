@@ -12,7 +12,8 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'p2p-selfcheck-'));
 const seedsDir = path.join(tmp, 'seeds');
 fs.mkdirSync(seedsDir);
 fs.writeFileSync(path.join(seedsDir, 'coa_seed.journal'), '; partial seeds: only the COA is present\n');
-const { server, url } = await startServer({ port: 0, sandboxDir: path.join(tmp, 'sor-sandbox'), seedsDir, offline: true, fresh: true });
+// ocrUrl: null keeps this walk on the PO-derived invoice even when OCR_URL is set; tests/test-copper-e2e.mjs drives the sidecar.
+const { server, url } = await startServer({ port: 0, sandboxDir: path.join(tmp, 'sor-sandbox'), seedsDir, offline: true, fresh: true, ocrUrl: null });
 
 let passed = 0;
 const check = async (label, fn) => {

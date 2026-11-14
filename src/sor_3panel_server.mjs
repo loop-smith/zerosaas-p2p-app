@@ -12,7 +12,7 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.
 const PLACEHOLDER = `<!doctype html><meta charset="utf-8"><title>ZeroSaaS P2P · PO-25800</title>
 <body style="font:14px system-ui;margin:2rem"><h1>ZeroSaaS P2P kernel online</h1>
 <p>Command Desk UI (public/index.html) lands in WO-04. JSON API:</p>
-<ul><li>GET /api/health · /api/state · /api/journal · /api/audit · /api/comex</li>
+<ul><li>GET /api/health · /api/state · /api/journal · /api/audit · /api/comex · /docs/&lt;trade PDF or OCR page&gt;</li>
 <li>POST /api/step/1..8 {"actor":"EMP-xxxx", ...} · POST /api/reset</li></ul></body>`;
 
 function send(res, status, body, type = 'application/json') {
@@ -77,6 +77,9 @@ async function route(kernel, req, res, publicDir) {
       '/api/comex': () => kernel.quote(),
     };
     if (reads[pathname]) return send(res, 200, await reads[pathname]());
+    // Trade PDFs and the OCR page image written by the sidecar into the kernel sandbox.
+    const doc = pathname.match(/^\/docs(\/[^/]+)$/);
+    if (doc) return serveStatic(res, kernel.docsDir, doc[1]);
     if (!pathname.startsWith('/api/')) return serveStatic(res, publicDir, pathname);
   }
   if (kernelWrite) {
@@ -98,7 +101,7 @@ export function createAppServer(kernel, { publicDir = path.join(ROOT, 'public') 
   });
 }
 
-/** Boots kernel + server. Options: port, host, sandboxDir, seedsDir, offline, fresh, hledgerBin, fetchImpl, publicDir. */
+/** Boots kernel + server. Options: port, host, sandboxDir, seedsDir, offline, fresh, hledgerBin, fetchImpl, publicDir, ocrUrl (env OCR_URL). */
 export async function startServer({ port = Number(process.env.PORT || 3590), host = '127.0.0.1', publicDir, ...kernelOpts } = {}) {
   const kernel = openKernel({ fresh: process.env.SOR_KEEP_SANDBOX !== '1', ...kernelOpts });
   const server = createAppServer(kernel, { publicDir });
@@ -118,6 +121,6 @@ export async function startServer({ port = Number(process.env.PORT || 3590), hos
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const { server, kernel, url } = await startServer();
-  console.log(`[sor_3panel_server] ${url} · sandbox ${kernel.dir} · sources ${JSON.stringify(kernel.sources)} · hledger ${kernel.hledgerBin ?? 'absent'}`);
+  console.log(`[sor_3panel_server] ${url} · sandbox ${kernel.dir} · sources ${JSON.stringify(kernel.sources)} · hledger ${kernel.hledgerBin ?? 'absent'} · ocr ${kernel.ocrUrl ?? 'off (PO-derived invoice)'}`);
   for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => server.close(() => process.exit(0)));
 }

@@ -1,5 +1,6 @@
-// WO-05 tracers via src/selfcheck.mjs, plus WO-06 red-team regressions.
-// Reuses startServer / the live kernel. No mock of the unit under test.
+// WO-05 tracers via src/selfcheck.mjs, plus WO-06 red-team regressions on the integrated stack:
+// src/ kernel + HTTP server (ephemeral port, :3590 by default), sidecar/ RapidOCR (ephemeral port, :3591 by
+// default) writing into the kernel sandbox, public/ desk validator, seeds/ copied. No mock of the unit under test.
 // Sandbox is a temp directory; committed seeds/ are only copied.
 //
 // Locked refusal codes (do not rename):
@@ -10,19 +11,23 @@
 //   415 UNSUPPORTED_MEDIA_TYPE
 //   422 INVALID_QUANTITY | UNKNOWN_REEL | NO_BARCODE | UNKNOWN_BANK_ACCOUNT
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { DatabaseSync } from 'node:sqlite';
 import { startServer } from '../src/sor_3panel_server.mjs';
 import { CONTRACT } from '../src/lineage_core.mjs';
+import { validateState } from '../public/app.js';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const AI = CONTRACT.provenance.aiSteward;
 const REELS = CONTRACT.primaryItem.lowStockTrigger.reelBarcodes;
 const CHECK = CONTRACT.primaryItem.settlement.checkNumber;
+const TRADE = CONTRACT.primaryItem.tradeDocuments;
+const PDFS = Object.values(TRADE).filter((v) => v.endsWith('.pdf')).sort();
+const sha = (bytes) => crypto.createHash('sha256').update(bytes).digest('hex');
 const KAL = AI.id;
 const [DARIUS, NANCY, DEVON, MARCUS, MEREDITH] = ['EMP-0021', 'EMP-0002', 'EMP-0005', 'EMP-0003', 'EMP-0007'];
 const SQL = "EMP-0007'; DROP TABLE stock_stockitem;--";
@@ -34,9 +39,38 @@ if (child.status !== 0) {
   process.exit(child.status ?? 1);
 }
 
+/** Real RapidOCR sidecar on a free loopback port, writing into the kernel sandbox docs dir. */
+const startSidecar = (docsDir) => new Promise((resolve, reject) => {
+  const proc = spawn(process.env.PYTHON ?? 'python3', ['sidecar/invoice_ocr_engine.py', '--docs-dir', docsDir, '--port', '0', 'serve'], {
+    cwd: ROOT, stdio: ['ignore', 'pipe', 'inherit'],
+  });
+  const fail = (e) => { clearTimeout(timer); proc.kill(); reject(e); };
+  const timer = setTimeout(() => fail(new Error('OCR sidecar not ready within 60s')), 60000);
+  let out = '';
+  proc.stdout.setEncoding('utf8');
+  proc.stdout.on('data', (chunk) => {
+    out += chunk;
+    if (!out.includes('\n')) return;
+    try {
+      const ready = JSON.parse(out.slice(0, out.indexOf('\n')));
+      if (ready.ok !== true) throw new Error(`OCR sidecar refused to start: ${out}`);
+      clearTimeout(timer);
+      resolve({ proc, ...ready });
+    } catch (e) {
+      fail(e);
+    }
+  });
+  proc.once('exit', (code) => fail(new Error(`OCR sidecar exited ${code} before ready: ${out}`)));
+});
+
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'p2p-redteam-'));
+const sandboxDir = path.join(tmp, 'sor-sandbox');
+const sidecar = await startSidecar(path.join(sandboxDir, 'docs'));
 const { server, url, kernel } = await startServer({
-  port: 0, host: '127.0.0.1', sandboxDir: path.join(tmp, 'sor-sandbox'), offline: true, fresh: true,
+  port: 0, host: '127.0.0.1', sandboxDir, offline: true, fresh: true, ocrUrl: sidecar.url,
+}).catch((e) => {
+  sidecar.proc.kill();
+  throw e;
 });
 
 let passed = 0;
@@ -150,6 +184,23 @@ try {
     assert.equal((await journal()).entries.length, 0, 'no GL impact before the dock scan');
   });
 
+  await must('step 5 receives the five sidecar trade PDFs into the sandbox; /docs serves them hash-for-hash', async () => {
+    const docs = (await state()).documents;
+    assert.deepEqual(docs.map((d) => d.name).sort(), PDFS);
+    for (const doc of docs) {
+      const bytes = fs.readFileSync(path.join(kernel.docsDir, doc.name));
+      assert.equal(doc.sha256, sha(bytes));
+      assert.equal(doc.url, `/docs/${doc.name}`);
+      const served = await fetch(url + doc.url);
+      assert.equal(served.status, 200);
+      assert.equal(served.headers.get('content-type'), 'application/pdf');
+      assert.ok(Buffer.from(await served.arrayBuffer()).equals(bytes));
+    }
+    for (const escape of ['/docs/..%2Fp2p_kernel.sqlite3', '/docs/%2E%2E%2Fwms_seed.sqlite3','/docs/../package.json', '/docs/missing.pdf']) {
+      assert.notEqual((await call('GET', escape)).status, 200, escape);
+    }
+  });
+
   await must('negative-quantity reel scans are refused and never stored', async () => {
     const attacks = [-2000, -1, 0, -0, '-2000', 8000, null, 1999.5, Number.NaN];
     for (const quantityFt of attacks) {
@@ -228,13 +279,51 @@ try {
     assert.equal((await journal()).balanced, true);
   });
 
-  await must('invoice tamper holds the match; a clean match clears GRNI only', async () => {
+  await must('invoice tamper holds the match: claimed fields, then a forged invoice PDF read by real RapidOCR', async () => {
     const held = await step(7, { invoice: { totalUsd: 0.01, unitPriceUsd: 0.01, quantityFt: -8000, sql: DROP } });
     assert.equal(held.status, 409);
     assert.equal(held.body.code, 'MATCH_VARIANCE_HOLD');
     assert.equal(held.body.bookImpactUsd, 0);
     assert.equal((await journal()).entries.length, 1);
-    assert.equal((await step(7, { actor: 'EMP-0001' })).status, 200);
+    // Same-length byte edit of the uncompressed content stream: a valid PDF that overbills at the $2.89 standard.
+    const invoicePath = path.join(kernel.docsDir, TRADE.vendorInvoice);
+    const clean = fs.readFileSync(invoicePath);
+    const forged = Buffer.from(clean.toString('latin1')
+      .replace('(UNIT PRICE USD: 2.70)', '(UNIT PRICE USD: 2.89)')
+      .replace('(TOTAL DUE USD: 21600.00)', '(TOTAL DUE USD: 23120.00)'), 'latin1');
+    assert.equal(forged.length, clean.length);
+    assert.notEqual(sha(forged), sha(clean));
+    fs.writeFileSync(invoicePath, forged);
+    const trap = await refusal(step(7, { actor: 'EMP-0001' }), 409, 'MATCH_VARIANCE_HOLD');
+    assert.deepEqual(trap.body.variances.map((v) => v.field), ['invoiceSha256', 'unitPrice', 'totalDue']);
+    assert.match(trap.body.message, /ocr:rapidocr-onnxruntime/);
+    assert.equal((await state()).ocr, null);
+    assert.equal((await journal()).entries.length, 1);
+    fs.writeFileSync(invoicePath, clean);
+    const matched = await step(7, { actor: 'EMP-0001' });
+    assert.equal(matched.status, 200, JSON.stringify(matched.body));
+    assert.equal(matched.body.detail.source, 'ocr:rapidocr-onnxruntime');
+    assert.equal(matched.body.detail.invoiceSha256, sha(clean));
+    assert.ok(matched.body.detail.ocrBoxes >= 28, `${matched.body.detail.ocrBoxes} OCR boxes`);
+    assert.equal(matched.body.journal.legs.reduce((a, l) => a + Math.round(l.amountUsd * 100), 0), 0);
+    assert.equal((await journal()).entries.length, 2);
+  });
+
+  await must('command desk validator accepts the integrated snapshot; OCR boxes sit on the served invoice image', async () => {
+    const snap = validateState(await state());
+    const invoiceDoc = snap.documents.find((d) => d.name === TRADE.vendorInvoice);
+    assert.equal(snap.ocr.sha256, invoiceDoc.sha256);
+    assert.equal(snap.match.invoiceSha256, invoiceDoc.sha256);
+    assert.ok(snap.ocr.boxes.length >= 28);
+    const text = snap.ocr.boxes.map((b) => b.text).join('\n');
+    for (const needle of ['21600.00', '2.70', '8000', CHECK.replace(/\D/g, '')])assert.ok(text.includes(needle), needle);
+    assert.equal(snap.ocr.imageUrl, `/docs/${TRADE.vendorInvoice.replace(/\.pdf$/, '.png')}`);
+    const image = await fetch(url + snap.ocr.imageUrl);
+    assert.equal(image.status, 200);
+    assert.equal(image.headers.get('content-type'), 'image/png');
+    const png = Buffer.from(await image.arrayBuffer());
+    assert.equal(png.subarray(1, 4).toString(), 'PNG');
+    assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [snap.ocr.width, snap.ocr.height]);
   });
 
   await must('Check #10045 pays once; replay, amount tamper, and a concurrent double post do not pay again', async () => {
@@ -287,14 +376,21 @@ try {
     assert.equal(health.status, 200);
     assert.equal(health.body.ok, true);
     assert.equal(health.body.audit.valid, true);
+    assert.equal(health.body.ocrUrl, sidecar.url);
+    const ocrHealth = await fetch(`${sidecar.url}/health`);
+    assert.equal(ocrHealth.status, 200);
+    assert.equal((await ocrHealth.json()).engine, 'rapidocr-onnxruntime');
+    assert.equal(sidecar.docsDir, kernel.docsDir);
   });
 } finally {
+  sidecar.proc.kill();
   await new Promise((resolve) => server.close(resolve));
   kernel.close();
   fs.rmSync(tmp, { recursive: true, force: true });
 }
 
+const EXPECTED = 12;
 console.log(`${passed} red-team checks passed`);
-if (passed !== 10) {
-  throw new Error(`expected 10 red-team checks, ran ${passed}`);
+if (passed !== EXPECTED) {
+  throw new Error(`expected ${EXPECTED} red-team checks, ran ${passed}`);
 }

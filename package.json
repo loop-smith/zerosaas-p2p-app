@@ -10,6 +10,8 @@
   },
   "scripts": {
     "start": "node src/sor_3panel_server.mjs",
-    "test": "node --input-type=module -e \"import fs from 'node:fs'; if (fs.existsSync('tests/test-copper-e2e.mjs')) { await import('./tests/test-copper-e2e.mjs'); } else { console.log('Stage smoke check OK: contract=' + fs.existsSync('contracts/p2p-lineage-contract.json')); }\""
+    "start:ocr": "OCR_URL=http://127.0.0.1:3591 node src/sor_3panel_server.mjs",
+    "sidecar": "python3 sidecar/invoice_ocr_engine.py serve",
+    "test": "node tests/test-copper-e2e.mjs"
   }
 }

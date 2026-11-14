@@ -84,4 +84,83 @@ One ESM file. It boots the real server twice (self-check process, then `startSer
 
 ---
 
+## Round 2
+
+HARA-06.T19 (cc2) integration seat. No nested review subagent. The fence now includes `src/`, `sidecar/`, `public/`, `seeds/`, `tests/` and `package.json`, so the Round 1 gaps were closed in code:
+
+- RapidOCR was outside the suite.
+- `package.json` was a presence check.
+
+One assertion was wrong on the first red run and was corrected. `/docs/%2E%2E` returned 200 because the URL parser normalizes it to `/`, the command desk. That is not a leak. The probe became `/docs/%2E%2E%2Fwms_seed.sqlite3`, which the server's decode-and-contain check refuses.
+
+### Requirements Alignment
+
+1. TRACER-DOA-KAL, TRACER-PPV-501900, TRACER-BANK-4409 — unchanged in `src/selfcheck.mjs`; 26/26.
+2. TRACER-OCR-TRAP — now against real RapidOCR.
+   - A same-length forgery of `INV-25800.pdf` ($2.89 / $23,120.00) is read by the model and held 409 `MATCH_VARIANCE_HOLD` with `variances` `invoiceSha256`, `unitPrice`, `totalDue`. No journal entry is posted.
+   - The restored invoice matches 200 with 35 boxes (≥28) and posts the balanced GRNI → Trade AP entry.
+3. `package.json` `test` is `node tests/test-copper-e2e.mjs`.
+
+**Blocking:** none.
+
+**Advisory:**
+
+- Step 7 holds the kernel write queue during OCR (about 5–10 s). Reads are not queued.
+- With live COMEX, an invoice priced at the contract rate is held whenever spot moves the PO rate. That is correct three-way-match behaviour, but it will stop a live demo at Step 7.
+
+### Architecture And Conventions
+
+The sidecar stays a proposal engine. It renders, OCRs and returns fields. The kernel decides everything else:
+
+- It re-hashes every PDF on its own disk at Step 5, which binds the sidecar's `--docs-dir` to `<sandbox>/docs`.
+- It binds the OCR hash to the Step 5 hash.
+- It matches amounts, posts, and audit-chains every refusal.
+
+`ocrUrl` is opt-in (`OCR_URL`). Without it the kernel behaves exactly as before.
+
+**Blocking:** none.
+
+**Advisory:** none.
+
+### Tests And Build
+
+**Commands run:**
+
+- `npm test` through a `python3` subprocess → exit 0. Self-check 26/26. Integrated red-team 12/12. About 17 s.
+- `python3 -m pytest sidecar seeds public/test_command_desk.py -q -p no:cacheprovider` → 66 passed. This includes real RapidOCR, the PNG output and the `serve --port 0` ready line.
+- `node --test public/command-desk.test.mjs` → 10/10.
+- `python3 -m pytest public/test_browser_command_desk.py` → 1 skipped (Playwright not installed).
+- Default-port smoke: `npm run sidecar` (:3591) + `npm run start:ocr` (:3590). Steps 1-8 all returned 200. Step 7 source was `ocr:rapidocr-onnxruntime` with 35 boxes. `/docs/INV-25800.pdf` and `.png` returned 200. Journal balanced; payment PAID. `sor-sandbox/` was removed afterwards.
+- `python3 -m hara.blocks.configurator.manifest check --repo .` → exit 1, `No module named 'hara'`.
+- `python3 -m pytest hara/blocks -q -p no:cacheprovider` → exit 4, `hara/blocks` not found.
+
+**Blocking:** none inside this work order. The HARA commands cannot pass until that package exists. They are not claimed green.
+
+### User-Facing Verification
+
+**Evidence:**
+
+- The desk's own `validateState` accepts the live integrated snapshot (`documents`, `ocr`).
+- The OCR box space equals the served PNG's IHDR width/height.
+- All five trade PDFs are served byte-identical to the sandbox files.
+
+**Skipped:** browser console capture (no Playwright in this lane).
+
+### Security, Privacy, And Data Safety
+
+- `/docs/<file>` reuses `serveStatic`'s decode-and-contain check. Probes `..%2Fp2p_kernel.sqlite3`, `%2E%2E%2Fwms_seed.sqlite3` and `../package.json` all fail to return 200.
+- The kernel only accepts sidecar document names matching `^[A-Za-z0-9][A-Za-z0-9.-]{0,80}$` with the expected extension, and only the five contract PDFs.
+- A malformed sidecar reply is 503 `OCR_UNAVAILABLE`, not a 500.
+
+**Blocking:** none.
+
+### Round 2 Verdict
+
+- Total blocking: 0
+- Total advisory: 2
+- Files reviewed: `src/lineage_core.mjs`, `src/sor_3panel_server.mjs`, `src/selfcheck.mjs`, `sidecar/invoice_ocr_engine.py`, `sidecar/test_invoice_ocr_engine.py`, `sidecar/README.md`, `tests/test-copper-e2e.mjs`, `package.json`, `public/app.js` (read only)
+- **Verdict:** APPROVED
+
+---
+
 <!-- Subsequent rounds: copy the structure above and increment the round number. -->

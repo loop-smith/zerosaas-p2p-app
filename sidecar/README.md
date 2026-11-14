@@ -10,7 +10,7 @@ python3 sidecar/invoice_ocr_engine.py ocr
 python3 sidecar/invoice_ocr_engine.py serve
 ```
 
-Options precede the command. `--docs-dir PATH` changes the default `sor-sandbox/docs`. `--port PORT` overrides `OCR_PORT`, which defaults to 3591. Startup in normal mode loads RapidOCR once; initialization or inference errors never enable synthetic output. `--fast-smoke` explicitly selects deterministic boxes for generated PDFs, still rendering through PDFium/Pillow. Its `engine` label is `deterministic-smoke`; confidence 1.0 denotes exact generated layout, not model confidence. Smoke refuses invoice bytes that differ from the canonical generated PDF. Normal mode reports actual model boxes and confidence.
+Options precede the command. `--docs-dir PATH` changes the default `sor-sandbox/docs`. `--port PORT` overrides `OCR_PORT`, which defaults to 3591; `--port 0` binds a free port. Once the model is loaded and the socket is bound, `serve` prints one JSON ready line, `{"ok":true,"url":"http://127.0.0.1:PORT","docsDir":"..."}`. Startup in normal mode loads RapidOCR once; initialization or inference errors never enable synthetic output. `--fast-smoke` explicitly selects deterministic boxes for generated PDFs, still rendering through PDFium/Pillow. Its `engine` label is `deterministic-smoke`; confidence 1.0 denotes exact generated layout, not model confidence. Smoke refuses invoice bytes that differ from the canonical generated PDF. Normal mode reports actual model boxes and confidence.
 
 ```sh
 python3 sidecar/invoice_ocr_engine.py --docs-dir /tmp/p2p-docs --fast-smoke generate
@@ -26,16 +26,25 @@ All POST routes accept a JSON object with one Content-Length and a maximum body 
 | --- | --- | --- |
 | GET /health | none | readiness and engine mode |
 | POST /generate | `{}` | five PDF basenames and SHA-256 hashes, locked amount fields |
-| POST /ocr | `{}` | invoice hash, rendered width/height, boxes and extracted amount fields |
+| POST /ocr | `{}` | invoice hash, rendered width/height, boxes, extracted amount fields, and `image` (the rendered page, `INV-25800.png`, written beside the PDF) |
 | POST /match | `{"quantityFt":8000,"unitPriceUsd":"2.70","totalUsd":"21600.00"}` | exact contract comparison and proposed 201200 debit / 201100 credit |
 | POST /payment-check | `{"empId":"EMP-0007","accountCode":"101100","accountNumber":"8801","amountUsd":"21600.00"}` | validated payment proposal and Check #10045 / ACH-000582 references |
 
 Each OCR box has `text`, `confidence`, a one-based `page`, and `box: [[x,y],...]` with four pixel corners measured from the rendered page's top left. Normal OCR parses amount fields from recognized text, allowing the model's omitted spaces in labels. It refuses unreadable or duplicate fields, numeric suffixes, and invoices with additional pages so unexamined charges cannot be omitted. The generated invoice currently has 35 text rows. Explicit smoke mode returns 35 layout boxes.
 
-`/match` compares the supplied invoice fields with the immutable contract's ordered quantity, spot rate and total using Decimal. Any discrepancy, including the $2.89 standard rate or a $500 overbill, returns HTTP 409 `MATCH_VARIANCE_HOLD`. It is a validation proposal: the missing application server must supply trusted PO/receipt evidence, bind OCR hashes to the invoice and receipt, and perform the actual three-way match and journal transfer. This endpoint alone does not prove physical receipt or approve an invoice for payment.
+`/match` compares the supplied invoice fields with the immutable contract's ordered quantity, spot rate and total using Decimal. Any discrepancy, including the $2.89 standard rate or a $500 overbill, returns HTTP 409 `MATCH_VARIANCE_HOLD`. It is a validation proposal: the application server (see Integration below) must supply trusted PO/receipt evidence, bind OCR hashes to the invoice and receipt, and perform the actual three-way match and journal transfer. This endpoint alone does not prove physical receipt or approve an invoice for payment.
 
 `/payment-check` checks the claimed CFO seat EMP-0007, $500,000 ceiling, exact invoice amount, and required Operating Checking 101100/#8801. Other accounts, including Payroll 101200/#4409, return HTTP 403 `BANK_POLICY_VIOLATION`. KAL EMP-AI-KAL returns HTTP 403 `AI_STEWARD_ZERO_AUTHORITY`; other employee IDs or amounts above the CFO ceiling return HTTP 403 `CFO_AUTHORITY_REQUIRED`. This local policy check does not authenticate the human identity. The application must authenticate the CFO, enforce segregation of duties, confirm a matched unpaid voucher and prevent duplicate settlement before posting.
 
-Both policy endpoints return `posted: false`. This sidecar never changes journals, WMS stock, AP balances or bank balances and never marks documents PAID. The application server is absent from this checkout and `src/` is outside this seat's fence; those integration steps require its owning seat.
+Both policy endpoints return `posted: false`. This sidecar never changes journals, WMS stock, AP balances or bank balances and never marks documents PAID.
+
+## Integration with the application server (:3590)
+
+Run `npm run sidecar` and `npm run start:ocr` from the repository root. The second command is `npm start` with `OCR_URL=http://127.0.0.1:3591`. With the default paths, the sidecar writes into `sor-sandbox/docs`, which is the kernel sandbox's `docs/` directory. The server serves those files at `/docs/<name>`.
+
+- Step 5 (vendor acknowledgement) calls `POST /generate`. The kernel re-hashes each PDF from its own `docs/` directory and refuses with 409 `DOCUMENT_INTEGRITY_HOLD` if any hash differs or a file is missing (for example, when `--docs-dir` points elsewhere).
+- Step 7 (three-way match) checks any claimed invoice fields first. It then calls `POST /ocr` on the invoice on disk. The OCR hash must equal the Step 5 hash, and the OCR quantity, rate and total must match the PO and the dock receipt. Otherwise Step 7 returns 409 `MATCH_VARIANCE_HOLD` with `variances` (for example, `invoiceSha256`, `unitPrice`, `totalDue`). On success, the snapshot carries `ocr` (pixel boxes as `{x, y, width, height, text}` plus `imageUrl`) and `documents` for the command desk.
+- The sidecar does not decide anything here: the kernel matches, posts the GRNI -> Trade AP entry, and pays. An unreachable sidecar or a malformed reply returns 503 `OCR_UNAVAILABLE` with `$0.00` book impact.
+- Without `OCR_URL`, the kernel uses the PO-derived invoice (`src/selfcheck.mjs` pins this with `ocrUrl: null`). `tests/test-copper-e2e.mjs` boots the real RapidOCR sidecar on a free port.
 
 Other refusals: 409 `DOCUMENT_INTEGRITY_HOLD` for missing, unrenderable or unrecognized smoke invoices; 400 `INVALID_REQUEST`; 404 `NOT_FOUND`; 413 `REQUEST_TOO_LARGE`; 503 `OCR_UNAVAILABLE`. Failed CLI operations emit a JSON refusal and exit nonzero. OCR/model and amount parsing failures are hard failures, not automatic retries or fallback triggers.

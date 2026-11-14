@@ -14,7 +14,12 @@
 ## Requirements
 
 - Foundry Requirement REQ-01 (`c2bd88dc-6cf0-41d2-8a20-6eb60e9b3dbc`). Body not readable here (no Software Factory MCP). Acceptance text is the Concrete Acceptance Criteria in `implementation-plan.md`.
-- Delivered file: `tests/test-copper-e2e.mjs`. `npm test` imports it. The run is 26 self-check assertions plus 10 red-team checks.
+- Delivered file: `tests/test-copper-e2e.mjs`. `npm test` runs `node tests/test-copper-e2e.mjs`. The run is 26 self-check assertions plus 12 integrated red-team/OCR checks.
+- HARA-06.T19 integration:
+  - `src/` (:3590) gains the opt-in `ocrUrl` / `OCR_URL`, `/docs/<file>`, and `documents` + `ocr` in the snapshot.
+  - `sidecar/` (:3591) writes the OCR page PNG and prints a `serve` ready line.
+  - `public/app.js` `validateState` runs on the live snapshot.
+  - `seeds/` are copied into the temp sandbox.
 
 
 ## Blueprints

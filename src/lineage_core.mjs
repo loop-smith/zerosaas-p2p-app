@@ -158,6 +158,8 @@ function provisionSandbox(seedsDir, dir) {
 }
 
 const KERNEL_DB = 'p2p_kernel.sqlite3';
+const OCR_TIMEOUT_MS = 60000;
+const SAFE_DOC = /^[A-Za-z0-9][A-Za-z0-9.-]{0,80}$/;
 
 /** Wipes only a directory that is absent, empty, or already a kernel sandbox (holds p2p_kernel.sqlite3). */
 function safeRemove(abs) {
@@ -262,10 +264,11 @@ async function comexSpotBuy(k, d) {
   return { detail: { ...d.po, stdUnitCents, stdCostLocked: true }, sor: () => { d.po.wms = k.writePurchaseOrder(d.po); } };
 }
 
-function vendorAcknowledgement(k, d) {
+async function vendorAcknowledgement(k, d) {
   const oa = { number: DOCS.orderAcknowledgementNumber, document: DOCS.orderAcknowledgement, po: d.po.id, vendor: d.po.vendor, quantityFt: d.po.quantityFt, unitCents: d.po.unitCents, totalCents: d.po.totalCents };
   d.oa = { ...oa, sha256: sha256(JSON.stringify(oa)) };
-  return { detail: { ...d.oa, glImpactCents: 0 }, sor: () => { d.oa.wms = k.updatePurchaseOrder(d.po, { supplier_reference: oa.number }); } };
+  if (k.ocrUrl) d.documents = await k.receiveDocuments();
+  return { detail: { ...d.oa, glImpactCents: 0, documents: d.documents ?? [] }, sor: () => { d.oa.wms = k.updatePurchaseOrder(d.po, { supplier_reference: oa.number }); } };
 }
 
 function dockScan(k, d, body, actor) {
@@ -303,24 +306,44 @@ function dockScan(k, d, body, actor) {
   return out;
 }
 
-function threeWayMatch(k, d, body) {
-  if (body.invoice != null && (typeof body.invoice !== 'object' || Array.isArray(body.invoice))) throw new Refusal(422, 'INVALID_INVOICE', 'invoice must be an object');
-  const inv = { poNumber: d.po.id, quantityFt: d.po.quantityFt, unitPriceUsd: d.po.unitCents / 100, totalUsd: d.po.totalCents / 100, source: 'po-derived', ...(body.invoice ?? {}) };
+function invoiceVariances(d, inv) {
   for (const f of ['quantityFt', 'unitPriceUsd', 'totalUsd']) {
     if (typeof inv[f] !== 'number' || !Number.isFinite(inv[f])) throw new Refusal(422, 'INVALID_INVOICE', `invoice.${f} must be a finite number`);
   }
   const receivedFt = d.scans.reduce((a, s) => a + s.ft, 0);
   const unitCents = cents(inv.unitPriceUsd);
   const totalCents = cents(inv.totalUsd);
-  const variances = [
+  return [
     inv.poNumber !== d.po.id && { field: 'poNumber', ordered: d.po.id, invoiced: inv.poNumber },
     (inv.quantityFt !== d.po.quantityFt || inv.quantityFt !== receivedFt) && { field: 'quantityFt', ordered: d.po.quantityFt, received: receivedFt, invoiced: inv.quantityFt },
     unitCents !== d.po.unitCents && { field: 'unitPrice', orderedCents: d.po.unitCents, invoicedCents: unitCents },
     totalCents !== Math.round(unitCents * inv.quantityFt) && { field: 'pennyMath', expectedCents: Math.round(unitCents * inv.quantityFt), invoicedCents: totalCents },
     totalCents !== d.po.totalCents && { field: 'totalDue', orderedCents: d.po.totalCents, invoicedCents: totalCents },
   ].filter(Boolean);
-  if (variances.length) throw new Refusal(409, 'MATCH_VARIANCE_HOLD', `3-way match variance on ${variances.map((v) => v.field).join(', ')}`, { variances });
-  d.match = { invoice: docId(DOCS.vendorInvoice), po: d.po.id, bol: d.receipt.bol, quantityFt: inv.quantityFt, totalCents, varianceCents: 0, source: inv.source };
+}
+
+const holdOn = (variances, source) => {
+  if (variances.length) throw new Refusal(409, 'MATCH_VARIANCE_HOLD', `3-way match variance on ${variances.map((v) => v.field).join(', ')} (${source})`, { variances });
+};
+
+/** Claimed invoice fields must match first; with the OCR sidecar, the pixels on the received invoice must match too. */
+async function threeWayMatch(k, d, body) {
+  if (body.invoice != null && (typeof body.invoice !== 'object' || Array.isArray(body.invoice))) throw new Refusal(422, 'INVALID_INVOICE', 'invoice must be an object');
+  const claimed = { poNumber: d.po.id, quantityFt: d.po.quantityFt, unitPriceUsd: d.po.unitCents / 100, totalUsd: d.po.totalCents / 100, source: 'po-derived', ...(body.invoice ?? {}) };
+  holdOn(invoiceVariances(d, claimed), claimed.source);
+  let inv = claimed;
+  if (k.ocrUrl) {
+    const read = await k.readInvoice();
+    const received = d.documents?.find((doc) => doc.name === DOCS.vendorInvoice)?.sha256 ?? null;
+    inv = { ...read.fields, poNumber: d.po.id, source: `ocr:${read.engine}`, sha256: read.sha256 };
+    holdOn([
+      read.sha256 !== received && { field: 'invoiceSha256', received, invoiced: read.sha256 },
+      ...invoiceVariances(d, inv),
+    ].filter(Boolean), inv.source);
+    d.ocr = read.ocr;
+  }
+  const totalCents = cents(inv.totalUsd);
+  d.match = { invoice: docId(DOCS.vendorInvoice), po: d.po.id, bol: d.receipt.bol, quantityFt: inv.quantityFt, totalCents, varianceCents: 0, source: inv.source, ...(inv.sha256 && { invoiceSha256: inv.sha256, ocrBoxes: d.ocr.boxes.length }) };
   return {
     detail: d.match,
     memo: `${d.po.id} 3-way match ${d.po.id}==${d.receipt.bol}==${d.match.invoice} GRNI -> Trade AP`,
@@ -381,9 +404,12 @@ const claimedActor = (identities) => (isStewardIdentity(identities) ? AI.id
 // ---------- kernel ----------
 
 export class P2PKernel {
-  constructor({ sandboxDir, seedsDir, offline, fetchImpl, hledgerBin, fresh = true, now } = {}) {
+  constructor({ sandboxDir, seedsDir, offline, fetchImpl, hledgerBin, fresh = true, now, ocrUrl } = {}) {
     this.dir = path.resolve(sandboxDir ?? process.env.SOR_SANDBOX_DIR ?? path.join(ROOT, 'sor-sandbox'));
     this.seedsDir = path.resolve(seedsDir ?? process.env.SOR_SEEDS_DIR ?? path.join(ROOT, 'seeds'));
+    this.docsDir = path.join(this.dir, 'docs');
+    // OCR sidecar (sidecar/invoice_ocr_engine.py serve, :3591). Must write into this.docsDir. null = PO-derived invoice.
+    this.ocrUrl = (ocrUrl === undefined ? process.env.OCR_URL : ocrUrl) || null;
     this.offline = offline ?? process.env.COMEX_OFFLINE === '1';
     this.fetchImpl = fetchImpl ?? globalThis.fetch;
     this.hledgerBin = findHledger(hledgerBin);
@@ -485,6 +511,61 @@ export class P2PKernel {
   writeStock(scan, po) {
     const r = adaptiveInsert(this.wms, 'stock_stockitem', { part_id: ITEM.wmsPartId, location_id: ITEM.wmsLocationId, quantity: scan.ft, batch: scan.barcode, purchase_order_id: po.wms?.orderId });
     return r.ok ? 'ok' : r.error;
+  }
+
+  // ----- OCR sidecar (proposals only; the kernel hashes, matches and posts) -----
+  async #sidecar(route) {
+    let res;
+    let reply;
+    try {
+      res = await fetch(new URL(route, this.ocrUrl), { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}', signal: AbortSignal.timeout(OCR_TIMEOUT_MS) });
+      reply = await res.json();
+    } catch (e) {
+      throw new Refusal(503, 'OCR_UNAVAILABLE', `OCR sidecar ${this.ocrUrl} ${route} failed: ${e?.message ?? e}`);
+    }
+    if (!res.ok) throw new Refusal(res.status === 409 ? 409 : 503, res.status === 409 ? 'DOCUMENT_INTEGRITY_HOLD' : 'OCR_UNAVAILABLE', `OCR sidecar ${route}: ${reply?.error ?? res.status} ${reply?.message ?? ''}`.trim());
+    return reply;
+  }
+
+  #docFile(name, ext) {
+    if (typeof name !== 'string' || !SAFE_DOC.test(name) || !name.endsWith(ext)) throw new Refusal(503, 'OCR_UNAVAILABLE', `OCR sidecar returned an unsafe document name ${JSON.stringify(name)}`);
+    return path.join(this.docsDir, name);
+  }
+
+  /** Sidecar renders the five trade PDFs; the kernel re-hashes each one on its own disk before recording it. */
+  async receiveDocuments() {
+    const { documents } = await this.#sidecar('/generate');
+    const names = new Set(Object.values(DOCS).filter((v) => v.endsWith('.pdf')));
+    if (!Array.isArray(documents) || documents.length !== names.size || documents.some((doc) => !names.has(doc?.name))) {
+      throw new Refusal(503, 'OCR_UNAVAILABLE', `OCR sidecar must return the contract documents ${[...names].join(', ')}`);
+    }
+    return documents.map(({ name, sha256: reported }) => {
+      let digest = null;
+      try { digest = sha256(fs.readFileSync(this.#docFile(name, '.pdf'))); } catch { /* reported below */ }
+      if (digest !== reported) throw new Refusal(409, 'DOCUMENT_INTEGRITY_HOLD', `${name} under ${this.docsDir} does not match the sidecar hash; start the sidecar with --docs-dir ${this.docsDir}`);
+      return { name, sha256: digest, url: `/docs/${name}` };
+    });
+  }
+
+  /** OCR of the invoice on disk: amount fields, its hash, and pixel boxes as {x, y, width, height} for the desk overlay. */
+  async readInvoice() {
+    const r = await this.#sidecar('/ocr');
+    this.#docFile(r?.image, '.png');
+    const { width, height } = r;
+    const point = (p) => Array.isArray(p) && p.length === 2 && p.every(Number.isFinite);
+    if (!(width > 0 && height > 0 && /^[0-9a-f]{64}$/.test(r.sha256) && r.fields && Array.isArray(r.boxes)
+      && r.boxes.every((b) => typeof b?.text === 'string' && Array.isArray(b.box) && b.box.length === 4 && b.box.every(point)))) {
+      throw new Refusal(503, 'OCR_UNAVAILABLE', 'OCR sidecar reply is malformed');
+    }
+    const clamp = (v, max) => Math.min(Math.max(v, 0), max);
+    const boxes = r.boxes.map(({ box, text, confidence }) => {
+      const [xs, ys] = [box.map((p) => p[0]), box.map((p) => p[1])];
+      const x = clamp(Math.floor(Math.min(...xs)), width);
+      const y = clamp(Math.floor(Math.min(...ys)), height);
+      return { text, confidence, x, y, width: clamp(Math.ceil(Math.max(...xs)), width) - x, height: clamp(Math.ceil(Math.max(...ys)), height) - y };
+    }).filter((b) => b.width > 0 && b.height > 0);
+    const fields = { quantityFt: Number(r.fields.quantityFt), unitPriceUsd: Number(r.fields.unitPriceUsd), totalUsd: Number(r.fields.totalUsd) };
+    return { engine: r.engine, sha256: r.sha256, fields, ocr: { engine: r.engine, document: DOCS.vendorInvoice, sha256: r.sha256, imageUrl: `/docs/${r.image}`, width, height, boxes } };
   }
 
   // ----- guardrails -----
@@ -667,7 +748,7 @@ export class P2PKernel {
   }
 
   health() {
-    return { ok: true, service: '8090-p2p-app sor_3panel_server', schema: CONTRACT.schema, sandbox: this.dir, sources: this.sources, hledger: Boolean(this.hledgerBin), offlineComex: this.offline, audit: this.verifyChain() };
+    return { ok: true, service: '8090-p2p-app sor_3panel_server', schema: CONTRACT.schema, sandbox: this.dir, sources: this.sources, hledger: Boolean(this.hledgerBin), offlineComex: this.offline, ocrUrl: this.ocrUrl, audit: this.verifyChain() };
   }
 
   journalReport() { return usdView({ ...this.verifyJournal({ hledger: true }), ledger: fs.readFileSync(this.ledgerPath, 'utf8') }); }
@@ -685,6 +766,7 @@ export class P2PKernel {
       },
       steps: STEPS.slice(1).map((spec, i) => ({ n: i + 1, name: spec.name, seats: spec.seats, ...s.steps[i + 1] })),
       req: s.req, po: s.po, oa: s.oa, scans: s.scans, receipt: s.receipt, match: s.match, payment: s.payment,
+      documents: s.documents ?? [], ocr: s.ocr ?? null,
       journal: this.verifyJournal(),
       audit: this.verifyChain(),
     });

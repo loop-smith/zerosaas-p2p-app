@@ -46,6 +46,11 @@ def test_five_trade_pdfs_and_deterministic_pixel_boxes(engine):
         assert 0 <= points[0][1] < points[2][1] <= result["height"]
         assert box["page"] == 1 and box["text"]
     assert result["fields"] == invoice()
+    from PIL import Image
+    assert result["image"] == "INV-25800.png"
+    with Image.open(engine.docs_dir / result["image"]) as page:
+        assert (page.format, page.size) == ("PNG", (result["width"], result["height"]))
+    assert not list(engine.docs_dir.glob("*.tmp"))
 
 
 def test_generation_is_reproducible_and_new_instance_can_read(engine):
@@ -183,6 +188,25 @@ def test_cli_smoke_uses_requested_temporary_root(tmp_path):
     extracted = subprocess.run(command + ["ocr"], capture_output=True, text=True, timeout=20)
     assert extracted.returncode == 0, extracted.stderr
     assert len(json.loads(extracted.stdout)["boxes"]) >= 28
+
+
+def test_cli_serve_prints_ready_line_with_bound_port(tmp_path):
+    script = Path(__file__).with_name("invoice_ocr_engine.py")
+    command = [sys.executable, str(script), "--docs-dir", str(tmp_path / "docs"), "--fast-smoke", "--port", "0", "serve"]
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, text=True)
+    try:
+        ready = json.loads(process.stdout.readline())
+        assert ready["ok"] is True and ready["docsDir"] == str((tmp_path / "docs").resolve())
+        host, port = ready["url"].removeprefix("http://").split(":")
+        assert host == "127.0.0.1" and int(port) > 0
+        conn = http.client.HTTPConnection(host, int(port), timeout=10)
+        conn.request("GET", "/health")
+        assert conn.getresponse().status == 200
+        conn.close()
+    finally:
+        process.terminate()
+        process.wait(timeout=10)
+        process.stdout.close()
 
 
 def test_real_rapidocr_extracts_rendered_invoice_and_reuses_model(tmp_path):

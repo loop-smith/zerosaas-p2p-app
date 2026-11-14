@@ -156,6 +156,14 @@ class InvoiceOCREngine:
                 raise Refusal(409, "DOCUMENT_INTEGRITY_HOLD", "Invoice PDF cannot be rendered") from exc
             try:
                 width, height = image.size
+                # The rendered page OCR read, so the desk can overlay the boxes on the same pixels.
+                image_name = name.removesuffix(".pdf") + ".png"
+                temporary = self.docs_dir / (image_name + ".tmp")
+                try:
+                    image.save(temporary, format="PNG")
+                    temporary.replace(self.docs_dir / image_name)
+                finally:
+                    temporary.unlink(missing_ok=True)
                 if self.fast_smoke:
                     from reportlab.pdfbase.pdfmetrics import stringWidth
                     boxes = []
@@ -187,7 +195,8 @@ class InvoiceOCREngine:
                     value = _number(values[0].strip().replace(",", ""))
                     fields[field] = int(value) if field == "quantityFt" and value == value.to_integral_value() else format(value, "f")
                 return {"engine": "deterministic-smoke" if self.fast_smoke else "rapidocr-onnxruntime",
-                        "boxes": boxes, "width": width, "height": height, "sha256": digest, "fields": fields}
+                        "boxes": boxes, "width": width, "height": height, "sha256": digest, "fields": fields,
+                        "image": image_name}
             finally:
                 image.close()
 
@@ -292,6 +301,9 @@ def main(argv=None):
         engine = InvoiceOCREngine(args.docs_dir, fast_smoke=args.fast_smoke)
         if args.command == "serve":
             with make_server(engine, args.port) as server:
+                # Ready line: the model is loaded and the socket is bound (--port 0 picks a free port).
+                print(json.dumps({"ok": True, "url": "http://127.0.0.1:%d" % server.server_address[1],
+                                  "docsDir": str(engine.docs_dir.resolve())}), flush=True)
                 server.serve_forever()
         else:
             result = engine.generate_documents() if args.command == "generate" else engine.extract_invoice()
