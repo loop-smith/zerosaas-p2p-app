@@ -314,14 +314,13 @@ export async function handleVoiceTts(req, res, { env = process.env, fetchImpl = 
           telemetry.lastTtsModel = candidateModel;
           telemetry.totalAudioBytes += audioBuf.length;
         }
-        res.writeHead(200, {
-          'Content-Type': 'audio/mpeg',
-          'X-Voice-Latency-Ms': String(latencyMs),
-          'X-Voice-Model': candidateModel,
-          'X-Voice-Role': resolvedRole,
-          'Cache-Control': 'no-store',
-          'X-Content-Type-Options': 'nosniff',
-        });
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'audio/mpeg');
+        res.setHeader('X-Voice-Latency-Ms', String(latencyMs));
+        res.setHeader('X-Voice-Model', candidateModel);
+        res.setHeader('X-Voice-Role', resolvedRole);
+        res.setHeader('Cache-Control', 'no-store');
+        res.setHeader('X-Content-Type-Options', 'nosniff');
         res.end(audioBuf);
         return;
       }

@@ -18,6 +18,7 @@ import { createWorkbenchEngine, SoxGuardrailError } from './workbench_engine.mjs
 
 const MAX_BODY_BYTES = 64 * 1024;
 const LOOPBACK_HOST = /^(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/i;
+const LOOPBACK_ORIGIN = /^http:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/i;
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.pdf': 'application/pdf', '.webm': 'video/webm' };
 
 const PLACEHOLDER = `<!doctype html><meta charset="utf-8"><title>ZeroSaaS P2P · PO-25800</title>
@@ -77,6 +78,19 @@ async function route(kernel, workbench, req, res, { publicDir, voiceEnv, voiceFe
   if (!LOOPBACK_HOST.test(req.headers.host ?? '')) throw new Refusal(403, 'BAD_HOST', 'Host must be 127.0.0.1 or localhost');
   const parsedUrl = new URL(req.url, 'http://127.0.0.1');
   const { pathname } = parsedUrl;
+  const reqOrigin = String(req.headers.origin ?? '');
+  if (pathname === '/api/voice/tts' && LOOPBACK_ORIGIN.test(reqOrigin)) {
+    res.setHeader('Access-Control-Allow-Origin', reqOrigin);
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Expose-Headers', 'X-Voice-Latency-Ms, X-Voice-Model, X-Voice-Role');
+    res.setHeader('Vary', 'Origin');
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+  }
   const headerIds = [req.headers['x-actor'], req.headers['x-agent-id']];
   const step = pathname.match(/^\/api\/step\/(\d{1,2})$/);
   const kernelWrite = req.method === 'POST' && (step || pathname === '/api/reset');

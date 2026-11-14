@@ -2,7 +2,7 @@
     let selectedDeal = 'PO-25800';
     let activeView = 'workflow'; // 'workflow' | 'registers' | 'security' | 'factory'
     let activeDocTab = 'auto';   // 'auto' | 'stock' | 'po' | 'bol' | 'invoice'
-    let deskSubView = 'auto';    // 'auto' | 'books' | 'voucher' | 'spot' | 'oa' | 'ocr'
+    let deskSubView = 'exec_brief'; // 'exec_brief' | 'auto' | 'books' | 'voucher' | 'spot' | 'oa' | 'ocr'
     let liveShowcasePhase = null; // null | 'spot_calling' | 'email_arrived'
     let showcaseTimer = null;
     let selectedRegSys = 'wms';
@@ -12,13 +12,18 @@
     let busyBannerText = '';
     let activeModal = null;
 
-    // KAL Voice State
+    // KAL Voice & Full-Demo Autopilot State
     let speakSeq = 0;
+    let speechDoneResolve = null;
     let ttsAbortController = null;
     let currentTtsBlobUrl = null;
     let kalSpeaking = false;
     let kalMuted = false;
-    let kalSubtitle = 'Compiled in 8090 Software Factory from our clean-room BOSS 8090 client discovery package — wake up KAL to begin.';
+    let kalAutopilotActive = false;
+    let kalAutopilotEpoch = 0;
+    let briefHighlightCard = 0; // 0=origin, 1..4=areas
+    let briefHighlightTimer = null;
+    let kalSubtitle = 'Executive Overview ready — press "Have KAL Give Demo" to hear KAL walk through the architecture and run all 8 steps.';
     let kalBadgeText = 'KAL · P2P STEWARD ($0 SIGNING LIMIT)';
     let dockScannedReels = new Set();
     let lastFlashedReelSeq = 0;
@@ -291,7 +296,7 @@
           resumedAudio = true;
           try { window.speechSynthesis.resume(); } catch {}
         }
-        if (!resumedAudio && !kalSpeaking && !liveShowcasePhase && !autoScanningReels && !busyAction && STATE) {
+        if (!resumedAudio && !kalAutopilotActive && !kalSpeaking && !liveShowcasePhase && !autoScanningReels && !busyAction && STATE) {
           const st = STATE.runtimeState?.[selectedDeal];
           if (st?.lastVoiceBrief) {
             void speakText(st.lastVoiceBrief, st.activeVoiceRole || 'ops_steward');
@@ -329,6 +334,11 @@
     function stopKalAudio() {
       speakSeq++;
       kalSpeaking = false;
+      if (speechDoneResolve) {
+        const resFn = speechDoneResolve;
+        speechDoneResolve = null;
+        try { resFn(false); } catch {}
+      }
       if (ttsAbortController) {
         try { ttsAbortController.abort(); } catch {}
         ttsAbortController = null;
@@ -351,7 +361,23 @@
       syncKalButtons();
     }
 
+    function stopKalAutopilot() {
+      kalAutopilotEpoch++;
+      kalAutopilotActive = false;
+      if (briefHighlightTimer) {
+        clearInterval(briefHighlightTimer);
+        briefHighlightTimer = null;
+      }
+      briefHighlightCard = 0;
+      stopKalAudio();
+      renderAll();
+    }
+
     function handleKalStopOrMute() {
+      if (kalAutopilotActive) {
+        stopKalAutopilot();
+        return;
+      }
       if (kalSpeaking) {
         stopKalAudio();
         return;
@@ -378,13 +404,16 @@
     }
 
     async function speakText(text, voiceRole = 'ops_steward') {
-      if (!text) return;
+      if (!text) return false;
       stopKalAudio();
       kalSubtitle = text;
       renderCenter();
-      if (kalMuted) return;
-
       const mySeq = ++speakSeq;
+      if (kalMuted) {
+        await waitPauseAware(1100);
+        return mySeq === speakSeq;
+      }
+
       const ctrl = new AbortController();
       ttsAbortController = ctrl;
       kalSpeaking = true;
@@ -400,31 +429,45 @@
           body: JSON.stringify({ text, voiceRole }),
           signal: ctrl.signal,
         });
-        if (mySeq !== speakSeq || kalMuted) return;
+        if (mySeq !== speakSeq || kalMuted) return false;
 
         const ct = res.headers.get('content-type') || '';
         if (ct.includes('audio/mpeg')) {
           const lat = res.headers.get('x-voice-latency-ms') || '';
           kalBadgeText = `KAL · STEWARD${lat ? ' · ' + lat + 'ms' : ''}`;
           const blob = await res.blob();
-          if (mySeq !== speakSeq || kalMuted) return;
+          if (mySeq !== speakSeq || kalMuted) return false;
 
           const audio = document.getElementById('ttsAudio');
           currentTtsBlobUrl = URL.createObjectURL(blob);
           audio.src = currentTtsBlobUrl;
+          const endedPromise = new Promise(resolve => {
+            speechDoneResolve = resolve;
+          });
           audio.onended = () => {
             if (mySeq === speakSeq) { kalSpeaking = false; syncKalButtons(); renderCenter(); }
+            if (speechDoneResolve) { const r = speechDoneResolve; speechDoneResolve = null; r(true); }
           };
           audio.onerror = () => {
             if (mySeq === speakSeq) { kalSpeaking = false; syncKalButtons(); renderCenter(); }
+            if (speechDoneResolve) { const r = speechDoneResolve; speechDoneResolve = null; r(true); }
           };
           renderCenter();
           if (presenterPaused) {
             await holdIfPresenterPaused();
-            if (mySeq !== speakSeq || kalMuted) return;
+            if (mySeq !== speakSeq || kalMuted) return false;
           }
-          await audio.play();
-          return;
+          try {
+            await audio.play();
+          } catch (playErr) {
+            if (mySeq === speakSeq) { kalSpeaking = false; syncKalButtons(); renderCenter(); }
+            const blockedAutoplay = playErr && playErr.name === 'NotAllowedError';
+            if (speechDoneResolve) { const r = speechDoneResolve; speechDoneResolve = null; r(!blockedAutoplay); }
+            return !blockedAutoplay && mySeq === speakSeq;
+          }
+          const finishedOk = await endedPromise;
+          if (presenterPaused) await holdIfPresenterPaused();
+          return finishedOk && mySeq === speakSeq;
         } else {
           const j = await res.json().catch(() => ({}));
           if (j.fallback === 'web_speech' && !STATE?.voiceConfig?.elevenLabsConfigured) {
@@ -434,24 +477,37 @@
         }
       } catch {
         if (mySeq === speakSeq) { kalSpeaking = false; syncKalButtons(); }
-        return;
+        return false;
       }
 
       if (useWebSpeechFallback && mySeq === speakSeq && !kalMuted && 'speechSynthesis' in window) {
         if (presenterPaused) {
           await holdIfPresenterPaused();
-          if (mySeq !== speakSeq || kalMuted) return;
+          if (mySeq !== speakSeq || kalMuted) return false;
         }
         window.speechSynthesis.cancel();
+        const endedPromise = new Promise(resolve => {
+          speechDoneResolve = resolve;
+        });
         const u = new SpeechSynthesisUtterance(normalizedFallback);
         u.rate = 1.04;
-        u.onend = () => { if (mySeq === speakSeq) { kalSpeaking = false; syncKalButtons(); } };
-        u.onerror = () => { if (mySeq === speakSeq) { kalSpeaking = false; syncKalButtons(); } };
+        u.onend = () => {
+          if (mySeq === speakSeq) { kalSpeaking = false; syncKalButtons(); }
+          if (speechDoneResolve) { const r = speechDoneResolve; speechDoneResolve = null; r(true); }
+        };
+        u.onerror = () => {
+          if (mySeq === speakSeq) { kalSpeaking = false; syncKalButtons(); }
+          if (speechDoneResolve) { const r = speechDoneResolve; speechDoneResolve = null; r(true); }
+        };
         window.speechSynthesis.speak(u);
+        const finishedOk = await endedPromise;
+        if (presenterPaused) await holdIfPresenterPaused();
+        return finishedOk && mySeq === speakSeq;
       } else if (mySeq === speakSeq) {
         kalSpeaking = false;
         syncKalButtons();
       }
+      return mySeq === speakSeq;
     }
 
     function startSoxAndDbTour() {
@@ -650,20 +706,186 @@
       return { ok: res.ok, status: res.status, data };
     }
 
-    // Click "▶ Start KAL · P2P Steward" -> Runs Step 1 WMS SQL check, speaks ON Box 1 (WMS Signal), and pauses for Proceed to Darius!
-    async function startKalSteward() {
+    const EXEC_BRIEF_SPEECH = 'Good day. Welcome to ZeroSaaS Procure-to-Pay—compiled in 8090 Software Factory from six clean-room BOSS discovery workshops across eleven and a half hours and three hundred twenty-eight client files. Instead of expensive per-seat ERP licenses, we pair zero-authority Binary Intelligence with four human signing officers across four headless open-source databases. Today we will hit four areas: warehouse stock-out and signing limits, live COMEX copper pricing, Bay 4 barcode scanning with neural invoice OCR, and segregated CFO check settlement. Let us begin the live demo.';
+
+    function toggleExecBriefView() {
+      if (activeView !== 'workflow') {
+        activeView = 'workflow';
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        const btn = document.getElementById('nav-workflow');
+        if (btn) btn.classList.add('active');
+      }
+      if (deskSubView === 'exec_brief') {
+        deskSubView = 'auto';
+        if (!kalAutopilotActive) stopKalAudio();
+      } else {
+        deskSubView = 'exec_brief';
+      }
+      renderCenter();
+    }
+
+    function openManualStep1() {
+      stopKalAutopilot();
+      setView('workflow');
+      deskSubView = 'auto';
+      renderAll();
+    }
+
+    // 1-Click Full Hands-Free KAL Presentation: Walks through the HTML Executive Overview Document, then runs Steps 1 -> 8 automatically!
+    async function startKalFullDemo(skipBrief = false) {
       if (busyAction) return;
+      if (kalAutopilotActive) {
+        togglePresenterPause();
+        return;
+      }
+      const myAuto = ++kalAutopilotEpoch;
+      kalAutopilotActive = true;
+      if (kalMuted) { kalMuted = false; syncKalButtons(); }
       setView('workflow');
       activeDocTab = 'auto';
-      deskSubView = 'auto';
-      const st = STATE?.runtimeState?.[selectedDeal];
-      if (!st || !st.kal_started) {
-        await executeStewardSequence([
-          { action: 'wf0_detect_stockout', label: 'Waking up KAL — reading BOSS 8090 lineage & live WMS stock-out signal…' },
-        ]);
-      } else {
-        await askKalPreset('status');
+
+      try {
+        const stInit = STATE?.runtimeState?.[selectedDeal];
+        let stepCur = computeStepIndex(stInit);
+
+        // Act 0: If starting from the beginning (and not arriving with skipBrief from BOSS), open the HTML Executive Overview Document and walk through all 4 areas aloud!
+        if (!skipBrief && stepCur === 0 && (!stInit || !stInit.kal_started)) {
+          deskSubView = 'exec_brief';
+          briefHighlightCard = 0;
+          kalBadgeText = 'KAL · EXECUTIVE OVERVIEW';
+          renderAll();
+
+          if (briefHighlightTimer) clearInterval(briefHighlightTimer);
+          const cardStartMs = Date.now();
+          briefHighlightTimer = setInterval(() => {
+            if (!kalAutopilotActive || presenterPaused || deskSubView !== 'exec_brief') return;
+            const elSec = (Date.now() - cardStartMs) / 1000;
+            const nextCard = elSec < 8.5 ? 0 : (elSec < 12.2 ? 1 : (elSec < 15.6 ? 2 : (elSec < 19.2 ? 3 : 4)));
+            if (nextCard !== briefHighlightCard) {
+              briefHighlightCard = nextCard;
+              renderCenter();
+            }
+          }, 350);
+
+          const okBrief = await speakText(EXEC_BRIEF_SPEECH, 'ops_steward');
+          if (briefHighlightTimer) { clearInterval(briefHighlightTimer); briefHighlightTimer = null; }
+          briefHighlightCard = 0;
+          if (!okBrief || myAuto !== kalAutopilotEpoch) return;
+          await waitPauseAware(650);
+          if (myAuto !== kalAutopilotEpoch) return;
+
+          // Transition from HTML Executive Overview Document straight into Box 1 (WMS Stock-Out Signal)!
+          deskSubView = 'auto';
+          const okStep1 = await executeStewardSequence(
+            [{ action: 'wf0_detect_stockout', label: 'Opening Step 1 — live WMS copper stock-out signal (0 FT < 8,000 FT)…' }],
+            { stripLeadingGoodDay: true }
+          );
+          if (!okStep1 || myAuto !== kalAutopilotEpoch) return;
+          await waitPauseAware(700);
+          if (myAuto !== kalAutopilotEpoch) return;
+        } else if (skipBrief && stepCur === 0 && (!stInit || !stInit.kal_started)) {
+          deskSubView = 'auto';
+          const okStep1 = await executeStewardSequence(
+            [{ action: 'wf0_detect_stockout', label: 'Opening Step 1 — live WMS copper stock-out signal (0 FT < 8,000 FT)…' }],
+            { stripLeadingGoodDay: true }
+          );
+          if (!okStep1 || myAuto !== kalAutopilotEpoch) return;
+          await waitPauseAware(700);
+          if (myAuto !== kalAutopilotEpoch) return;
+        } else {
+          deskSubView = 'auto';
+          renderAll();
+        }
+
+        // Step 1 -> Step 2 (Darius Mercer · $20k Signing Limit)
+        stepCur = computeStepIndex(STATE?.runtimeState?.[selectedDeal]);
+        if (stepCur === 0 && myAuto === kalAutopilotEpoch) {
+          await executeStewardSequence([
+            { action: 'wf0_route_to_darius', label: 'Routing WMS stock-out signal (REQ-25800) to Supply Chain Planner Darius Mercer…' },
+          ]);
+          if (myAuto !== kalAutopilotEpoch) return;
+          await waitPauseAware(750);
+        }
+
+        // Step 2 -> Step 3 (Escalation to VP Supply Chain Devon Brooks · $100k Signing Limit)
+        stepCur = computeStepIndex(STATE?.runtimeState?.[selectedDeal]);
+        if (stepCur === 1 && myAuto === kalAutopilotEpoch) {
+          await executeStewardSequence([
+            { action: 'wf0_submit_req', label: 'Recording Darius Mercer confirmation & escalating above $20,000 Signing Limit to VP Devon Brooks…' },
+          ]);
+          if (myAuto !== kalAutopilotEpoch) return;
+          await waitPauseAware(750);
+        }
+
+        // Step 3 -> Step 4 (VP Sign-Off + Live Outbound COMEX Copper API Call)
+        stepCur = computeStepIndex(STATE?.runtimeState?.[selectedDeal]);
+        if (stepCur === 2 && myAuto === kalAutopilotEpoch) {
+          await approveCheckpoint2Devon();
+          if (myAuto !== kalAutopilotEpoch) return;
+          await waitPauseAware(800);
+        }
+
+        // Step 4 -> Step 5 (Cut Spot PO-25800 + Receive Encore Wire Order Ack Dates)
+        stepCur = computeStepIndex(STATE?.runtimeState?.[selectedDeal]);
+        if (stepCur === 3 && myAuto === kalAutopilotEpoch) {
+          spotGateUnlockedAt = 0;
+          await proceedStep4CutPo();
+          if (myAuto !== kalAutopilotEpoch) return;
+          await waitPauseAware(750);
+        }
+
+        // Step 5 -> Step 6 (Verify Shipping Dates & Stage 4 Reels for Marcus Vance at Bay 4)
+        stepCur = computeStepIndex(STATE?.runtimeState?.[selectedDeal]);
+        if (stepCur === 4 && myAuto === kalAutopilotEpoch) {
+          dockScannedReels.clear();
+          lastFlashedReelSeq = 0;
+          autoScanningReels = false;
+          await executeStewardSequence([
+            { action: 'wf1_confirm_ack', label: 'Verifying ENC-OA-2026-884192 dates & staging 4 master reels at Receiving Bay 4…' },
+          ]);
+          if (myAuto !== kalAutopilotEpoch) return;
+          await waitPauseAware(450);
+        }
+
+        // Step 6 -> Step 7 (Marcus Scans All 4 Barcoded Reels -> Auto-Runs 28-Box RapidOCR Neural Scan & 3-Way Match)
+        stepCur = computeStepIndex(STATE?.runtimeState?.[selectedDeal]);
+        if (stepCur === 5 && myAuto === kalAutopilotEpoch) {
+          await scanAllDockReelsSequentially();
+          if (myAuto !== kalAutopilotEpoch) return;
+          await waitPauseAware(800);
+        }
+
+        // Step 7 -> Step 8 (Stage Corporate Voucher Check #10045 for Segregated CFO Meredith Hale)
+        stepCur = computeStepIndex(STATE?.runtimeState?.[selectedDeal]);
+        if (stepCur === 6 && myAuto === kalAutopilotEpoch) {
+          ocrGateUnlockedAt = 0;
+          await executeStewardSequence([
+            { action: 'wf3_confirm_match', label: 'Staging verified 3-Way Match packet & Check #10045 for CFO Meredith Hale…' },
+          ]);
+          if (myAuto !== kalAutopilotEpoch) return;
+          await waitPauseAware(900);
+        }
+
+        // Step 8 -> Final Balanced GAAP Books & 4-Database Settlement Summary
+        stepCur = computeStepIndex(STATE?.runtimeState?.[selectedDeal]);
+        if (stepCur === 7 && myAuto === kalAutopilotEpoch) {
+          await executeStewardSequence([
+            { action: 'wf4_release_ach', label: 'CFO Meredith Hale signing Check #10045 / ACH-000582 from Operating Checking 101100…' },
+          ]);
+        }
+      } finally {
+        if (myAuto === kalAutopilotEpoch) {
+          kalAutopilotActive = false;
+          if (briefHighlightTimer) { clearInterval(briefHighlightTimer); briefHighlightTimer = null; }
+          briefHighlightCard = 0;
+          renderAll();
+        }
       }
+    }
+
+    // Left rail / primary start button -> Launches KAL's Executive Overview + Full Demo!
+    async function startKalSteward() {
+      await startKalFullDemo();
     }
 
     // Step 1 -> Step 2: Click "Proceed" on WMS Signal (Box 1) -> Routes REQ-25800 into Supply Chain Planner Darius Mercer's queue (Box 2)!
@@ -674,8 +896,8 @@
     }
 
     // Runs 1 human checkpoint + any immediate downstream automated blocks cleanly while updating screen live!
-    async function executeStewardSequence(steps) {
-      if (busyAction) return;
+    async function executeStewardSequence(steps, opts = {}) {
+      if (busyAction) return false;
       busyAction = true;
       activeDocTab = 'auto';
       deskSubView = 'auto';
@@ -712,8 +934,10 @@
       }
 
       if (finalVoiceBrief) {
-        speakText(finalVoiceBrief, finalVoiceRole);
+        const spoken = opts.stripLeadingGoodDay ? finalVoiceBrief.replace(/^Good day\.\s*/i, '') : finalVoiceBrief;
+        return await speakText(spoken, finalVoiceRole);
       }
+      return true;
     }
 
     // Step-by-Step Human Checkpoints & "OK to Proceed" Gates (NEVER auto-skips a step!)
@@ -769,7 +993,7 @@
           STATE = r2.data;
           const stNow = STATE.runtimeState[selectedDeal];
           renderAll();
-          if (stNow?.lastVoiceBrief) speakText(stNow.lastVoiceBrief, stNow.activeVoiceRole || 'ops_steward');
+          if (stNow?.lastVoiceBrief) await speakText(stNow.lastVoiceBrief, stNow.activeVoiceRole || 'ops_steward');
         } else {
           if (r2.data?.state) STATE = r2.data.state;
           renderAll();
@@ -808,20 +1032,18 @@
     // Step 4 -> Step 5: Central Purchasing clicks "OK to Proceed" -> Cuts PO-25800 + Receives Encore Vendor Ack ENC-OA-2026-884192 -> STOPS on Step 5!
     async function proceedStep4CutPo() {
       if (busyAction || liveShowcasePhase === 'cp_reviewing' || liveShowcasePhase === 'spot_calling' || Date.now() < spotGateUnlockedAt) return;
+      // Pre-warm rendered invoice PNG in browser image cache so Step 7 OCR laser stage paints in 0ms
+      try {
+        const pngFile = STATE?.deals?.[selectedDeal]?.pngFile || 'INV-25800.png';
+        if (typeof Image !== 'undefined') {
+          const pre = new Image();
+          pre.src = `/api/invoice-image?file=${encodeURIComponent(pngFile)}`;
+        }
+      } catch {}
       await executeStewardSequence([
         { action: 'wf1_commit_po', label: 'Central Purchasing cutting PO-25800 at locked COMEX spot price…' },
         { action: 'wf1_vendor_ack', label: 'Receiving Encore Wire Vendor Ack ENC-OA-2026-884192 (ship & delivery dates)…' },
       ]);
-      // Pre-warm rendered invoice PNG in browser image cache so Step 7 OCR laser stage paints in 0ms
-      try {
-        const pngFile = STATE?.deals?.[selectedDeal]?.pngFile || 'INV-25800.png';
-        const poHash = STATE?.runtimeState?.[selectedDeal]?.poSha256;
-        const vQuery = poHash ? `&v=${encodeURIComponent(poHash.slice(0, 8))}` : '';
-        if (typeof Image !== 'undefined') {
-          const pre = new Image();
-          pre.src = `/api/invoice-image?file=${encodeURIComponent(pngFile)}${vQuery}`;
-        }
-      } catch {}
     }
 
     // Step 5 -> Step 6: Central Purchasing verifies OA ship/delivery dates copacetic -> clicks "OK to Proceed" -> STOPS on Step 6!
@@ -879,7 +1101,7 @@
           STATE = r2.data;
           const stNow = STATE.runtimeState[selectedDeal];
           renderAll();
-          if (stNow?.lastVoiceBrief) speakText(stNow.lastVoiceBrief, stNow.activeVoiceRole || 'treasury_steward');
+          if (stNow?.lastVoiceBrief) await speakText(stNow.lastVoiceBrief, stNow.activeVoiceRole || 'treasury_steward');
         } else {
           if (r2.data?.state) STATE = r2.data.state;
           renderAll();
@@ -966,6 +1188,10 @@
         }
       }
       if (showcaseTimer) { clearTimeout(showcaseTimer); showcaseTimer = null; }
+      kalAutopilotEpoch++;
+      kalAutopilotActive = false;
+      if (briefHighlightTimer) { clearInterval(briefHighlightTimer); briefHighlightTimer = null; }
+      briefHighlightCard = 0;
       presenterPaused = false;
       while (pauseResumeResolvers.length) {
         const res = pauseResumeResolvers.shift();
@@ -980,23 +1206,38 @@
       closeModal();
       setView('workflow');
       activeDocTab = 'auto';
-      deskSubView = 'auto';
+      deskSubView = 'exec_brief';
       const topBtn = document.getElementById('topResetBtn');
       if (topBtn) topBtn.textContent = '⏳ Resetting…';
       try {
         const res = await fetch('/api/reset', { method: 'POST' });
         STATE = await res.json();
         kalBadgeText = 'KAL · P2P STEWARD ($0 SIGNING LIMIT)';
-        kalSubtitle = 'Compiled in 8090 Software Factory from our clean-room BOSS 8090 client discovery package — wake up KAL to begin.';
+        kalSubtitle = 'Executive Overview ready — press "Have KAL Give Demo" to hear KAL walk through the architecture and run all 8 steps.';
         renderAll();
       } finally {
         if (topBtn) topBtn.textContent = '↺ Reset Queue';
       }
     }
 
+    function startKalStepsOnly() {
+      void startKalFullDemo(true);
+    }
+
     async function loadState() {
       const res = await fetch('/api/state');
       STATE = await res.json();
+      const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+      const stInit = STATE?.runtimeState?.[selectedDeal];
+      if (stInit?.kal_started || computeStepIndex(stInit) > 0) {
+        deskSubView = 'auto';
+      }
+      if (params && params.get('autoplay') === '1') {
+        deskSubView = 'auto';
+        renderAll();
+        void startKalFullDemo(true);
+        return;
+      }
       renderAll();
     }
 
@@ -1041,12 +1282,15 @@
         if (st.wf4_ach_released) {
           startBtn.className = 'btn-kal-start settled';
           startBtn.textContent = '✅ Paid · Check #10045';
+        } else if (kalAutopilotActive) {
+          startBtn.className = 'btn-kal-start running';
+          startBtn.textContent = presenterPaused ? '⏸ Paused · Click to Play' : '🟢 KAL Giving Demo…';
         } else if (st.kal_started) {
           startBtn.className = 'btn-kal-start running';
-          startBtn.textContent = '🟢 KAL Steward Running';
+          startBtn.textContent = '▶ Resume KAL Demo';
         } else {
           startBtn.className = 'btn-kal-start';
-          startBtn.textContent = '▶ Wake Up KAL · Start';
+          startBtn.textContent = '▶ Have KAL Give Demo';
         }
       }
 
@@ -1129,14 +1373,14 @@
           <div class="kal-msg" title="${esc(kalSubtitle)}">${esc(kalSubtitle)}</div>
           <div style="display:flex;gap:5px;flex-shrink:0;">
             <button class="btn-top presenter-pause-btn ${presenterPaused ? 'paused' : ''}" style="padding:3px 8px;font-size:10.5px;" onclick="togglePresenterPause()" title="Pause or Resume KAL voice, live showcase &amp; recording (Shortcut: Spacebar)">${presenterPaused ? '▶ Play' : '⏸ Pause'}</button>
+            <button class="btn-top" style="padding:3px 8px;font-size:10.5px;${deskSubView === 'exec_brief' ? 'background:#0f172a;color:#fff;border-color:#0f172a;' : ''}" onclick="toggleExecBriefView()" title="Open the Executive Overview HTML Document">📄 Overview</button>
             <button class="btn-top" style="padding:3px 8px;font-size:10.5px;${deskSubView === 'sox_db' ? 'background:#1d4ed8;color:#fff;border-color:#1d4ed8;' : 'border-color:#93c5fd;color:#1d4ed8;'}" onclick="startSoxAndDbTour()" title="1-click KAL guided run-through of SOX, Live Headless Databases &amp; White House Super Intelligence Accord">🛡️ SOX, Live DBs &amp; White House SI</button>
-            <button class="btn-top" style="padding:3px 8px;font-size:10.5px;" onclick="askKalPreset('status')">📊 Brief</button>
             <button class="btn-top" style="padding:3px 8px;font-size:10.5px;" onclick="askKalPreset('spot')">📈 Copper Spot</button>
             <button class="btn-top" style="padding:3px 8px;font-size:10.5px;${showingBooks ? 'background:#0f172a;color:#fff;border-color:#0f172a;' : ''}"
               onclick="setDeskSubView('${showingBooks ? (stepIdx >= 8 ? 'voucher' : 'auto') : 'books'}')">
               ${showingBooks ? (stepIdx >= 8 ? '🧾 View Check #10045' : '↩ Officer Desk') : '📗 Ledger Books'}
             </button>
-            ${kalSpeaking ? `<button class="btn-top" style="padding:3px 8px;font-size:10.5px;border-color:#ef4444;color:#b91c1c;" onclick="stopKalAudio()">⏹ Stop</button>` : ''}
+            ${(kalSpeaking || kalAutopilotActive) ? `<button class="btn-top" style="padding:3px 8px;font-size:10.5px;border-color:#ef4444;color:#b91c1c;" onclick="stopKalAutopilot()">⏹ Stop</button>` : ''}
           </div>
         </div>
 
@@ -1494,6 +1738,11 @@
         `;
       }
 
+      // Executive Overview HTML Document ('exec_brief') — KAL introduces what the app is & the 4 areas, then launches Step 1!
+      if (deskSubView === 'exec_brief') {
+        return renderExecutiveBriefDesk(d, st);
+      }
+
       // 1-Click KAL Guided Run-Through: SOX Workflow Governance + Live NVMe Databases ('sox_db')
       if (deskSubView === 'sox_db') {
         return renderSoxAndLiveDbDesk(d, st, stepIdx);
@@ -1563,11 +1812,14 @@
                   🤖 Rogue KAL (403)
                 </button>
                 ${triggered
-                  ? `<button class="btn-approve" onclick="proceedStep1RouteToDarius()">
+                  ? `<button class="btn-top" onclick="startKalStepsOnly()" title="Have KAL run Steps 1 through 8 automatically">
+                       ▶ Auto-Run Steps 1–8
+                     </button>
+                     <button class="btn-approve" onclick="proceedStep1RouteToDarius()">
                        ✓ Route Signal to Supply Chain ➔
                      </button>`
-                  : `<button class="btn-approve blue" onclick="startKalSteward()">
-                       ▶ Wake Up KAL · Begin Demo
+                  : `<button class="btn-approve" onclick="startKalFullDemo()">
+                       ▶ Have KAL Give Full Demo
                      </button>`}
               </div>
             </div>
@@ -3207,6 +3459,125 @@
       bg.classList.add('open');
     }
 
+    function renderExecutiveBriefDesk() {
+      const hc = briefHighlightCard;
+      return `
+        <div class="officer-desk">
+          <div class="desk-banner" style="background:linear-gradient(90deg, #eff6ff 0%, #f0fdf4 100%);">
+            <div>
+              <div class="cp-eyebrow" style="color:#1d4ed8;">📄 EXECUTIVE OVERVIEW · CLEAN-ROOM BOSS 8090 DISCOVERY ➔ 8090 SOFTWARE FACTORY (18 WORK ORDERS)</div>
+              <div class="cp-title">ZeroSaaS P2P — Headless Stock-to-Pay ERP (Binary Intelligence + Human Signing Officers)</div>
+              <div class="cp-desc">
+                KAL walks through this overview aloud, then drives all 8 live steps hands-free — press <strong>Spacebar</strong> anytime to pause for commentary or questions.
+              </div>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
+              ${kalAutopilotActive
+                ? `<span class="autopilot-pill">🟢 KAL Presenting…</span>
+                   <button class="btn-top" onclick="openManualStep1()">Skip to Step 1 ➔</button>`
+                : `<button class="btn-top" onclick="openManualStep1()" title="Open Step 1 desk for manual click-by-click walkthrough">
+                     Step 1 Desk ➔
+                   </button>
+                   <button class="btn-approve" onclick="startKalFullDemo()">
+                     ▶ Have KAL Give Full Demo
+                   </button>`}
+            </div>
+          </div>
+
+          <div class="desk-stage equal">
+            <div class="doc-sheet exec-doc-sheet">
+              <div>
+                <div class="sheet-top">
+                  <div>
+                    <div class="sheet-kicker" style="color:#1d4ed8;">1. Origin &amp; Architecture</div>
+                    <div class="sheet-title">What This App Is &amp; Where It Came From</div>
+                  </div>
+                  <span class="badge b-ready">Zero SaaS Licenses</span>
+                </div>
+                <div class="brief-origin-list">
+                  <div class="brief-origin-item ${kalAutopilotActive && hc === 0 ? 'active' : ''}">
+                    <div class="brief-origin-title">
+                      <span>🏛️ Clean-Room BOSS 8090 Client Discovery</span>
+                      <span class="badge b-amber">6 Workshops · 328 Files</span>
+                    </div>
+                    <div class="brief-origin-desc">
+                      Distilled from real client discovery workshops, meeting notes, org chart, signing limits, and legacy SOPs — packaged cleanly into <strong>8090 Software Factory</strong> (<code>WO-01..WO-18</code>).
+                    </div>
+                  </div>
+                  <div class="brief-origin-item ${kalAutopilotActive && hc === 0 ? 'active' : ''}">
+                    <div class="brief-origin-title">
+                      <span>🗄️ 4 Headless Open-Source Databases on Disk</span>
+                      <span class="badge b-done">275 SQL Tbls + 89 GL</span>
+                    </div>
+                    <div class="brief-origin-desc">
+                      Replaces bloated per-seat ERP SaaS with live <strong>Warehouse SQLite</strong> (119 tbls), <strong>Supplier CRM</strong> (151 tbls), <strong>HR Signing Limits</strong> (5 tbls), and <strong>GAAP hledger</strong>.
+                    </div>
+                  </div>
+                  <div class="brief-origin-item ${kalAutopilotActive && hc === 0 ? 'active' : ''}">
+                    <div class="brief-origin-title">
+                      <span>🛡️ $0.00 Binary Intelligence + 4 Human Officers</span>
+                      <span class="badge b-hold">SOX + EO 14434</span>
+                    </div>
+                    <div class="brief-origin-desc">
+                      <strong>KAL ($0.00 limit)</strong>, local <code>RapidOCR</code>, and live COMEX feeds run 100% of operational legwork while <strong>4 segregated human officers</strong> sign statutory gates.
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="sig-strip signed">
+                <span style="font-weight:800;color:#1d4ed8;">✓ Upstream Source: BOSS 8090 Common Data Spine ➔ 8090 Software Factory</span>
+              </div>
+            </div>
+
+            <div class="doc-sheet exec-doc-sheet">
+              <div>
+                <div class="sheet-top">
+                  <div>
+                    <div class="sheet-kicker" style="color:#15803d;">2. Today's Live Walkthrough Agenda</div>
+                    <div class="sheet-title">The 4 Areas KAL Will Demonstrate Live</div>
+                  </div>
+                  <span class="badge b-done">Steps 1–8 Live</span>
+                </div>
+                <div class="brief-area-grid">
+                  <div class="brief-area-card ${hc === 1 ? 'active' : ''}">
+                    <div class="brief-origin-title">
+                      <span>1. WMS Stock-Out &amp; Statutory Signing Limits</span>
+                      <span style="font-family:var(--mono);font-size:9px;color:var(--blue);">Steps 1–3</span>
+                    </div>
+                    <div class="brief-origin-desc">0 FT bare copper trigger (&lt; 8,000 FT safety stock) ➔ Planner Darius ($20k limit) escalates $23,120 requisition to VP Devon ($100k).</div>
+                  </div>
+                  <div class="brief-area-card ${hc === 2 ? 'active' : ''}">
+                    <div class="brief-origin-title">
+                      <span>2. Live COMEX Copper Spot &amp; Vendor Order Ack</span>
+                      <span style="font-family:var(--mono);font-size:9px;color:var(--blue);">Steps 4–5</span>
+                    </div>
+                    <div class="brief-origin-desc">Live COMEX market quote locks <code>PO-25800</code> below $2.89/FT standard cost (saving ~$1,600) &amp; verifies Encore shipping dates.</div>
+                  </div>
+                  <div class="brief-area-card ${hc === 3 ? 'active' : ''}">
+                    <div class="brief-origin-title">
+                      <span>3. Bay 4 RF Barcode Scan &amp; RapidOCR 3-Way Match</span>
+                      <span style="font-family:var(--mono);font-size:9px;color:var(--blue);">Steps 6–7</span>
+                    </div>
+                    <div class="brief-origin-desc">Marcus Vance scans 4 reels (8,000 FT · 3,288 lbs) into stock ➔ 28-box neural invoice OCR proves PO == Dock == Invoice ($0.00 variance).</div>
+                  </div>
+                  <div class="brief-area-card ${hc === 4 ? 'active' : ''}">
+                    <div class="brief-origin-title">
+                      <span>4. Segregated CFO Check #10045 &amp; Balanced Books</span>
+                      <span style="font-family:var(--mono);font-size:9px;color:var(--blue);">Step 8</span>
+                    </div>
+                    <div class="brief-origin-desc">CFO Meredith Hale signs <code>Check #10045</code> from Operating Checking <code>101100</code> ➔ settles all 4 databases with <code>DR == CR</code>.</div>
+                  </div>
+                </div>
+              </div>
+              <div class="sig-strip signed">
+                <span style="font-weight:800;color:var(--green);">✓ Pause Anytime with Spacebar · Red-Team SOX Guardrails Ready</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     function closeModal() {
       activeModal = null;
       document.getElementById('modalBackdrop')?.classList.remove('open');
@@ -3225,6 +3596,7 @@
       window.handleKalStopOrMute = handleKalStopOrMute;
       window.highlightBox = highlightBox;
       window.inspectStepCell = inspectStepCell;
+      window.openManualStep1 = openManualStep1;
       window.openModal = openModal;
       window.proceedStep1RouteToDarius = proceedStep1RouteToDarius;
       window.proceedStep4CutPo = proceedStep4CutPo;
@@ -3240,10 +3612,14 @@
       window.setDeskSubView = setDeskSubView;
       window.setDocTab = setDocTab;
       window.setView = setView;
+      window.startKalFullDemo = startKalFullDemo;
+      window.startKalStepsOnly = startKalStepsOnly;
       window.startKalSteward = startKalSteward;
       window.startSoxAndDbTour = startSoxAndDbTour;
       window.stopKalAudio = stopKalAudio;
+      window.stopKalAutopilot = stopKalAutopilot;
       window.toggleDemoRecorder = toggleDemoRecorder;
+      window.toggleExecBriefView = toggleExecBriefView;
       window.togglePresenterPause = togglePresenterPause;
       window.toggleVoiceListen = toggleVoiceListen;
       void loadState();
