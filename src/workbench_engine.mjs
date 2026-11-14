@@ -1455,7 +1455,7 @@ export function createWorkbenchEngine({
       st.activeVoiceRole = 'ops_steward';
       st.lastGuardrailBlock = null;
       st.wf1_ack_verified = true;
-      st.lastVoiceBrief = `Shipping and delivery dates verified. Encore Wire's flatbed is staged at Receiving Bay 4 with 4 barcoded master reels for Warehouse Lead ${deal.dockSigner.name} to receive.`;
+      st.lastVoiceBrief = `Shipping and delivery dates verified. Encore Wire's flatbed is at Receiving Bay 4—${deal.dockSigner.name}, scan all 4 barcoded master reels into stock.`;
       recordAuditEvent(
         dealId,
         'STEP-5B-OA-VERIFIED',
@@ -1880,7 +1880,7 @@ export function createWorkbenchEngine({
             evidenceSha256: jHash,
           });
           st.activeVoiceRole = 'treasury_steward';
-          st.lastVoiceBrief = `Marcus received all 4 reels—8,000 feet—into stock. Encore's invoice arrived in Accounts Payable, RapidOCR extracted 28 fields, and Purchase Order, Dock Receipt, and Invoice match at ${fmtUsd(deal.receiptAmount)} with zero variance.`;
+          st.lastVoiceBrief = `Marcus scanned all 4 reels—8,000 feet—into stock, and we've moved to Accounts Payable. RapidOCR extracted 28 fields from Encore's invoice, matching Purchase Order, Dock Receipt, and Invoice at ${fmtUsd(deal.receiptAmount)} with zero variance.`;
           recordAuditEvent(
             dealId,
             'STEP-7-3WAY-MATCH',

@@ -671,9 +671,10 @@ body.presenter-paused .rf-laser-beam {
 
 .coa-tbl {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-family: var(--mono);
-  font-size: 9.6px;
+  font-size: 9.4px;
   background: #ffffff;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -682,31 +683,38 @@ body.presenter-paused .rf-laser-beam {
 .coa-tbl th {
   background: #f1f5f9;
   color: var(--text-sec);
-  font-size: 8.5px;
+  font-size: 8.3px;
   font-weight: 900;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
-  padding: 3.5px 5px;
+  letter-spacing: 0.02em;
+  padding: 3.5px 4px;
   border-bottom: 1px solid var(--border);
   text-align: right;
   white-space: nowrap;
 }
 .coa-tbl th:nth-child(1), .coa-tbl th:nth-child(2) { text-align: left; }
+.coa-tbl th:nth-child(1) { width: 44px; }
+.coa-tbl th:nth-child(2) { width: auto; }
+.coa-tbl th:nth-child(3) { width: 52px; }
+.coa-tbl th:nth-child(4) { width: 52px; }
+.coa-tbl th:nth-child(5) { width: 64px; padding-right: 6px; }
 .coa-tbl td {
-  padding: 3.5px 5px;
+  padding: 3.5px 4px;
   border-bottom: 1px solid #f1f5f9;
   text-align: right;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+.coa-tbl td:nth-child(5) { padding-right: 6px; }
 .coa-tbl tr:last-child td { border-bottom: none; }
 .coa-tbl td:nth-child(1) { text-align: left; font-weight: 900; color: #0f172a; }
 .coa-tbl td:nth-child(2) {
   text-align: left;
   font-family: var(--sans);
-  font-size: 9.6px;
+  font-size: 9.4px;
   font-weight: 700;
   color: var(--text-main);
-  max-width: 126px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -1064,7 +1072,7 @@ body.presenter-paused .sor-db-card.sor-db-alert {
 
 @media (max-width: 1460px) {
   .stockout-alert-pill { font-size: 8.8px; padding: 2px 5px; }
-  .shell { grid-template-columns: 196px minmax(0, 1fr) 324px; }
+  .shell { grid-template-columns: 192px minmax(0, 1fr) 340px; }
   .steps-head > div:last-child { display: none; }
   .left-rail { padding: 8px 8px; gap: 6px; }
   .nav-btn { padding: 6px 8px; font-size: 11px; }
@@ -1074,6 +1082,13 @@ body.presenter-paused .sor-db-card.sor-db-alert {
   .rail-drawer-btn { padding: 5px 8px; font-size: 10.8px; }
   .right-rail { padding: 7px 9px; gap: 6px; }
   .gl-card { padding: 6px 8px; }
+  .coa-tbl { font-size: 9px; }
+  .coa-tbl th, .coa-tbl td { padding: 3px 3.5px; }
+  .coa-tbl th:nth-child(1) { width: 40px; }
+  .coa-tbl th:nth-child(3) { width: 47px; }
+  .coa-tbl th:nth-child(4) { width: 47px; }
+  .coa-tbl th:nth-child(5), .coa-tbl td:nth-child(5) { width: 58px; padding-right: 5px; }
+  .coa-tbl td:nth-child(2) { font-size: 9px; }
   .doc-viewer-card { padding: 6px 8px; gap: 4px; }
 }
 

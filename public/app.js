@@ -70,7 +70,7 @@
       playRfScannerBeep(allDone);
       kalBadgeText = `RF SCAN GUN · BAY 4 (${scannedCount}/${reels.length} REELS)`;
       kalSubtitle = allDone
-        ? `All ${reels.length} Encore Wire GS1 reel barcodes scanned (${fmtInt(scannedCount * 2000)} FT = 100% of BOL-25800). Click "✓ Submit Dock Scan" to post SQLite stock & GL!`
+        ? `Marcus scanned all ${reels.length} Encore Wire reels (${fmtInt(scannedCount * 2000)} FT = 100% of BOL-25800) — posting stock & advancing to AP Invoice OCR…`
         : `Snap ${scannedCount} of ${reels.length}: Scanned Vendor Barcode ${target.barcode} (+${fmtInt(target.qtyFt)} FT · ${target.weightLbs} lbs) ➔ ${fmtInt(scannedCount * 2000)} / 8,000 FT.`;
       renderCenter();
       const subEl = document.getElementById('kalSubText');
@@ -88,25 +88,30 @@
 
     async function scanAllDockReelsSequentially() {
       if (busyAction || autoScanningReels || !STATE) return;
+      stopKalAudio();
       const reels = getDealReelSpecs(STATE.deals[selectedDeal]);
       const pending = reels.filter(r => !dockScannedReels.has(r.seq));
-      if (pending.length === 0) return;
-      autoScanningReels = true;
-      renderCenter();
-      try {
-        for (let i = 0; i < pending.length; i++) {
-          await holdIfPresenterPaused();
-          if (!STATE || computeStepIndex(STATE.runtimeState[selectedDeal]) !== 5) break;
-          scanSingleDockReel(pending[i].seq);
-          if (i < pending.length - 1) {
-            await waitPauseAware(460);
-          }
-        }
-      } finally {
-        await waitPauseAware(240);
-        autoScanningReels = false;
-        lastFlashedReelSeq = 0;
+      if (pending.length > 0) {
+        autoScanningReels = true;
         renderCenter();
+        try {
+          for (let i = 0; i < pending.length; i++) {
+            await holdIfPresenterPaused();
+            if (!STATE || computeStepIndex(STATE.runtimeState[selectedDeal]) !== 5) break;
+            scanSingleDockReel(pending[i].seq);
+            if (i < pending.length - 1) {
+              await waitPauseAware(460);
+            }
+          }
+          await waitPauseAware(520);
+        } finally {
+          autoScanningReels = false;
+          lastFlashedReelSeq = 0;
+          renderCenter();
+        }
+      }
+      if (STATE && computeStepIndex(STATE.runtimeState[selectedDeal]) === 5 && dockScannedReels.size >= reels.length) {
+        await approveCheckpoint3MarcusDock();
       }
     }
 
@@ -1112,7 +1117,7 @@
         { num: 3, name: 'VP Approval',  who: 'Devon ($100k)',    human: true,  badge: '👤 SIGN' },
         { num: 4, name: 'Spot & PO',    who: 'Nancy (Spot OK)',  human: false, badge: '⚡ AUTO+OK' },
         { num: 5, name: 'Order Ack',    who: 'Nancy (Dates OK)', human: false, badge: '⚡ AUTO+OK' },
-        { num: 6, name: 'Dock Scan',    who: 'Marcus (Submit)',  human: true,  badge: '👤 SCAN' },
+        { num: 6, name: 'Dock Scan',    who: 'Marcus (4 Scans)', human: true,  badge: '👤 SCAN' },
         { num: 7, name: 'OCR & Match',  who: 'Duncan (3WM OK)',  human: false, badge: '⚡ AUTO+OK' },
         { num: 8, name: 'Cut Check',    who: 'Meredith (CFO)',   human: true,  badge: '👤 SIGN' },
       ];
@@ -1141,9 +1146,9 @@
             <div style="font-weight:800;color:var(--text-main);">
               Supply Chain (<code>P2M</code> · Steps 1–3) ➔ Procure-to-Pay (<code>P2P</code> · Steps 4–8) · ${esc(d.id)} — <span style="color:var(--blue);">${stepIdx >= 8 ? 'All 8 Steps Complete · Ledger Balanced' : `Step ${stepIdx + 1} of 8`}</span>
             </div>
-            <div style="display:flex;gap:10px;font-size:10.5px;color:var(--text-muted);font-weight:700;">
-              <span><span class="step-kind kind-auto">⚡ AUTO+OK</span> Agentic Block + Proceed Gate</span>
-              <span><span class="step-kind kind-human">👤 SIGN</span> Officer Sign / Scan</span>
+            <div style="display:flex;gap:10px;font-size:10.5px;color:var(--text-muted);font-weight:700;white-space:nowrap;">
+              <span><span class="step-kind kind-auto">⚡ AUTO+OK</span> Binary Intelligence</span>
+              <span><span class="step-kind kind-human">👤 SIGN</span> Human Officer Gate</span>
             </div>
           </div>
           <div class="steps-grid">
@@ -1770,7 +1775,7 @@
                 <div class="cp-eyebrow">👤 STEP 6 OF 8 · MARCUS VANCE (WAREHOUSE RECEIVING DOCK LEAD · BAY 4 RF BARCODE SCAN GUN)</div>
                 <div class="cp-title">Scan All 4 Vendor-Barcoded Master Reels (${scannedCount} / ${reelSpecs.length} Scanned · ${fmtInt(scannedFt)} / 8,000 FT)</div>
                 <div class="cp-desc">
-                  Encore Wire shipped <strong>4 Master Wooden Reels</strong> (<code>2,000 FT</code> each) with GS1-128 barcodes under Vendor Ack <code>${esc(d.oaId)}</code>. Click <strong>Scan All 4 Reels</strong> once — Marcus sweeps each reel one at a time, then click <strong>Submit</strong>.
+                  Encore Wire shipped <strong>4 Master Wooden Reels</strong> (<code>2,000 FT</code> each) with GS1-128 barcodes under Vendor Ack <code>${esc(d.oaId)}</code>. Press <strong>Scan All 4 Reels</strong> — Marcus scans all 4 reels into stock and moves straight to AP Invoice Match.
                 </div>
               </div>
               <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
@@ -1859,10 +1864,10 @@
                 </div>
                 <div class="sig-strip" style="background:#1e293b;border-color:${allReelsScanned ? '#22c55e' : '#475569'};color:#e2e8f0;padding:5px 9px;">
                   <span>${allReelsScanned
-                    ? '✅ <strong>All 4 Reels Scanned (8,000 FT)</strong> — Click <strong>Submit Dock Scan</strong> above!'
+                    ? '✅ <strong>All 4 Reels Scanned (8,000 FT)</strong> — Posting Dock Receipt &amp; advancing to AP Invoice OCR…'
                     : (autoScanningReels
-                        ? `🔫 <strong>Marcus RF Gun Active:</strong> Sweeping reel ${scannedCount} of 4 sequentially…`
-                        : `🔫 Click <strong>Scan All 4 Reels</strong> once above — Marcus sweeps all 4 barcodes one at a time!`)}</span>
+                        ? `🔫 <strong>Marcus RF Gun Active:</strong> Scanning reel ${scannedCount} of 4 into WMS stock…`
+                        : `🔫 Ready at Bay 4 — Marcus scans all 4 GS1-128 barcodes (8,000 FT) and advances automatically.`)}</span>
                 </div>
               </div>
             </div>
@@ -2662,9 +2667,11 @@
       const fmtCell = (v) => (!v || Math.abs(v) < 0.005) ? '—' : fmtUsdShort(v);
       const fmtBalCell = (v) => {
         const n = Number(v || 0);
-        if (Math.abs(n) < 0.005) return '$0.00';
-        if (n < 0) return `(${fmtUsd(Math.abs(n))})`;
-        return fmtUsd(n);
+        if (Math.abs(n) < 0.005) return '$0';
+        const abs = Math.abs(n);
+        const hasCents = Math.abs(Math.round(abs * 100) % 100) > 0;
+        const formatted = hasCents ? fmtUsd(abs) : fmtUsdShort(abs);
+        return n < 0 ? `(${formatted})` : formatted;
       };
 
       el.innerHTML = `
@@ -2707,10 +2714,10 @@
             </tbody>
           </table>
           <!-- SEPARATE PURCHASING COMMITMENT MEMO BELOW CLEAN RULE (NEVER MIXED INTO GL ACCOUNTS) -->
-          <div style="margin-top:5px;padding-top:5px;border-top:1px dashed #cbd5e1;display:flex;justify-content:space-between;align-items:center;font-size:9.8px;">
-            <span style="font-family:var(--mono);color:var(--text-sec);font-weight:700;">Memo · Open ${esc(d.id)} Commitment</span>
-            <span style="font-family:var(--mono);font-weight:800;color:${openPoVal > 0 ? 'var(--blue)' : 'var(--text-muted)'};">
-              ${fmtUsd(openPoVal)}${st.wf2_dock_received === 'done' ? ' (Cleared at Dock)' : ''}
+          <div style="margin-top:5px;padding-top:5px;border-top:1px dashed #cbd5e1;display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:9.5px;white-space:nowrap;">
+            <span style="font-family:var(--mono);color:var(--text-sec);font-weight:700;overflow:hidden;text-overflow:ellipsis;">Memo · Open ${esc(d.id)}</span>
+            <span style="font-family:var(--mono);font-weight:800;flex-shrink:0;color:${openPoVal > 0 ? 'var(--blue)' : 'var(--text-muted)'};">
+              ${openPoVal > 0 ? fmtUsdShort(openPoVal) : '$0'}${st.wf2_dock_received === 'done' ? ' (Cleared at Dock)' : ''}
             </span>
           </div>
         </div>
