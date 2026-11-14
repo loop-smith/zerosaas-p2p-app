@@ -21,6 +21,7 @@
     let kalMuted = false;
     let kalAutopilotActive = false;
     let kalAutopilotEpoch = 0;
+    let stopAtHumanGates = false; // false = full hands-free run; true = pause at the 4 human signing gates for presenter click
     let briefHighlightCard = 0; // 0=origin, 1..4=areas
     let briefHighlightTimer = null;
     let kalSubtitle = 'Safety-Stock Replenishment Workflow ready — live WMS copper stock-out (0 FT < 8,000 FT safety stock) staged at Step 1.';
@@ -803,13 +804,14 @@
           await executeStewardSequence([
             { action: 'wf0_route_to_darius', label: 'Routing WMS stock-out signal (REQ-25800) to Supply Chain Planner Darius Mercer…' },
           ]);
-          if (myAuto !== kalAutopilotEpoch) return;
+          if (myAuto !== kalAutopilotEpoch || stopAtHumanGates) return;
           await waitPauseAware(750);
         }
 
         // Step 2 -> Step 3 (Escalation to VP Supply Chain Devon Brooks · $100k Signing Limit)
         stepCur = computeStepIndex(STATE?.runtimeState?.[selectedDeal]);
         if (stepCur === 1 && myAuto === kalAutopilotEpoch) {
+          if (stopAtHumanGates) return;
           await executeStewardSequence([
             { action: 'wf0_submit_req', label: 'Recording Darius Mercer confirmation & escalating above $20,000 Signing Limit to VP Devon Brooks…' },
           ]);
@@ -820,6 +822,7 @@
         // Step 3 -> Step 4 (VP Sign-Off + Live Outbound COMEX Copper API Call)
         stepCur = computeStepIndex(STATE?.runtimeState?.[selectedDeal]);
         if (stepCur === 2 && myAuto === kalAutopilotEpoch) {
+          if (stopAtHumanGates) return;
           await approveCheckpoint2Devon();
           if (myAuto !== kalAutopilotEpoch) return;
           await waitPauseAware(800);
@@ -843,13 +846,14 @@
           await executeStewardSequence([
             { action: 'wf1_confirm_ack', label: 'Verifying ENC-OA-2026-884192 dates & staging 4 master reels at Receiving Bay 4…' },
           ]);
-          if (myAuto !== kalAutopilotEpoch) return;
+          if (myAuto !== kalAutopilotEpoch || stopAtHumanGates) return;
           await waitPauseAware(450);
         }
 
         // Step 6 -> Step 7 (Marcus Scans All 4 Barcoded Reels -> Auto-Runs 28-Box RapidOCR Neural Scan & 3-Way Match)
         stepCur = computeStepIndex(STATE?.runtimeState?.[selectedDeal]);
         if (stepCur === 5 && myAuto === kalAutopilotEpoch) {
+          if (stopAtHumanGates) return;
           await scanAllDockReelsSequentially();
           if (myAuto !== kalAutopilotEpoch) return;
           await waitPauseAware(800);
@@ -862,13 +866,14 @@
           await executeStewardSequence([
             { action: 'wf3_confirm_match', label: 'Staging verified 3-Way Match packet & Check #10045 for CFO Meredith Hale…' },
           ]);
-          if (myAuto !== kalAutopilotEpoch) return;
+          if (myAuto !== kalAutopilotEpoch || stopAtHumanGates) return;
           await waitPauseAware(900);
         }
 
         // Step 8 -> Final Balanced GAAP Books & 4-Database Settlement Summary
         stepCur = computeStepIndex(STATE?.runtimeState?.[selectedDeal]);
         if (stepCur === 7 && myAuto === kalAutopilotEpoch) {
+          if (stopAtHumanGates) return;
           await executeStewardSequence([
             { action: 'wf4_release_ach', label: 'CFO Meredith Hale signing Check #10045 / ACH-000582 from Operating Checking 101100…' },
           ]);
@@ -994,6 +999,10 @@
           const stNow = STATE.runtimeState[selectedDeal];
           renderAll();
           if (stNow?.lastVoiceBrief) await speakText(stNow.lastVoiceBrief, stNow.activeVoiceRole || 'ops_steward');
+          if (stopAtHumanGates && !kalAutopilotActive) {
+            await waitPauseAware(500);
+            void startKalFullDemo(true);
+          }
         } else {
           if (r2.data?.state) STATE = r2.data.state;
           renderAll();
@@ -1102,6 +1111,10 @@
           const stNow = STATE.runtimeState[selectedDeal];
           renderAll();
           if (stNow?.lastVoiceBrief) await speakText(stNow.lastVoiceBrief, stNow.activeVoiceRole || 'treasury_steward');
+          if (stopAtHumanGates && !kalAutopilotActive) {
+            await waitPauseAware(500);
+            void startKalFullDemo(true);
+          }
         } else {
           if (r2.data?.state) STATE = r2.data.state;
           renderAll();
@@ -3635,8 +3648,11 @@
         if (!/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/i.test(String(ev.origin || ''))) return;
         const cmd = ev.data.cmd;
         if (cmd === 'start') {
+          if (typeof ev.data.stopAtHumanGates === 'boolean') stopAtHumanGates = ev.data.stopAtHumanGates;
           deskSubView = 'auto';
           void startKalFullDemo(true);
+        } else if (cmd === 'setStopAtHumanGates') {
+          stopAtHumanGates = Boolean(ev.data.stop);
         } else if (cmd === 'pause') {
           togglePresenterPause();
         } else if (cmd === 'setPaused') {
