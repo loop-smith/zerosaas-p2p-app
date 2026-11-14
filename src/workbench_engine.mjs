@@ -1187,7 +1187,7 @@ export function createWorkbenchEngine({
         evidenceSha256: hrmHash,
       });
 
-      st.lastVoiceBrief = `VP ${actingSeat.name} signed ${sc.upstreamWo} under his $100,000 Signing Limit. Releasing to Centralized Purchasing for live COMEX spot buy.`;
+      st.lastVoiceBrief = `VP ${actingSeat.name} has approved Requisition ${sc.upstreamWo} under his $100,000 signing limit and sent it to Central Purchasing for buying.`;
       recordAuditEvent(
         dealId,
         'STEP-3-VP-SIGNED',
@@ -1238,8 +1238,8 @@ export function createWorkbenchEngine({
       });
 
       st.lastVoiceBrief = isFav
-        ? `VP Devon Brooks approved the requisition. Central Purchasing pulled live COMEX copper at $${quote.spotPerLbUsd.toFixed(2)} per pound—$${quote.lockedUnitPriceFt.toFixed(2)} per foot, or ${fmtUsd(quote.quotedTotalUsd)} total—beating standard cost by ${fmtUsd(absVarUsd)}. Ready to issue Purchase Order ${deal.id}.`
-        : `VP Devon Brooks approved the requisition. Central Purchasing pulled live COMEX copper at $${quote.spotPerLbUsd.toFixed(2)} per pound—$${quote.lockedUnitPriceFt.toFixed(2)} per foot, or ${fmtUsd(quote.quotedTotalUsd)} total—within Purchasing's $50,000 authority. Ready to issue Purchase Order ${deal.id}.`;
+        ? `Central Purchasing pulled live COMEX copper at $${quote.spotPerLbUsd.toFixed(2)} per pound—$${quote.lockedUnitPriceFt.toFixed(2)} per foot, or ${fmtUsd(quote.quotedTotalUsd)} total—beating standard cost by ${fmtUsd(absVarUsd)}. Ready to issue Purchase Order ${deal.id}.`
+        : `Central Purchasing pulled live COMEX copper at $${quote.spotPerLbUsd.toFixed(2)} per pound—$${quote.lockedUnitPriceFt.toFixed(2)} per foot, or ${fmtUsd(quote.quotedTotalUsd)} total—within Purchasing's $50,000 authority. Ready to issue Purchase Order ${deal.id}.`;
       recordAuditEvent(
         dealId,
         'STEP-4A-SPOT-API',

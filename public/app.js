@@ -49,6 +49,11 @@
         };
         beep(1960, 0, 0.06);
         if (allDone) beep(2520, 0.08, 0.09);
+        try {
+          if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
+            window.parent.postMessage({ type: 'zerosaas-audio', kind: 'beep', allDone: Boolean(allDone), ts: Date.now() }, '*');
+          }
+        } catch {}
         setTimeout(() => { try { ctx.close(); } catch {} }, 300);
       } catch {}
     }
@@ -449,6 +454,11 @@
           }
           try {
             await audio.play();
+            try {
+              if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
+                window.parent.postMessage({ type: 'zerosaas-audio', kind: 'tts', text, voiceRole, ts: Date.now() }, '*');
+              }
+            } catch {}
           } catch {
             if (speechDoneResolve) { const r = speechDoneResolve; speechDoneResolve = null; r(false); }
             useWebSpeechFallback = true;
@@ -866,6 +876,11 @@
           await executeStewardSequence([
             { action: 'wf4_release_ach', label: 'CFO Meredith Hale signing Check #10045 / ACH-000582 from Operating Checking 101100…' },
           ]);
+          try {
+            if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
+              window.parent.postMessage({ type: 'zerosaas-status', paid: true, step8SpeechDone: true, kalSpeaking: false }, '*');
+            }
+          } catch {}
         }
       } finally {
         if (myAuto === kalAutopilotEpoch) {
@@ -967,13 +982,19 @@
         }
         STATE = r1.data;
 
-        // Beat 1 (~850ms): Central Purchasing (Nancy Rostova) receives signed REQ-25800 and initiates spot review
+        // Beat 1: VP Devon Brooks approval spoken explicitly & routed to Central Purchasing for buying!
+        const stStep3 = STATE.runtimeState?.[selectedDeal];
         liveShowcasePhase = 'cp_reviewing';
         busyAction = false;
-        kalBadgeText = 'CENTRAL PURCHASING · NANCY ROSTOVA';
-        kalSubtitle = 'VP Devon signed REQ-25800 ($23,120 ceiling) ➔ Central Purchasing received the requisition and is launching a live COMEX copper spot check…';
+        kalBadgeText = 'VP SUPPLY CHAIN · DEVON BROOKS ($100K LIMIT)';
+        kalSubtitle = stStep3?.lastVoiceBrief || 'VP Devon Brooks has approved Requisition REQ-25800 under his $100,000 signing limit and sent it to Central Purchasing for buying.';
         renderAll();
-        await waitPauseAware(850);
+        if (stStep3?.lastVoiceBrief) {
+          await speakText(stStep3.lastVoiceBrief, stStep3.activeVoiceRole || 'ops_steward');
+        } else {
+          await waitPauseAware(850);
+        }
+        await holdIfPresenterPaused();
 
         // Beat 2 (~1,450ms min): Outbound TLS handshake pulls real-time COMEX Copper price live on screen
         liveShowcasePhase = 'spot_calling';
