@@ -4,10 +4,18 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { openKernel, ROOT, Refusal, isStewardIdentity, stewardRefusal } from './lineage_core.mjs';
+import {
+  createVoiceTelemetry,
+  getVoiceStatus,
+  voiceConfig,
+  kalSpeak,
+  kalTranscribe,
+  handleVoiceTts,
+  handleVoiceStt,
+  handleVoiceKal,
+} from './voice.mjs';
 
 const MAX_BODY_BYTES = 64 * 1024;
-const MAX_AUDIO_BYTES = 2 * 1024 * 1024;
-const MAX_SPEECH_CHARS = 1500;
 const LOOPBACK_HOST = /^(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/i;
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.pdf': 'application/pdf', '.webm': 'video/webm' };
 
@@ -63,59 +71,7 @@ function serveStatic(res, publicDir, pathname) {
   return send(res, 404, { ok: false, code: 'NOT_FOUND' });
 }
 
-// KAL voice proxy. The ElevenLabs key lives only in the server's runtime env, read per request: nothing in public/ or
-// the repo holds it, and it never appears in a response or a log. Unset ➔ 503, and the desk falls back to browser speech.
-// Voice is read-only: these routes never reach the kernel, so they cannot approve, post or pay.
-function voiceConfig(env) {
-  const key = String(env.ELEVENLABS_API_KEY ?? '').trim();
-  if (!key) throw new Refusal(503, 'KAL_VOICE_UNCONFIGURED', 'Set ELEVENLABS_API_KEY in the server environment to enable KAL voice; the desk uses browser speech meanwhile');
-  return {
-    key,
-    base: String(env.ELEVENLABS_BASE_URL || 'https://api.elevenlabs.io').replace(/\/+$/, ''),
-    voiceId: env.ELEVENLABS_VOICE_ID || '21m00Tcm4TlvDq8ikWAM',
-    ttsModel: env.ELEVENLABS_TTS_MODEL || 'eleven_turbo_v2_5',
-    sttModel: env.ELEVENLABS_STT_MODEL || 'scribe_v1',
-  };
-}
-
-async function elevenLabs(voice, fetchImpl, route, body, timeoutMs, headers = {}) {
-  let reply, bytes;
-  try {
-    reply = await fetchImpl(voice.base + route, { method: 'POST', headers: { ...headers, 'xi-api-key': voice.key }, body, signal: AbortSignal.timeout(timeoutMs) });
-    bytes = Buffer.from(await reply.arrayBuffer());
-  } catch {
-    throw new Refusal(502, 'KAL_VOICE_UPSTREAM', 'ElevenLabs did not answer in time');
-  }
-  // The upstream body is never relayed: an error page may quote the request.
-  if (!reply.ok) throw new Refusal(502, 'KAL_VOICE_UPSTREAM', `ElevenLabs returned HTTP ${reply.status}`);
-  return { type: reply.headers.get('content-type') ?? '', bytes };
-}
-
-async function kalSpeak(req, res, voice, fetchImpl) {
-  const { text } = await readJson(req);
-  if (typeof text !== 'string' || !text.trim() || text.length > MAX_SPEECH_CHARS) throw new Refusal(400, 'BAD_TEXT', `text must be 1-${MAX_SPEECH_CHARS} characters`);
-  const route = `/v1/text-to-speech/${encodeURIComponent(voice.voiceId)}?output_format=mp3_44100_128`;
-  const audio = await elevenLabs(voice, fetchImpl, route, JSON.stringify({ text, model_id: voice.ttsModel }), 8000, { 'content-type': 'application/json', accept: 'audio/mpeg' });
-  const type = audio.type.split(';')[0].trim();
-  if (!/^audio\/[\w.+-]+$/i.test(type)) throw new Refusal(502, 'KAL_VOICE_UPSTREAM', 'ElevenLabs returned no audio');
-  return send(res, 200, audio.bytes, type);
-}
-
-async function kalTranscribe(req, res, voice, fetchImpl) {
-  const audio = await readBody(req, MAX_AUDIO_BYTES);
-  if (!audio.length) throw new Refusal(400, 'NO_AUDIO', 'Body must carry the push-to-talk WebM audio');
-  const form = new FormData();
-  form.append('model_id', voice.sttModel);
-  form.append('file', new Blob([audio], { type: 'audio/webm' }), 'ask-kal.webm');
-  const reply = await elevenLabs(voice, fetchImpl, '/v1/speech-to-text', form, 11000);
-  let text;
-  try { text = JSON.parse(reply.bytes.toString('utf8')).text; } catch { text = undefined; }
-  if (typeof text !== 'string') throw new Refusal(502, 'KAL_VOICE_UPSTREAM', 'Scribe returned no transcript');
-  // Only the transcript is relayed; the desk maps it to a read-only intent.
-  return send(res, 200, { text: text.slice(0, 2000) });
-}
-
-async function route(kernel, req, res, { publicDir, voiceEnv, voiceFetch }) {
+async function route(kernel, req, res, { publicDir, voiceEnv, voiceFetch, voiceTelemetry }) {
   // DNS-rebinding guard: only loopback Host names reach the kernel.
   if (!LOOPBACK_HOST.test(req.headers.host ?? '')) throw new Refusal(403, 'BAD_HOST', 'Host must be 127.0.0.1 or localhost');
   const { pathname } = new URL(req.url, 'http://127.0.0.1');
@@ -123,11 +79,18 @@ async function route(kernel, req, res, { publicDir, voiceEnv, voiceFetch }) {
   const step = pathname.match(/^\/api\/step\/(\d{1,2})$/);
   const kernelWrite = req.method === 'POST' && (step || pathname === '/api/reset');
   const transcribe = req.method === 'POST' && pathname === '/api/kal/transcribe';
+  const voiceStt = req.method === 'POST' && pathname === '/api/voice/stt';
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     // KAL holds zero write authority on every route; step/reset refusals are audit-chained by the kernel instead.
     if (!kernelWrite && isStewardIdentity(headerIds)) throw stewardRefusal();
-    // CSRF guard: JSON-only writes (and the audio/webm transcript upload) force a CORS preflight this server never grants.
-    if (!(transcribe ? /^audio\/webm\b/i : /^application\/json\b/i).test(req.headers['content-type'] ?? '')) {
+    // CSRF guard: JSON-only writes (and explicit audio/multipart transcript uploads) force a CORS preflight this server never grants.
+    const ct = req.headers['content-type'] ?? '';
+    const validType = transcribe
+      ? /^audio\/webm\b/i.test(ct)
+      : voiceStt
+        ? /^(audio\/[\w.+-]+|video\/webm|multipart\/form-data|application\/json|application\/octet-stream)\b/i.test(ct)
+        : /^application\/json\b/i.test(ct);
+    if (!validType) {
       throw new Refusal(415, 'UNSUPPORTED_MEDIA_TYPE', transcribe ? 'Transcription requires Content-Type: audio/webm' : 'Writes require Content-Type: application/json');
     }
   }
@@ -138,6 +101,7 @@ async function route(kernel, req, res, { publicDir, voiceEnv, voiceFetch }) {
       '/api/journal': () => kernel.journalReport(),
       '/api/audit': () => kernel.verifyChain({ entries: true }),
       '/api/comex': () => kernel.quote(),
+      '/api/voice/status': () => getVoiceStatus(voiceEnv),
     };
     if (reads[pathname]) return send(res, 200, await reads[pathname]());
     // Trade PDFs and the OCR page image written by the sidecar into the kernel sandbox.
@@ -151,14 +115,28 @@ async function route(kernel, req, res, { publicDir, voiceEnv, voiceFetch }) {
     const result = step ? await kernel.act(Number(step[1]), { identities, body }) : await kernel.reset(identities);
     return send(res, result.status, result.body);
   }
-  if (req.method === 'POST' && pathname === '/api/kal/speak') return kalSpeak(req, res, voiceConfig(voiceEnv), voiceFetch);
-  if (transcribe) return kalTranscribe(req, res, voiceConfig(voiceEnv), voiceFetch);
+  if (req.method === 'POST' && pathname === '/api/kal/speak') {
+    return kalSpeak(req, res, voiceConfig(voiceEnv), voiceFetch, { readJson, send });
+  }
+  if (transcribe) {
+    return kalTranscribe(req, res, voiceConfig(voiceEnv), voiceFetch, { readBody, send });
+  }
+  if (req.method === 'POST' && pathname === '/api/voice/tts') {
+    return handleVoiceTts(req, res, { env: voiceEnv, fetchImpl: voiceFetch, telemetry: voiceTelemetry, readJson, send });
+  }
+  if (voiceStt) {
+    return handleVoiceStt(req, res, { env: voiceEnv, fetchImpl: voiceFetch, telemetry: voiceTelemetry, readBody, send });
+  }
+  if (req.method === 'POST' && pathname === '/api/voice/kal') {
+    return handleVoiceKal(req, res, { kernel, readJson, send });
+  }
   return send(res, pathname.startsWith('/api/') ? 405 : 404, { ok: false, code: 'NOT_FOUND', message: `${req.method} ${pathname} is not a route` });
 }
 
 /** Options: publicDir; voiceEnv (default process.env, read per request) and voiceFetch for the KAL voice proxy. */
 export function createAppServer(kernel, { publicDir = path.join(ROOT, 'public'), voiceEnv = process.env, voiceFetch = globalThis.fetch } = {}) {
-  const options = { publicDir, voiceEnv, voiceFetch };
+  const voiceTelemetry = createVoiceTelemetry();
+  const options = { publicDir, voiceEnv, voiceFetch, voiceTelemetry };
   return http.createServer((req, res) => {
     route(kernel, req, res, options).catch((e) => {
       if (!(e instanceof Refusal)) console.error('[sor_3panel_server]', e);
