@@ -43,7 +43,7 @@ Initial TDD run failed collection because sidecar.invoice_ocr_engine did not exi
 
 Automated HTTP checks exercised the live loopback listener, generation, OCR, match/payment proposals, variance/bank refusals, invalid JSON, body shape, path-selection refusal, size limit and nested JSON. CLI checks ran actual subprocesses with temporary docs roots. Independent exploratory review generated five real PDFs, rendered a 1224x1584 invoice and observed 35 smoke boxes; real model extraction independently returned 35 recognized boxes with 8000 FT / 2.70 / 21600.00. No browser UI is part of this sidecar; UI routes and app_server.py are absent and out of scope.
 
-All test document roots were temporary; /home/rig/state was not opened or changed. The server accepts no caller-selected filesystem paths, binds only 127.0.0.1, limits JSON bodies, serializes PDF/OCR operations, and returns financial proposals rather than posting money. Normal mode retains one real OCR model; synthetic boxes require explicit startup smoke mode and an exact canonical PDF byte match. No external messages or record mutations occurred.
+All test document roots were temporary; host state directories were not opened or changed. The server accepts no caller-selected filesystem paths, binds only 127.0.0.1, limits JSON bodies, serializes PDF/OCR operations, and returns financial proposals rather than posting money. Normal mode retains one real OCR model; synthetic boxes require explicit startup smoke mode and an exact canonical PDF byte match. No external messages or record mutations occurred.
 
 ### Lean accounting
 

@@ -24,8 +24,8 @@ Enterprise buyers are trapped between two bad deals: paying millions in per-seat
 
 Enterprise builds fail when code generation starts from vague prompts instead of real brownfield rules. This app demonstrates the full pipeline:
 
-* **Upstream `BOSS` Digital Twin Intake:** Distilled **6 clean-room client discovery workshops** and **336 raw client files** (org chart, Delegation of Authority limits, SOPs, and standard-cost policies) into **35 specification files** and the machine-enforced lineage contract ([`contracts/p2p-lineage-contract.json`](./contracts/p2p-lineage-contract.json)).
-* **Compiled in `8090 Software Factory`:** Loaded into `Refinery` ➔ `Foundry` ➔ `Planner` ➔ `Validator`, generating **11 initial Work Orders + 7 Change Orders** across **4 closed-loop Validator rounds** (**18/18 completed** in [`.sw-factory/`](./.sw-factory/) and traced in [`docs/software-factory-trace.md`](./docs/software-factory-trace.md)).
+* **Upstream `BOSS` Digital Twin Intake:** Distilled **6 workshops** (`11.5 hrs`, `12 people`) and **336 client files** (emails, Excel spreadsheets, SOPs, org chart, Delegation of Authority limits, and standard-cost policies) ➔ **242 master rows + 9 schemas** ➔ **35 specs** (`35 specification files`) loaded into `8090 Software Factory` alongside the machine-enforced lineage contract ([`contracts/p2p-lineage-contract.json`](./contracts/p2p-lineage-contract.json)).
+* **Compiled in `8090 Software Factory`:** Loaded into `Refinery` ➔ `Foundry` ➔ `Planner` ➔ `Validator`, generating **11 initial Work Orders + 7 Change Orders** across **4 closed-loop Validator rounds** (**18 work orders — 16 passed, 2 built**, plus consolidated demo-polish Change Order `WO-19`, documented in [`.sw-factory/`](./.sw-factory/) and traced in [`docs/software-factory-trace.md`](./docs/software-factory-trace.md)).
 * **Live `BOSS` Stage Bridge & Autopilot Modes:** Includes a loopback `postMessage` (`zerosaas-cmd` / `zerosaas-status`) and CORS stage bridge so a live **BOSS** instance can embed, start, pause, and step the P2P workbench directly — plus standalone **Executive Overview**, **Hands-Free `KAL` Autopilot**, and **Human-Gate Stop Mode** (pausing at the 4 human officer checkpoints for live commentary).
 
 ---
@@ -47,7 +47,7 @@ Enterprise builds fail when code generation starts from vague prompts instead of
 
 ### 4. 🗄️ Four MIT Headless Systems of Record (`/seeds`)
 * **WMS:** `InvenTree` warehouse management schema (`seeds/wms_seed.sqlite3` — `119` tables)
-* **CRM:** `Django-CRM` supplier & commercial schema (`seeds/crm_seed.sqlite3` — `151` tables)
+* **CRM:** `Django-CRM` headless supplier/vendor master schema only — no sales workflow (`seeds/crm_seed.sqlite3` — `151` tables)
 * **HRM:** Officer DOA signing limits, SoD roles & `$0.00` AI `CHECK` cap (`seeds/hrm_seed.sqlite3` — `5` tables)
 * **ERP/GL:** `89`-account GAAP double-entry financial ledger (`seeds/coa_seed.journal`, `hledger --strict` & built-in JS verifier)
 
@@ -105,17 +105,17 @@ python3 seeds/build_seeds.py --check
 ├── seeds/                               # 275-table MIT SQLite seeds (WMS/CRM/HRM) + 89-acct ERP/GL journal
 ├── tests/                               # Copper E2E, golden-master parity & red-team regression suites
 ├── docs/software-factory-trace.md       # Forward/backward Software Factory traceability
-└── .sw-factory/WO-01..WO-18/            # Software Factory checklists, plans & Validator review logs
+└── .sw-factory/WO-01..WO-19/            # Software Factory checklists, plans & Validator review logs
 ```
 
 ---
 
 ## Pre-Event Planning & Third-Party Tool / License Disclosure (EVOLVE Rules §10)
 
-* **Pre-Event Planning Disclosure:** Per EVOLVE FAQ (*brainstorming, problem exploration, wireframing, and tech-stack setup permitted prior to kickoff*), upstream brownfield workflow discovery (`BOSS` export) and the static P2P target schema contract (`contracts/p2p-lineage-contract.json`) were prepared prior to kickoff; application server code, workbench UI, OCR sidecar, **ERP/GL** ledger bindings, voice steward, 275-table seed builder, and automated test suites in this repository were built and refined through **8090 Software Factory** (`WO-01`..`WO-18`).
+* **Pre-Event Planning Disclosure:** Per EVOLVE FAQ (*brainstorming, problem exploration, wireframing, and tech-stack setup permitted prior to kickoff*), upstream brownfield workflow discovery (`BOSS` export) and the static P2P target schema contract (`contracts/p2p-lineage-contract.json`) were prepared prior to kickoff; application server code, workbench UI, OCR sidecar, **ERP/GL** ledger bindings, voice steward, 275-table seed builder, and automated test suites in this repository were built and refined through **8090 Software Factory** (`WO-01`..`WO-18` — 18 work orders, 16 passed, 2 built — plus consolidated demo-polish Change Order `WO-19`).
 * **Open-Source Libraries, External APIs, Partner & AI Coding Tools (`100%` MIT-Compatible):**
   * `Node.js 22+` (`node:sqlite`, `node:http`, `node:crypto`) — MIT License
-  * `SQLite 3` + `4` MIT Headless Seeds (`InvenTree` WMS `119` tables MIT · `Django-CRM` `151` tables MIT · `Headless HRM` `5` tables MIT · `89`-account `ERP/GL` `coa_seed.journal` MIT) — Public Domain & MIT
+  * `SQLite 3` + `4` MIT Headless Seeds (`InvenTree` WMS `119` tables MIT · `Django-CRM` headless supplier/vendor master `151` tables MIT · `Headless HRM` `5` tables MIT · `89`-account `ERP/GL` `coa_seed.journal` MIT) — Public Domain & MIT
   * `hledger` (optional external plaintext **ERP/GL** accounting CLI verifier; built-in MIT JS verifier included) — GPL-3.0 (unmodified external CLI binary only, not bundled)
   * `Python 3.12+` (`PSF-2.0`), `rapidocr-onnxruntime` (`Apache-2.0`), `pypdfium2` (`Apache-2.0`), `Pillow` (`MIT-CMU`), `reportlab` (`BSD-3-Clause`)
   * `8090 Software Factory` (`Refinery` · `Foundry` · `Planner` · `Validator`) + `software-factory` plugin — EVOLVE Host Platform / Partner Tool

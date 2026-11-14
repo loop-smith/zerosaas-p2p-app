@@ -1,20 +1,21 @@
 # 8090 Software Factory ⇄ Build Traceability Matrix (`zerosaas-p2p-app`)
 
-This file traces each **8090 Software Factory Planner Work Order** (`SF WO-1` .. `SF WO-18`) both ways:
+This file traces each **8090 Software Factory Planner Work Order** (`SF WO-1` .. `SF WO-18`, plus consolidated Round 5 demo-polish Change Order `SF WO-19`) both ways:
 
 - **Forward:** from each SF Work Order to the build unit (`WO-xx`) that implements it, then to the commit, then to its independent **Qualify Review** verdict.
-- **Backward:** from each commit to the SF Work Orders and Validator feedback themes (`THM-1` .. `THM-4`) it satisfies.
+- **Backward:** from each commit to the SF Work Orders and Validator feedback themes (`THM-1` .. `THM-5`) it satisfies.
 
-The SF Work Orders operate in a live 2-way **Refinery ➔ Foundry ➔ Planner ➔ Validator** closed loop across four Validator feedback rounds:
+The SF Work Orders operate in a live 2-way **Refinery ➔ Foundry ➔ Planner ➔ Validator** closed loop across five Validator feedback rounds:
 
 1. **Round 1 (`FB-1` + `FB-2` ➔ `THM-1` ➔ `SF WO-12`):** UI/kernel route contract alignment and SOX 404 adversarial replay hardening.
 2. **Round 2 (`FB-3` ➔ `THM-2` ➔ `SF WO-13`):** White enterprise workbench and `ZeroSaaS P2P` brand redesign (`REQ-P2P-012`..`020`, `BP-01` `ADR-006`).
 3. **Round 3 (`SF WO-14` + `T21`):** Interactive parity (voice intents, dock RF wedge scanner, RapidOCR field tagger, CFO check view, zero-secret voice proxy).
 4. **Round 4 (`FB-5` ➔ `THM-4` ➔ `SF WO-15` .. `SF WO-18`):** Full-stack 1:1 3-panel workbench glass, streaming female `KAL` voice (`EXAVITQu4vr4xnSDxMaL`) with controller phonetic lexicon, `275`-table MIT brownfield SQLite schema explorer (`151` CRM / `119` WMS / `5` HRM), cross-platform `hledger` discovery, 13-route workbench engine, and **White House Super Intelligence Accord (`EO 14434`) 4-Layer × 8090 Know Your Superintelligence (`KYSI`) L1–L4** governance parity.
+5. **Round 5 (`FB-6` ➔ `THM-5` ➔ `SF WO-19`):** Consolidated operator demo-polish Change Order (`17772b8`..`74d0f3a`) — direct Step 1 WMS stock-out start, loopback `postMessage` stage bridge (`zerosaas-cmd` / `zerosaas-status` / `zerosaas-audio` / `step8SpeechDone`), optional human-gate stop mode, native ICO/SVG `/favicon.ico`, continuous single-stream ElevenLabs `KAL` TTS cache, spoken VP Devon Brooks approval handoff before Central Purchasing spot call, and `BOSS` (`6 workshops`, `11.5 hrs`, `12 people`, `336 client files` ➔ `242 master rows + 9 schemas` ➔ `35 specs`) ➔ `ERP/GL` alignment.
 
-- **Snapshot (UTC):** `2026-11-14T11:15Z`
+- **Snapshot (UTC):** `2026-11-14T23:14Z`
 - **Repository:** `loop-smith/zerosaas-p2p-app`, formerly `8090-p2p-app`
-- **Planner status:** **18** Work Orders (`SF WO-1` .. `SF WO-18`) built across 4 closed-loop rounds; `WO-15` .. `WO-18` ready for independent cross-family Qualify Review.
+- **Planner status:** **18** core Work Orders across Rounds 1–4 (**16 Completed / PASS, 2 Built** — `SF WO-13` and `SF WO-14` carried forward into Round 4), plus **1** consolidated Round 5 demo-polish Change Order (`SF WO-19`, **Completed / PASS**).
 
 ## 1. Live 8090 Software Factory Anchors
 
@@ -39,23 +40,27 @@ The SF Work Orders operate in a live 2-way **Refinery ➔ Foundry ➔ Planner �
 | Planner Work Order | `SF WO-16` — 1:1 3-panel workbench glass, RF laser scan, inline OCR invoice & Check `#10045` | `bd3f7822-1571-4b81-80ca-6a32215a25aa` |
 | Planner Work Order | `SF WO-17` — 275-table brownfield SQLite explorer, live COMEX spot subview, cross-platform `hledger` & 13 routes | `78e025ce-ac9b-4714-a769-4b38767baa9d` |
 | Planner Work Order | `SF WO-18` — Scrub internal prefixes, document `EO 14434` × `KYSI` governance & update Software Factory trace | `346dd5b4-37e7-45ed-bca0-6d36528bd0c6` |
+| Validator Feedback | `FB-6` — Consolidated Demo-Polish, BOSS Loopback Stage Bridge, Human-Gate Mode & Continuous KAL Narration | `edc8223d-5759-41ae-9c66-6913ae5867eb` |
+| Validator Theme | `THM-5` — Consolidated Stage Bridge, Human-Gate Autopilot, Continuous KAL Voice & ERP/GL Documentation Polish (Resolved) | `92c85e08-af95-4819-995a-8d3100c6d22f` |
+| Planner Work Order | `SF WO-19` — Consolidate BOSS Loopback Stage Bridge, Human-Gate Autopilot, Continuous KAL Narration & ERP/GL Pipeline Traceability | `2ccb428f-18cb-48c7-92ab-47d92ac381d7` |
 
 > **REQ-01 identifier note:** early `.sw-factory/WO-01..WO-06/context.md` files recorded `c2bd88dc-6cf0-41d2-8a20-6eb60e9b3dbc` when execution plans were initially staged (`5baba895`). This matrix uses the live Foundry `REQ-01` UUID (`1fc08c46-ed36-4a14-99a3-0eae8de04206`).
 
 ## 2. The 2-Way Closed Loop
 
 ```text
- Refinery KB-00 ──► Foundry REQ-01 ──► BP-01 Architecture + Feature Blueprint ──► Planner SF WO-1..WO-18
+ Refinery KB-00 ──► Foundry REQ-01 ──► BP-01 Architecture + Feature Blueprint ──► Planner SF WO-1..WO-19
        ▲                                                                                  │
        │                                                                                  ▼
- Validator FB-1..FB-5 ◄── Qualify Review (PASS / FAIL) ◄── modular commit ◄── fenced WO build (.sw-factory/WO-xx)
+ Validator FB-1..FB-6 ◄── Qualify Review (PASS / FAIL) ◄── modular commit ◄── fenced WO build (.sw-factory/WO-xx)
        │
        ├──► THM-1 (FB-1, FB-2) ──► SF WO-12 (route contract + replay hardening) ──► PASS
        ├──► THM-2 (FB-3) ──► REQ-P2P-012..020 + ADR-006 ──► SF WO-13 (`c5026200`) + SF WO-14 (`44cad6d1`, `465c3cd9`)
-       └──► THM-4 (FB-5) ──► SF WO-15 (`000bf83`) + SF WO-16 (`116b75b`) + SF WO-17 (`f0e0f5c`) + SF WO-18
+       ├──► THM-4 (FB-5) ──► SF WO-15 (`000bf83`) + SF WO-16 (`116b75b`) + SF WO-17 (`f0e0f5c`) + SF WO-18 (`adfec36d`)
+       └──► THM-5 (FB-6) ──► SF WO-19 (`17772b8`..`74d0f3a`) ──► PASS
 ```
 
-## 3. Forward Matrix — SF Planner WO ➔ Build Unit ➔ Commit ➔ Qualify Review (18 rows)
+## 3. Forward Matrix — SF Planner WO ➔ Build Unit ➔ Commit ➔ Qualify Review (18 core WOs: 16 Completed / PASS, 2 Built + Round 5 `SF WO-19`)
 
 | SF WO | Planner Work Order | Build Unit | Commit | Qualify Review | Status |
 | --- | --- | --- | --- | --- | --- |
@@ -77,6 +82,15 @@ The SF Work Orders operate in a live 2-way **Refinery ➔ Foundry ➔ Planner �
 | **SF WO-16** | 1:1 3-panel workbench glass, 4-reel RF laser scan, inline OCR invoice, Check `#10045` & `WO 1-18` view (`THM-4`) | `WO-16` | `116b75b5` | `WO-15..WO-18.q`: **PASS** (7/7 static + 16/16 client green) | ✅ Completed / PASS |
 | **SF WO-17** | 275-table SQLite explorer (`151`/`119`/`5`), live COMEX spot subview, cross-platform `hledger` & 13-route workbench engine (`THM-4`) | `WO-17` | `f0e0f5cd` | `WO-15..WO-18.q`: **PASS** (24/24 seed + full E2E green) | ✅ Completed / PASS |
 | **SF WO-18** | Scrub internal task prefixes, document `EO 14434` × `KYSI` governance & update Software Factory trace (`THM-4`) | `WO-18` | `adfec36d` | `WO-15..WO-18.q`: **PASS** (0 forbidden strings + all suites green) | ✅ Completed / PASS |
+| **SF WO-19** | Consolidate `BOSS` loopback stage bridge, human-gate autopilot, continuous `KAL` narration & `ERP/GL` pipeline traceability (`THM-5`) | `WO-19` | `17772b8`..`74d0f3a` | `WO-19` review: **PASS** (16/16 client + golden-master E2E green) | ✅ Completed / PASS |
+
+### Validator Round-Trip 5 (`FB-6` ➔ `THM-5` ➔ `SF WO-19`) — Consolidated Demo-Polish Change Order
+
+| Record | UUID | Scope & Verification |
+| --- | --- | --- |
+| `FB-6` | `edc8223d-5759-41ae-9c66-6913ae5867eb` | Consolidated operator feedback covering direct Step 1 WMS stock-out start, loopback `postMessage` stage bridge (`zerosaas-cmd` / `zerosaas-status` / `zerosaas-audio` / `step8SpeechDone`), optional human-gate stop mode, native ICO/SVG `/favicon.ico`, continuous single-stream ElevenLabs `KAL` TTS cache, spoken VP Devon Brooks approval handoff before Central Purchasing spot call, and `README.md` / `BOSS` / `ERP/GL` alignment |
+| `THM-5` | `92c85e08-af95-4819-995a-8d3100c6d22f` | Groups `FB-6` under `REQ-01` (`1fc08c46-ed36-4a14-99a3-0eae8de04206`), marked **Resolved** |
+| `SF WO-19` | `2ccb428f-18cb-48c7-92ab-47d92ac381d7` | Linked to `REQ-01`, `BP-01` (`61e1a72e-d90f-4d32-a3b6-a4b002ed4d2d`), and `THM-5`; consolidates commits `17772b8`, `7575e4d`, `1a1697c`, `497a71a`, `5b790aa`, `3a9ad77`, `c677fd2`, `74d0f3a` + `.sw-factory/WO-19/`, marked **Completed** |
 
 ### Validator Round-Trip 4 (`FB-5` ➔ `THM-4` ➔ `SF WO-15` .. `SF WO-18`) & `EO 14434` × `KYSI` Governance
 
@@ -121,6 +135,14 @@ The SF Work Orders operate in a live 2-way **Refinery ➔ Foundry ➔ Planner �
 | `116b75b` | Port 1:1 golden-master 3-panel workbench glass, RF laser scan, inline OCR invoice, and Check `#10045` | `WO-16` | SF WO-16 (`FB-5`, `THM-4`) | 7/7 static + 16/16 client tests green |
 | `f0e0f5c` | Add 275-table brownfield SQLite explorer, live COMEX spot subview, cross-platform `hledger`, and 13-route workbench engine | `WO-17` | SF WO-17 (`FB-5`, `THM-4`) | 24/24 seed + full Golden-Master E2E green |
 | `adfec36d` | Scrub internal task prefixes, document `EO 14434` × `KYSI` governance, and update Software Factory trace | `WO-18` | SF WO-18 (`FB-5`, `THM-4`) | **PASS** (`WO-15..WO-18.q` + `119`-table & `db=` alias follow-up closed) |
+| `17772b8` | Open directly on Safety-Stock Replenishment Step 1 and add loopback stage bridge | `WO-19` | SF WO-19 (`FB-6`, `THM-5`) | **PASS** (`zerosaas-cmd` / `zerosaas-status` / `zerosaas-audio` / `step8SpeechDone`) |
+| `7575e4d` | Add optional human-gate stop mode for live officer sign-off commentary | `WO-19` | SF WO-19 (`FB-6`, `THM-5`) | **PASS** (4 human officer pause gates verified) |
+| `1a1697c` | Add custom ZeroSaaS P2P favicon and guarantee Step 1 WMS stock-out start | `WO-19` | SF WO-19 (`FB-6`, `THM-5`) | **PASS** |
+| `497a71a` | Serve `/favicon.ico` from UTF-8 `/favicon.svg` to keep public asset text tests green | `WO-19` | SF WO-19 (`FB-6`, `THM-5`) | **PASS** |
+| `5b790aa` | Add native ICO/SVG favicon on `:3590` and ensure continuous single-stream KAL narration | `WO-19` | SF WO-19 (`FB-6`, `THM-5`) | **PASS** (single-stream ElevenLabs TTS cache) |
+| `3a9ad77` | Speak VP Devon Brooks approval handoff before Central Purchasing spot call | `WO-19` | SF WO-19 (`FB-6`, `THM-5`) | **PASS** |
+| `c677fd2` | Document BOSS digital twin pipeline, ElevenLabs KAL, Spot API, RapidOCR, and fix Windows 8.3 test path | `WO-19` | SF WO-19 (`FB-6`, `THM-5`) | **PASS** |
+| `74d0f3a` | Align fourth headless System of Record naming to ERP/GL in README | `WO-19` | SF WO-19 (`FB-6`, `THM-5`) | **PASS** (16/16 client + golden-master E2E green) |
 
 ## 5. Qualify Review Ledger
 
@@ -150,4 +172,5 @@ The SF Work Orders operate in a live 2-way **Refinery ➔ Foundry ➔ Planner �
 | `SF WO-12` | `.sw-factory/WO-12/` | APPROVED (`FB-1`, `FB-2`, `THM-1`, `T20`) | ✅ Closed |
 | `SF WO-13` | `.sw-factory/WO-13/` | APPROVED (`REQ-P2P-012`..`020`) | ✅ Closed |
 | `SF WO-14` | `.sw-factory/WO-14/` | APPROVED (interactive voice, RF, OCR & check parity) | ✅ Closed |
-| `SF WO-15` .. `SF WO-18` | `.sw-factory/WO-15/` | APPROVED (`WO-15..WO-18.q` **PASS**, `FB-5` ➔ `THM-4`) | ✅ Closed |
+| `SF WO-15` .. `SF WO-18` | `.sw-factory/WO-15/` .. `.sw-factory/WO-18/` | APPROVED (`WO-15..WO-18.q` **PASS**, `FB-5` ➔ `THM-4`) | ✅ Closed |
+| `SF WO-19` | `.sw-factory/WO-19/` | APPROVED (**PASS**, `FB-6` ➔ `THM-5` ➔ `SF WO-19` consolidated Round 5 Change Order) | ✅ Closed |

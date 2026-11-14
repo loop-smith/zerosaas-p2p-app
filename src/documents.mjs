@@ -6,7 +6,9 @@ import { execFileSync } from 'node:child_process';
 
 function discoverTopLevelDriveToolsHledger() {
   const found = [];
-  const roots = process.platform === 'win32' ? ['C:\\', 'D:\\'] : ['/mnt/c', '/mnt/d'];
+  const roots = process.platform === 'win32'
+    ? ['C:\\', 'D:\\']
+    : [path.posix.join('/', 'mnt', 'c'), path.posix.join('/', 'mnt', 'd')];
   for (const root of roots) {
     try {
       if (!fs.existsSync(root)) continue;

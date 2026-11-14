@@ -80,7 +80,7 @@ Same-lifecycle double payment does not post a second Check #10045. SYSTEM reset,
 
 A KAL `PUT` is 403 with `bookImpactUsd` 0 and is not an audit-chain row. Kernel spoofs are chained as `EMP-AI-KAL`.
 
-The run copies seeds into a temp directory and does not write `/home/rig/state`. No receipt file was created.
+The run copies seeds into a temp directory and does not write host state directories. No receipt file was created.
 
 **Blocking:** none.
 

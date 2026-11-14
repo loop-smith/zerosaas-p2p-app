@@ -22,7 +22,7 @@ Inspected the target checkout: no sidecar, src/, hara/, existing functions or re
 3. Run focused tests and real OCR, exploratory CLI/HTTP checks; review changes; record all unavailable checks without claiming completion of external integration.
 
 ## Testing
-Use pytest tmp_path roots; never write /home/rig/state. Validate all five PDF headers and hashes, >=28 positive pixel boxes, real rendered RapidOCR output and model reuse, mutated-document refusal, exact match and tampered totals/rates, CFO and bank refusal, HTTP routes and malformed bodies, CLI output. Run python3 -m pytest sidecar -q -p no:cacheprovider and python3 -m py_compile sidecar/invoice_ocr_engine.py. Also run both task-card HARA commands fresh; missing HARA is a baseline limitation. Node server check is unavailable because src/ is absent; execute package smoke through Python subprocess if node/npm exist.
+Use pytest tmp_path roots; never write host state directories. Validate all five PDF headers and hashes, >=28 positive pixel boxes, real rendered RapidOCR output and model reuse, mutated-document refusal, exact match and tampered totals/rates, CFO and bank refusal, HTTP routes and malformed bodies, CLI output. Run python3 -m pytest sidecar -q -p no:cacheprovider and python3 -m py_compile sidecar/invoice_ocr_engine.py. Also run both task-card HARA commands fresh; missing HARA is a baseline limitation. Node server check is unavailable because src/ is absent; execute package smoke through Python subprocess if node/npm exist.
 
 ## Requirements Tracking
 R1 local warm HTTP + CLI: in scope.
