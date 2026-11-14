@@ -21,6 +21,29 @@ const LOOPBACK_HOST = /^(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/i;
 const LOOPBACK_ORIGIN = /^http:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/i;
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.png': 'image/png', '.pdf': 'application/pdf', '.webm': 'video/webm' };
 
+const FAVICON_ICO_BUF = (() => {
+  const w = 32, h = 32, xorBytes = w * h * 4, andBytes = ((w + 31) >> 5) * 4 * h, dibSize = 40 + xorBytes + andBytes;
+  const buf = Buffer.alloc(22 + dibSize);
+  buf.writeUInt16LE(0, 0); buf.writeUInt16LE(1, 2); buf.writeUInt16LE(1, 4);
+  buf[6] = w; buf[7] = h; buf.writeUInt16LE(1, 10); buf.writeUInt16LE(32, 12);
+  buf.writeUInt32LE(dibSize, 14); buf.writeUInt32LE(22, 18);
+  buf.writeUInt32LE(40, 22); buf.writeInt32LE(w, 26); buf.writeInt32LE(h * 2, 30);
+  buf.writeUInt16LE(1, 34); buf.writeUInt16LE(32, 36); buf.writeUInt32LE(xorBytes + andBytes, 42);
+  for (let y = 0; y < h; y++) {
+    const ty = h - 1 - y;
+    for (let x = 0; x < w; x++) {
+      const off = 62 + (y * w + x) * 4;
+      const dx = Math.max(0, 5 - x, x - 26), dy = Math.max(0, 5 - ty, ty - 26);
+      if (dx * dx + dy * dy > 25) continue;
+      const dotDist = (x - 25) * (x - 25) + (ty - 7) * (ty - 7);
+      const isBorder = x <= 2 || x >= 29 || ty <= 2 || ty >= 29 || dx * dx + dy * dy >= 13;
+      const [r, g, b] = dotDist <= 7 ? [34, 197, 94] : isBorder ? [234, 88, 12] : [29, 78, 216];
+      buf[off] = b; buf[off + 1] = g; buf[off + 2] = r; buf[off + 3] = 255;
+    }
+  }
+  return buf;
+})();
+
 const PLACEHOLDER = `<!doctype html><meta charset="utf-8"><title>ZeroSaaS P2P · PO-25800</title>
 <body style="font:14px system-ui;margin:2rem"><h1>ZeroSaaS P2P kernel online</h1>
 <p>JSON API:</p>
@@ -59,10 +82,11 @@ async function readJson(req) {
 }
 
 function serveStatic(res, publicDir, pathname) {
+  if (pathname === '/favicon.ico') return send(res, 200, FAVICON_ICO_BUF, MIME['.ico']);
   const root = path.resolve(publicDir);
   let decoded;
   try {
-    decoded = decodeURIComponent(pathname === '/' ? '/index.html' : (pathname === '/favicon.ico' ? '/favicon.svg' : pathname));
+    decoded = decodeURIComponent(pathname === '/' ? '/index.html' : pathname);
   } catch {
     return send(res, 400, { ok: false, code: 'BAD_PATH' });
   }

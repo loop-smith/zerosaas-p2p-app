@@ -1630,8 +1630,8 @@ export function createWorkbenchEngine({
 
       const isFavDock = ppvSignedUsd <= 0.005;
       st.lastVoiceBrief = isFavDock
-        ? `Marcus scanned all 4 barcoded reels—8,000 feet—into stock at ${fmtUsd(stdInventoryUsd)} standard cost, booking ${fmtUsd(deal.receiptAmount)} to GRNI and a ${fmtUsd(Math.abs(ppvSignedUsd))} favorable purchase price variance.`
-        : `Marcus scanned all 4 barcoded reels—8,000 feet—into stock at ${fmtUsd(stdInventoryUsd)} standard cost, booking ${fmtUsd(deal.receiptAmount)} to GRNI and a ${fmtUsd(Math.abs(ppvSignedUsd))} unfavorable purchase price variance.`;
+        ? `Marcus Vance scanned all 4 barcoded reels—8,000 feet—into warehouse stock at ${fmtUsd(stdInventoryUsd)} standard cost, booking ${fmtUsd(deal.receiptAmount)} to GRNI and a ${fmtUsd(Math.abs(ppvSignedUsd))} favorable purchase price variance. Encore's invoice is now in Accounts Payable for neural OCR.`
+        : `Marcus Vance scanned all 4 barcoded reels—8,000 feet—into warehouse stock at ${fmtUsd(stdInventoryUsd)} standard cost, booking ${fmtUsd(deal.receiptAmount)} to GRNI and a ${fmtUsd(Math.abs(ppvSignedUsd))} unfavorable purchase price variance. Encore's invoice is now in Accounts Payable for neural OCR.`;
       recordAuditEvent(
         dealId,
         'STEP-6-DOCK-SCAN',
@@ -1880,7 +1880,7 @@ export function createWorkbenchEngine({
             evidenceSha256: jHash,
           });
           st.activeVoiceRole = 'treasury_steward';
-          st.lastVoiceBrief = `Marcus scanned all 4 reels—8,000 feet—into stock, and we've moved to Accounts Payable. RapidOCR extracted 28 fields from Encore's invoice, matching Purchase Order, Dock Receipt, and Invoice at ${fmtUsd(deal.receiptAmount)} with zero variance.`;
+          st.lastVoiceBrief = `RapidOCR extracted all 28 fields from Encore Wire's invoice, matching Purchase Order, Dock Receipt, and Invoice at 8,000 feet and ${fmtUsd(deal.receiptAmount)} with zero variance.`;
           recordAuditEvent(
             dealId,
             'STEP-7-3WAY-MATCH',

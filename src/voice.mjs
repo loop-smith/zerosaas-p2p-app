@@ -177,6 +177,25 @@ export function createVoiceTelemetry() {
   };
 }
 
+const ttsAudioCache = new Map();
+let ttsSerialChain = Promise.resolve();
+
+function getCachedTtsClip(cacheKey) {
+  const hit = ttsAudioCache.get(cacheKey);
+  if (!hit) return null;
+  ttsAudioCache.delete(cacheKey);
+  ttsAudioCache.set(cacheKey, hit);
+  return hit;
+}
+
+function setCachedTtsClip(cacheKey, entry) {
+  if (ttsAudioCache.size >= 64) {
+    const oldest = ttsAudioCache.keys().next().value;
+    if (oldest !== undefined) ttsAudioCache.delete(oldest);
+  }
+  ttsAudioCache.set(cacheKey, entry);
+}
+
 export function getVoiceStatus(env = process.env) {
   const key = String(env.ELEVENLABS_API_KEY ?? '').trim();
   return {
@@ -282,48 +301,100 @@ export async function handleVoiceTts(req, res, { env = process.env, fetchImpl = 
     : [primaryModel, 'eleven_flash_v2_5'];
 
   const t0 = performance.now();
-  try {
+  const useCache = fetchImpl === globalThis.fetch;
+  const cacheKey = `${voiceId}|${primaryModel}|${resolvedRole}|${normalizedText}`;
+  if (useCache) {
+    const cached = getCachedTtsClip(cacheKey);
+    if (cached) {
+      const latencyMs = Math.max(1, Math.round(performance.now() - t0));
+      if (telemetry) {
+        telemetry.ttsCalls += 1;
+        telemetry.lastTtsLatencyMs = latencyMs;
+        telemetry.lastTtsModel = cached.model;
+        telemetry.totalAudioBytes += cached.audioBuf.length;
+      }
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'audio/mpeg');
+      res.setHeader('X-Voice-Latency-Ms', String(latencyMs));
+      res.setHeader('X-Voice-Model', cached.model);
+      res.setHeader('X-Voice-Role', resolvedRole);
+      res.setHeader('Cache-Control', 'no-store');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.end(cached.audioBuf);
+      return;
+    }
+  }
+
+  const runUpstream = async () => {
+    if (useCache) {
+      const cached = getCachedTtsClip(cacheKey);
+      if (cached) return cached;
+    }
     for (const candidateModel of modelsToTry) {
       const endpoint = candidateModel === 'eleven_v3'
         ? `${base}/v1/text-to-speech/${encodeURIComponent(voiceId)}`
         : `${base}/v1/text-to-speech/${encodeURIComponent(voiceId)}/stream?optimize_streaming_latency=1`;
-      const elRes = await fetchImpl(endpoint, {
-        method: 'POST',
-        headers: {
-          'xi-api-key': key,
-          'Content-Type': 'application/json',
-          'Accept': 'audio/mpeg',
-        },
-        body: JSON.stringify({
-          text: normalizedText,
-          model_id: candidateModel,
-          voice_settings: resolvedRole === 'treasury_steward'
-            ? { stability: 0.58, similarity_boost: 0.82 }
-            : { stability: 0.48, similarity_boost: 0.80 },
-        }),
-        signal: AbortSignal.timeout(8000),
-      });
-      if (elRes.ok) {
-        const audioBuf = Buffer.from(await elRes.arrayBuffer());
-        const ct = String(elRes.headers.get('content-type') || 'audio/mpeg').split(';')[0].trim();
-        if (!/^audio\/[\w.+-]+$/i.test(ct) || !audioBuf.length) continue;
-        const latencyMs = Math.round(performance.now() - t0);
-        if (telemetry) {
-          telemetry.ttsCalls += 1;
-          telemetry.lastTtsLatencyMs = latencyMs;
-          telemetry.lastTtsModel = candidateModel;
-          telemetry.totalAudioBytes += audioBuf.length;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const elRes = await fetchImpl(endpoint, {
+          method: 'POST',
+          headers: {
+            'xi-api-key': key,
+            'Content-Type': 'application/json',
+            'Accept': 'audio/mpeg',
+          },
+          body: JSON.stringify({
+            text: normalizedText,
+            model_id: candidateModel,
+            voice_settings: resolvedRole === 'treasury_steward'
+              ? { stability: 0.58, similarity_boost: 0.82 }
+              : { stability: 0.48, similarity_boost: 0.80 },
+          }),
+          signal: AbortSignal.timeout(14000),
+        });
+        if (elRes.ok) {
+          const audioBuf = Buffer.from(await elRes.arrayBuffer());
+          const ct = String(elRes.headers.get('content-type') || 'audio/mpeg').split(';')[0].trim();
+          if (!/^audio\/[\w.+-]+$/i.test(ct) || !audioBuf.length) break;
+          const entry = { audioBuf, model: candidateModel };
+          if (useCache) setCachedTtsClip(cacheKey, entry);
+          return entry;
         }
-        res.statusCode = 200;
-        res.setHeader('Content-Type', 'audio/mpeg');
-        res.setHeader('X-Voice-Latency-Ms', String(latencyMs));
-        res.setHeader('X-Voice-Model', candidateModel);
-        res.setHeader('X-Voice-Role', resolvedRole);
-        res.setHeader('Cache-Control', 'no-store');
-        res.setHeader('X-Content-Type-Options', 'nosniff');
-        res.end(audioBuf);
-        return;
+        if ((elRes.status === 429 || elRes.status >= 500) && attempt === 0 && useCache) {
+          await new Promise(r => setTimeout(r, 550));
+          continue;
+        }
+        break;
       }
+    }
+    return null;
+  };
+
+  try {
+    let minted = null;
+    if (useCache) {
+      const next = ttsSerialChain.then(runUpstream, runUpstream);
+      ttsSerialChain = next.then(() => undefined, () => undefined);
+      minted = await next;
+    } else {
+      minted = await runUpstream();
+    }
+    if (minted) {
+      const latencyMs = Math.round(performance.now() - t0);
+      if (telemetry) {
+        telemetry.ttsCalls += 1;
+        telemetry.lastTtsLatencyMs = latencyMs;
+        telemetry.lastTtsModel = minted.model;
+        telemetry.totalAudioBytes += minted.audioBuf.length;
+      }
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'audio/mpeg');
+      res.setHeader('X-Voice-Latency-Ms', String(latencyMs));
+      res.setHeader('X-Voice-Model', minted.model);
+      res.setHeader('X-Voice-Role', resolvedRole);
+      res.setHeader('Cache-Control', 'no-store');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.end(minted.audioBuf);
+      return;
     }
   } catch {
     // Graceful fallback to browser speech without leaking upstream errors or secrets.

@@ -288,22 +288,11 @@
           } catch {}
         }
         const audio = typeof document !== 'undefined' ? document.getElementById('ttsAudio') : null;
-        let resumedAudio = false;
         if (audio && audio.src && audio.paused && !audio.ended && audio.currentTime > 0) {
           kalSpeaking = true;
-          resumedAudio = true;
           audio.play().catch(() => {});
         } else if (typeof window !== 'undefined' && 'speechSynthesis' in window && window.speechSynthesis.paused) {
-          resumedAudio = true;
           try { window.speechSynthesis.resume(); } catch {}
-        }
-        if (!resumedAudio && !kalAutopilotActive && !kalSpeaking && !liveShowcasePhase && !autoScanningReels && !busyAction && STATE) {
-          const st = STATE.runtimeState?.[selectedDeal];
-          if (st?.lastVoiceBrief) {
-            void speakText(st.lastVoiceBrief, st.activeVoiceRole || 'ops_steward');
-          } else {
-            void askKalPreset('status');
-          }
         }
       }
       syncPresenterPauseButtons();
@@ -460,18 +449,18 @@
           }
           try {
             await audio.play();
-          } catch (playErr) {
-            if (mySeq === speakSeq) { kalSpeaking = false; syncKalButtons(); renderCenter(); }
-            const blockedAutoplay = playErr && playErr.name === 'NotAllowedError';
-            if (speechDoneResolve) { const r = speechDoneResolve; speechDoneResolve = null; r(!blockedAutoplay); }
-            return !blockedAutoplay && mySeq === speakSeq;
+          } catch {
+            if (speechDoneResolve) { const r = speechDoneResolve; speechDoneResolve = null; r(false); }
+            useWebSpeechFallback = true;
           }
-          const finishedOk = await endedPromise;
-          if (presenterPaused) await holdIfPresenterPaused();
-          return finishedOk && mySeq === speakSeq;
+          if (!useWebSpeechFallback) {
+            const finishedOk = await endedPromise;
+            if (presenterPaused) await holdIfPresenterPaused();
+            return finishedOk && mySeq === speakSeq;
+          }
         } else {
           const j = await res.json().catch(() => ({}));
-          if (j.fallback === 'web_speech' && !STATE?.voiceConfig?.elevenLabsConfigured) {
+          if (j.fallback === 'web_speech') {
             useWebSpeechFallback = true;
             if (j.normalizedText) normalizedFallback = j.normalizedText;
           }
@@ -902,7 +891,13 @@
 
     // Runs 1 human checkpoint + any immediate downstream automated blocks cleanly while updating screen live!
     async function executeStewardSequence(steps, opts = {}) {
+      let guardWait = 0;
+      while (busyAction && guardWait < 1200) {
+        await new Promise(r => setTimeout(r, 60));
+        guardWait += 60;
+      }
       if (busyAction) return false;
+      stopKalAudio();
       busyAction = true;
       activeDocTab = 'auto';
       deskSubView = 'auto';
@@ -1053,14 +1048,18 @@
         { action: 'wf1_commit_po', label: 'Central Purchasing cutting PO-25800 at locked COMEX spot price…' },
         { action: 'wf1_vendor_ack', label: 'Receiving Encore Wire Vendor Ack ENC-OA-2026-884192 (ship & delivery dates)…' },
       ]);
+      if (stopAtHumanGates && !kalAutopilotActive && computeStepIndex(STATE?.runtimeState?.[selectedDeal]) === 4) {
+        await waitPauseAware(450);
+        await proceedStep5VerifyAck();
+      }
     }
 
     // Step 5 -> Step 6: Central Purchasing verifies OA ship/delivery dates copacetic -> clicks "OK to Proceed" -> STOPS on Step 6!
-    function proceedStep5VerifyAck() {
+    async function proceedStep5VerifyAck() {
       dockScannedReels.clear();
       lastFlashedReelSeq = 0;
       autoScanningReels = false;
-      executeStewardSequence([
+      return await executeStewardSequence([
         { action: 'wf1_confirm_ack', label: 'Verifying ENC-OA-2026-884192 ship & delivery dates and staging 4 barcoded reels at Bay 4…' },
       ]);
     }
@@ -1090,7 +1089,15 @@
           return;
         }
         STATE = r1.data;
-        await waitPauseAware(480);
+        const stDock = STATE.runtimeState?.[selectedDeal];
+        busyAction = false;
+        busyBannerText = '';
+        renderAll();
+        if (stDock?.lastVoiceBrief) {
+          await speakText(stDock.lastVoiceBrief, stDock.activeVoiceRole || 'ops_steward');
+        } else {
+          await waitPauseAware(480);
+        }
 
         // Sweep the blue laser 2 clean passes (~2,300ms) across INV-25800.png while calling real RapidOCR ONNX (:3591/scan), STOP laser, lock 28 boxes, and PAUSE on Step 7!
         liveShowcasePhase = 'ocr_scanning';
