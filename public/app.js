@@ -18,7 +18,7 @@
     let currentTtsBlobUrl = null;
     let kalSpeaking = false;
     let kalMuted = false;
-    let kalSubtitle = '🚨 WMS Under-Stock Warning: 0 FT bare copper on hand (< 8,000 FT min). Click "▶ Start KAL · P2P Steward" to inspect the WMS signal on Step 1.';
+    let kalSubtitle = 'Warehouse management triggered a stock-out alert on 2/0 AWG bare copper—0 feet on hand, below our 8,000-foot safety stock.';
     let kalBadgeText = 'KAL · P2P STEWARD ($0 SIGNING LIMIT)';
     let dockScannedReels = new Set();
     let lastFlashedReelSeq = 0;
@@ -982,17 +982,34 @@
         const res = await fetch('/api/reset', { method: 'POST' });
         STATE = await res.json();
         kalBadgeText = 'KAL · P2P STEWARD ($0 SIGNING LIMIT)';
-        kalSubtitle = '🚨 Queue & all headless databases reset to Step 1: WMS Under-Stock Warning flashing (0 / 8,000 FT). Click "▶ Start KAL · P2P Steward" when ready.';
         renderAll();
+        await autoStartStep1Signal();
       } finally {
         if (topBtn) topBtn.textContent = '↺ Reset Queue';
       }
+    }
+
+    async function autoStartStep1Signal() {
+      const st = STATE?.runtimeState?.[selectedDeal];
+      if (!st || st.kal_started || computeStepIndex(st) !== 0 || busyAction) return;
+      try {
+        const { ok, data } = await postStepRaw('wf0_detect_stockout');
+        if (ok && data) {
+          STATE = data;
+          const stNow = STATE.runtimeState?.[selectedDeal];
+          renderAll();
+          if (stNow?.lastVoiceBrief) {
+            void speakText(stNow.lastVoiceBrief, stNow.activeVoiceRole || 'ops_steward');
+          }
+        }
+      } catch {}
     }
 
     async function loadState() {
       const res = await fetch('/api/state');
       STATE = await res.json();
       renderAll();
+      await autoStartStep1Signal();
     }
 
     function setView(v) {
@@ -1061,31 +1078,31 @@
             : (d.isBelowThreshold ? '<span class="badge b-hold">0 FT Stock-Out</span>' : '<span class="badge b-done">8,000 FT In Stock</span>'));
 
       el.innerHTML = `
-        ${d.isBelowThreshold ? `<div class="stockout-alert-pill"><span class="stockout-dot"></span>UNDER-STOCK WARNING · 0 FT</div>` : ''}
+        ${d.isBelowThreshold ? `<div class="stockout-alert-pill"><span class="stockout-dot"></span>OUT OF STOCK · BELOW SAFETY</div>` : ''}
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <span style="font-family:var(--mono);font-size:11px;font-weight:800;color:var(--blue);">${esc(d.itemCanonical)}</span>
           ${statusBadge}
         </div>
         <div style="font-size:11px;font-weight:700;color:var(--text-main);line-height:1.25;">2/0 AWG Bare Copper Wire</div>
         <div class="os-row">
-          <span class="os-k">WMS On Hand:</span>
+          <span class="os-k">On Hand Qty:</span>
           <span class="os-v" style="color:${d.isBelowThreshold ? 'var(--red)' : 'var(--green)'};">${fmtInt(d.onHandStockFt)} FT ${d.isBelowThreshold ? '(OUT)' : '✓'}</span>
         </div>
         <div class="os-row">
-          <span class="os-k">Min Reorder Lvl:</span>
-          <span class="os-v" style="color:${d.isBelowThreshold ? '#b91c1c' : 'var(--text-main)'};">${fmtInt(d.minThresholdFt)} FT (4 Reels)</span>
+          <span class="os-k">Safety Stock:</span>
+          <span class="os-v">${fmtInt(d.minThresholdFt)} FT</span>
         </div>
         <div class="os-row">
-          <span class="os-k">Supplier:</span>
-          <span class="os-v" style="font-family:var(--sans);font-size:10.5px;">Encore Wire Corp</span>
+          <span class="os-k">Need to Buy:</span>
+          <span class="os-v" style="color:${d.isBelowThreshold ? '#b91c1c' : 'var(--green)'};">${d.isBelowThreshold ? `${fmtInt(d.orderedQty)} FT (4 Reels)` : '0 FT · Stocked ✓'}</span>
         </div>
         <div class="os-row">
           <span class="os-k">Annual Std Cost:</span>
-          <span class="os-v">${fmtUsd(d.catalogEstimateUsd)}</span>
+          <span class="os-v">$${d.catalogUnitPrice.toFixed(2)} / FT</span>
         </div>
         <div class="os-row">
-          <span class="os-k">Actual Spot PO:</span>
-          <span class="os-v" style="color:var(--blue);">${st.wf1_po_committed === 'done' ? fmtUsd(d.poAmount) : 'Pending'}</span>
+          <span class="os-k">Approved Mill:</span>
+          <span class="os-v" style="font-family:var(--sans);font-size:10.5px;">Encore Wire Corp</span>
         </div>
       `;
     }
@@ -1534,36 +1551,25 @@
         `;
       }
 
-      // STEP 1 (stepIdx === 0): SUPPLY CHAIN DEMAND SIGNAL (LIVE HEADLESS WMS SQLITE QUERY -> PAUSES ON BOX 1 BEFORE DARIUS!)
+      // STEP 1 (stepIdx === 0): WMS STOCK-OUT SIGNAL (STARTS IN BOX 1 WITH KAL SPEAKING -> ROUTES TO SUPPLY CHAIN!)
       if (stepIdx === 0) {
-        const signalVerified = Boolean(st.kal_started);
         return `
           <div class="officer-desk">
-            <div class="desk-banner" style="background:${signalVerified ? 'linear-gradient(90deg, #fff1f2 0%, #eff6ff 100%)' : 'linear-gradient(90deg, #fef2f2 0%, #fff7ed 100%)'};">
+            <div class="desk-banner" style="background:linear-gradient(90deg, #fff1f2 0%, #eff6ff 100%);">
               <div>
-                <div class="cp-eyebrow" style="color:#b91c1c;">${signalVerified
-                  ? `📡 STEP 1 OF 8 · WMS UNDER-STOCK SIGNAL VERIFIED BY KAL — CLICK PROCEED TO SEND TO SUPPLY CHAIN`
-                  : `🚨 STEP 1 OF 8 · WMS UNDER-STOCK DEMAND SIGNAL (0 FT ON HAND &lt; 8,000 FT MIN LEVEL · <code>WO-01</code>)`}</div>
-                <div class="cp-title">${signalVerified
-                  ? `WMS Under-Stock Confirmed: 0 FT On Hand vs. 8,000 FT Min Level (${fmtUsd(d.catalogEstimateUsd)} Std)`
-                  : `Under-Stock Warning Flashing: 0 FT Bare Copper On Hand (&lt; 8,000 FT Min Level)`}</div>
+                <div class="cp-eyebrow" style="color:#b91c1c;">🚨 STEP 1 OF 8 · WMS STOCK-OUT SIGNAL (0 FT ON HAND &lt; 8,000 FT SAFETY STOCK · <code>WO-01</code>)</div>
+                <div class="cp-title">WMS Stock-Out Alert: 0 FT Bare Copper On Hand — Below 8,000 FT Safety Stock</div>
                 <div class="cp-desc">
-                  ${signalVerified
-                    ? `KAL verified the live Warehouse SQLite stock-out (<code>0 FT &lt; 8,000 FT</code> minimum reorder level = <code>4 × 2,000-FT</code> reels needed). Click <strong>Proceed to Supply Chain</strong> to route <strong>REQ-25800</strong> into Darius Mercer's queue (Step 2).`
-                    : `Warehouse SQLite (<code>wms_inventree.sqlite3</code>) is flashing an under-stock warning below our <strong>8,000 FT minimum reorder level</strong> (${fmtUsd(d.catalogEstimateUsd)} Standard Cost). Click <strong>Start KAL</strong> — she explains the WMS signal right here on Step 1 before routing to Darius.`}
+                  Warehouse SQLite (<code>wms_inventree.sqlite3</code>) triggered a live stock-out: <strong>0 FT on hand</strong> against our <strong>8,000 FT safety stock</strong>. Replenishment of <strong>8,000 FT (4 reels)</strong> is ready to send to Supply Chain.
                 </div>
               </div>
               <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
                 <button class="btn-guard-inline" onclick="runGuardrailTest('kal_rogue_attempt')" title="Optional Red-Team Demo: Force KAL ($0 limit) to attempt a rogue PO/check write">
                   🤖 Rogue KAL (403)
                 </button>
-                ${signalVerified
-                  ? `<button class="btn-approve" onclick="proceedStep1RouteToDarius()">
-                       ✓ Proceed · Route to Supply Chain (Darius)
-                     </button>`
-                  : `<button class="btn-approve blue" onclick="startKalSteward()">
-                       ▶ Start KAL · P2P Steward
-                     </button>`}
+                <button class="btn-approve" onclick="proceedStep1RouteToDarius()">
+                  ✓ Route Signal to Supply Chain ➔
+                </button>
               </div>
             </div>
             <div class="desk-stage">
@@ -1572,22 +1578,22 @@
                   <div class="sheet-top">
                     <div>
                       <div class="sheet-kicker">Headless WMS DB · wms_inventree.sqlite3 (119 Tables)</div>
-                      <div class="sheet-title">Live Under-Stock Trigger · On Hand (0 FT) vs. Min Level (8,000 FT)</div>
+                      <div class="sheet-title">Stock-Out Trigger · On Hand (0 FT) vs. Safety Stock (8,000 FT)</div>
                     </div>
-                    <span class="badge b-hold">🚨 0 FT &lt; 8,000 MIN</span>
+                    <span class="badge b-hold">🚨 0 FT &lt; 8,000 SAFETY</span>
                   </div>
                   <div class="api-terminal" style="margin:6px 0;padding:6px 9px;font-size:9.6px;">
                     <div style="color:#7dd3fc;">SELECT p.id, p.IPN, p.minimum_stock, COALESCE(SUM(s.quantity),0) AS on_hand</div>
                     <div style="color:#94a3b8;">FROM part_part p LEFT JOIN stock_stockitem s ON s.part_id=p.id WHERE p.id=218;</div>
-                    <div style="color:#f87171;font-weight:700;margin-top:3px;">➔ ALERT: { id: 218, IPN: "${esc(d.itemCanonical)}", min_stock: 8000, on_hand: ${d.onHandStockFt} } (UNDER-STOCK!)</div>
+                    <div style="color:#f87171;font-weight:700;margin-top:3px;">➔ STOCK-OUT: { id: 218, IPN: "${esc(d.itemCanonical)}", safety_stock: 8000, on_hand: ${d.onHandStockFt} }</div>
                   </div>
                   <div class="kv-list">
-                    <div class="kv-row"><span class="kv-k">Stocked SKU &amp; Min Level:</span><span class="kv-v" style="color:var(--red);">${esc(d.itemCanonical)} · 0 FT / 8,000 FT Min (4 Reels)</span></div>
-                    <div class="kv-row"><span class="kv-k">Annual Standard Cost (Jan 1):</span><span class="kv-v">$${d.catalogUnitPrice.toFixed(2)}/FT × 8,000 FT = ${fmtUsd(d.catalogEstimateUsd)}</span></div>
-                    <div class="kv-row"><span class="kv-k">Approved Mill (crm_company#181):</span><span class="kv-v">Encore Wire Corporation (McKinney, TX)</span></div>
+                    <div class="kv-row"><span class="kv-k">Quantity On Hand:</span><span class="kv-v" style="color:var(--red);">0 FT (Out of Stock)</span></div>
+                    <div class="kv-row"><span class="kv-k">Safety Stock Minimum:</span><span class="kv-v">8,000 FT — Need to Buy 8,000 FT (4 × 2,000-FT Reels)</span></div>
+                    <div class="kv-row"><span class="kv-k">Item Standard Cost &amp; Mill:</span><span class="kv-v">$${d.catalogUnitPrice.toFixed(2)} / FT · Encore Wire Corp (McKinney, TX)</span></div>
                   </div>
                 </div>
-                <div class="sig-strip"><span>Signal Origin: <strong>Live Headless WMS Under-Stock Trigger</strong></span><span style="font-family:var(--mono);font-size:10px;color:${signalVerified ? 'var(--green)' : 'var(--red)'};">${signalVerified ? '✓ Signal Verified · Ready to Route' : '● Flashing Under-Stock Alert'}</span></div>
+                <div class="sig-strip"><span>Origin: <strong>Live Headless WMS Stock-Out Signal</strong></span><span style="font-family:var(--mono);font-size:10px;color:var(--red);">● Routing to Supply Chain (EMP-0021)</span></div>
               </div>
 
               <div class="doc-sheet">

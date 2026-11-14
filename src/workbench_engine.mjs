@@ -1018,12 +1018,12 @@ export function createWorkbenchEngine({
       st.wf0_signal_routed = false;
       st.lastGuardrailBlock = null;
       st.activeVoiceRole = 'ops_steward';
-      st.lastVoiceBrief = `Good day. Our warehouse management database has an active under-stock warning—0 feet of 2/0 AWG bare copper on hand against our 8,000-foot minimum stock level, valued at ${fmtUsd(sqlStock.standardTotalUsd)} annual standard cost. Click Proceed to route Requisition REQ-25800 over to Supply Chain Planner Darius Mercer.`;
+      st.lastVoiceBrief = 'Good day. Warehouse management triggered a stock-out alert on 2/0 AWG bare copper—0 feet on hand, below our 8,000-foot safety stock. We need 8,000 feet across 4 reels and are routing this signal to Supply Chain.';
       recordAuditEvent(
         dealId,
         'STEP-1-KAL-START',
         'KAL (Read-Only Steward) + SQL:WMS-STOCK-MONITOR',
-        `Verified WMS under-stock signal (${sqlStock.onHandFt} FT < ${fmtInt(sqlStock.minFt)} FT min · ${fmtUsd(sqlStock.standardTotalUsd)} standard). Ready to route REQ-25800 to Supply Chain Planner ${deal.scPlanner.name}.`,
+        `Verified WMS stock-out (${sqlStock.onHandFt} FT < ${fmtInt(sqlStock.minFt)} FT safety stock · $${sc.catalogUnitPrice.toFixed(2)}/FT std). Ready to send signal to Supply Chain Planner ${deal.scPlanner.name}.`,
         sha256FileSafe(wmsDbPath)
       );
       return;
@@ -1034,7 +1034,7 @@ export function createWorkbenchEngine({
       st.wf0_signal_routed = true;
       st.lastGuardrailBlock = null;
       st.activeVoiceRole = 'ops_steward';
-      st.lastVoiceBrief = `Under-stock signal routed to Supply Chain. Requisition REQ-25800 for 8,000 feet at ${fmtUsd(deal.catalogEstimateUsd)} standard cost is now in Planner Darius Mercer's queue. Darius, click Approve to confirm the replenishment need.`;
+      st.lastVoiceBrief = `Stock-out signal delivered to Supply Chain. Planner Darius Mercer has Requisition REQ-25800 for 8,000 feet—${fmtUsd(deal.catalogEstimateUsd)} at $2.89 per foot standard cost—ready for review.`;
       recordAuditEvent(
         dealId,
         'STEP-1B-SIGNAL-ROUTED',
@@ -1238,8 +1238,8 @@ export function createWorkbenchEngine({
       });
 
       st.lastVoiceBrief = isFav
-        ? `Devon signed the ceiling. Central Purchasing called live COMEX copper at $${quote.spotPerLbUsd.toFixed(2)} per pound, pricing 8,000 feet at $${quote.lockedUnitPriceFt.toFixed(2)} per foot—${fmtUsd(quote.quotedTotalUsd)} total, a ${fmtUsd(absVarUsd)} favorable variance below standard. Click OK to Proceed to cut Purchase Order ${deal.id}.`
-        : `Devon signed the requisition. Central Purchasing called live COMEX copper at $${quote.spotPerLbUsd.toFixed(2)} per pound, pricing 8,000 feet at $${quote.lockedUnitPriceFt.toFixed(2)} per foot—${fmtUsd(quote.quotedTotalUsd)} total, a ${fmtUsd(absVarUsd)} unfavorable market variance above standard, covered within Purchasing's $50,000 authority. Click OK to Proceed to cut Purchase Order ${deal.id}.`;
+        ? `VP Devon Brooks approved the requisition. Central Purchasing pulled live COMEX copper at $${quote.spotPerLbUsd.toFixed(2)} per pound—$${quote.lockedUnitPriceFt.toFixed(2)} per foot, or ${fmtUsd(quote.quotedTotalUsd)} total—beating standard cost by ${fmtUsd(absVarUsd)}. Ready to issue Purchase Order ${deal.id}.`
+        : `VP Devon Brooks approved the requisition. Central Purchasing pulled live COMEX copper at $${quote.spotPerLbUsd.toFixed(2)} per pound—$${quote.lockedUnitPriceFt.toFixed(2)} per foot, or ${fmtUsd(quote.quotedTotalUsd)} total—within Purchasing's $50,000 authority. Ready to issue Purchase Order ${deal.id}.`;
       recordAuditEvent(
         dealId,
         'STEP-4A-SPOT-API',
@@ -1440,7 +1440,7 @@ export function createWorkbenchEngine({
         evidenceSha256: st.oaSha256 || sha256FileSafe(wmsDbPath),
       });
 
-      st.lastVoiceBrief = `Purchase Order ${deal.id} sent to Encore Wire, and Order Acknowledgement ${sc.oaId} just arrived back from the mill confirming 8,000 feet at $${deal.unitPrice.toFixed(2)} per foot, shipping from McKinney for Bay 4 delivery on ${sc.deliveryDate}. Verify dates and click OK to Proceed.`;
+      st.lastVoiceBrief = `Purchase Order ${deal.id} is out to Encore Wire, and Order Acknowledgement ${sc.oaId} returned confirming 8,000 feet at $${deal.unitPrice.toFixed(2)} per foot for Bay 4 delivery on ${sc.deliveryDate}.`;
       recordAuditEvent(
         dealId,
         'STEP-5-ORDER-ACK',
@@ -1455,7 +1455,7 @@ export function createWorkbenchEngine({
       st.activeVoiceRole = 'ops_steward';
       st.lastGuardrailBlock = null;
       st.wf1_ack_verified = true;
-      st.lastVoiceBrief = `Order Acknowledgement ${sc.oaId} dates and terms verified copacetic. Encore Wire's flatbed is staged at Receiving Bay 4 with four barcoded master reels. Warehouse Lead ${deal.dockSigner.name}, click Scan All 4 Reels once to sweep every barcode, then click Submit.`;
+      st.lastVoiceBrief = `Shipping and delivery dates verified. Encore Wire's flatbed is staged at Receiving Bay 4 with 4 barcoded master reels for Warehouse Lead ${deal.dockSigner.name} to receive.`;
       recordAuditEvent(
         dealId,
         'STEP-5B-OA-VERIFIED',
@@ -1880,7 +1880,7 @@ export function createWorkbenchEngine({
             evidenceSha256: jHash,
           });
           st.activeVoiceRole = 'treasury_steward';
-          st.lastVoiceBrief = `Marcus scanned 8,000 feet into stock at ${fmtUsd(deal.catalogEstimateUsd)} standard cost. Encore's invoice arrived in the AP inbox, RapidOCR tagged 28 regions, and all three forms—Purchase Order, Dock Receiver, and Invoice—tie out at ${fmtUsd(deal.receiptAmount)} with zero variance. Click OK to Proceed to route to CFO Meredith Hale.`;
+          st.lastVoiceBrief = `Marcus received all 4 reels—8,000 feet—into stock. Encore's invoice arrived in Accounts Payable, RapidOCR extracted 28 fields, and Purchase Order, Dock Receipt, and Invoice match at ${fmtUsd(deal.receiptAmount)} with zero variance.`;
           recordAuditEvent(
             dealId,
             'STEP-7-3WAY-MATCH',
@@ -1897,7 +1897,7 @@ export function createWorkbenchEngine({
       st.activeVoiceRole = 'treasury_steward';
       st.lastGuardrailBlock = null;
       st.wf3_match_confirmed = true;
-      st.lastVoiceBrief = `Three-way match packet verified and routed to Treasury. CFO Meredith Hale, inspect the three matched backup documents and Check number 10045 for ${fmtUsd(deal.receiptAmount)} on screen, then click Approve.`;
+      st.lastVoiceBrief = `Three-way match verified and vouchered. Check #10045 for ${fmtUsd(deal.receiptAmount)} is staged with the matched backup packet for CFO Meredith Hale's signature.`;
       recordAuditEvent(
         dealId,
         'STEP-7B-3WM-ROUTED',
@@ -2073,7 +2073,7 @@ export function createWorkbenchEngine({
       st.activeVoiceRole = 'treasury_steward';
       const absFinalPpv = Math.abs(deal.ppvTotalUsd || (deal.catalogEstimateUsd - deal.poAmount));
       const isFavFinal = (deal.ppvTotalUsd ?? -1) <= 0.005;
-      st.lastVoiceBrief = `Check #10045 signed by CFO Meredith Hale for ${fmtUsd(deal.receiptAmount)}, settling 8,000 feet of 2/0 AWG bare copper across 4 barcoded 2,000-foot reels—3,288 pounds net copper stocked at ${fmtUsd(deal.catalogEstimateUsd)} standard cost with a ${fmtUsd(absFinalPpv)} ${isFavFinal ? 'favorable' : 'unfavorable'} purchase price variance. Four headless databases were hit on local disk: warehouse management SQLite, HRM and Django CRM SQLite, our 89-account hledger GAAP journal, and the SHA-256 lineage SQLite ledger.`;
+      st.lastVoiceBrief = `CFO Meredith Hale signed Check #10045 for ${fmtUsd(deal.receiptAmount)}. All 8,000 feet—4 reels weighing 3,288 pounds—are in stock, with a ${fmtUsd(absFinalPpv)} ${isFavFinal ? 'favorable' : 'unfavorable'} variance recorded across our Warehouse, CRM and HRM, hledger, and Lineage databases.`;
       recordAuditEvent(
         dealId,
         'STEP-8-CHECK-PAID',
@@ -2745,13 +2745,11 @@ export function createWorkbenchEngine({
     } else if (st.wf0_req_status === 'approved') {
       reply = `VP Devon Brooks signed the ${fmtUsd(d.catalogEstimateUsd)} requisition ceiling. Centralized Purchasing is ready to check live COMEX copper and place PO-25800.`;
     } else if (st.wf0_req_status === 'pending_manager_doa') {
-      reply = `Planner Darius Mercer confirmed the 8,000-foot buy (${fmtUsd(d.catalogEstimateUsd)} standard). Because that exceeds his $20,000 Signing Limit, we are paused at Human Checkpoint 2 for VP Devon Brooks ($100,000 Signing Limit).`;
+      reply = `Planner Darius Mercer confirmed the 8,000-foot replenishment. At ${fmtUsd(d.catalogEstimateUsd)}, the order exceeds his $20,000 Signing Limit and awaits VP Devon Brooks.`;
     } else if (st.wf0_signal_routed) {
-      reply = `Under-stock Requisition REQ-25800 for 8,000 feet (${fmtUsd(d.catalogEstimateUsd)} standard) is now in Supply Chain Planner Darius Mercer's queue at Step 2. Click Approve to confirm.`;
-    } else if (st.kal_started) {
-      reply = `WMS under-stock signal verified on Step 1: our warehouse database shows 0 feet of 2/0 AWG bare copper on hand against an 8,000-foot minimum (${fmtUsd(d.catalogEstimateUsd)} standard). Click Proceed to route REQ-25800 to Supply Chain Planner Darius Mercer.`;
+      reply = `Stock-out signal delivered to Supply Chain. Planner Darius Mercer has Requisition REQ-25800 for 8,000 feet—${fmtUsd(d.catalogEstimateUsd)} at $2.89 per foot standard cost—ready for review.`;
     } else {
-      reply = `WMS under-stock warning active: our warehouse database shows 0 feet of 2/0 AWG bare copper on hand against an 8,000-foot minimum (${fmtUsd(d.catalogEstimateUsd)} standard). Click Start KAL to inspect the WMS signal on Step 1.`;
+      reply = `Warehouse management triggered a stock-out alert on 2/0 AWG bare copper—0 feet on hand, below our 8,000-foot safety stock. We need 8,000 feet across 4 reels and are ready to send this signal to Supply Chain.`;
     }
 
     return {
