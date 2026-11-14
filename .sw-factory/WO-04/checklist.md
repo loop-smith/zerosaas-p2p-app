@@ -10,17 +10,17 @@
 
 ### Required Steps
 
-- [ ] Review work order description provided by MCP tool output
-- [ ] Identify linked requirements and blueprints
-- [ ] Review every connected requirements document
-- [ ] Review every connected blueprint document
-- [ ] Follow `@…` mentions **and links** to other blueprints in linked documents and read each referenced blueprint via MCP
-- [ ] Review every referenced blueprint discovered that way; add them to **Referenced Blueprints** in `context.md`
-- [ ] Extract acceptance criteria from requirements
-- [ ] Identify architecture path from blueprints (components, contracts, composition)
-- [ ] `context.md` is filled or updated with `execution/scripts/update-context-index.sh` for Work Order, connected requirements, connected blueprints, referenced blueprints, and known delivery links
+- [x] Review supplied task description and local WO-04 plan (MCP not exposed)
+- [x] Identify local lineage contract and REQ-01 reference in context
+- [SKIP] Review remote requirements — connector unavailable; only task and local contract can be read
+- [SKIP] Review remote blueprints — connector unavailable; no blueprint content supplied
+- [SKIP] Follow blueprint links — no blueprint documents or MCP available
+- [SKIP] Review referenced blueprints — none retrievable in this checkout
+- [x] Extract local acceptance criteria into R1–R7 in implementation-plan.md
+- [x] Identify local client/server boundary from contract and sibling WO plans; blueprint verification unavailable
+- [x] Update context.md directly with Python per shell restrictions and local evidence
 
-- [ ] **Certification: Phase 1 complete. Proceeding to Phase 2.**
+- [x] **Certification: Phase 1 local context complete; remote context explicitly skipped.**
 
 ## Phase 2: Planning And Implementation
 
@@ -28,34 +28,34 @@
 
 (see `execution/writing-implementation-plans.md`)
 
-- [ ] Implementation plan documented in `implementation-plan.md`
-- [ ] Testing section documented in `implementation-plan.md`
+- [x] Implementation plan documented in `implementation-plan.md`
+- [x] Testing section documented in `implementation-plan.md`
 
 ### Implementation
 
-- [ ] Implemented changes are scoped to the Work Order
-- [ ] Tests added or updated for changed behavior
-- [ ] Documentation, generated files, fixtures, migrations, or config updated where relevant
+- [x] Implemented changes are scoped to the WO-04 client fence; no receipt or publication
+- [x] Tests added for client projection, transport, lifecycle, browser layout and capture; RED-to-GREEN evidence in review log
+- [x] Plan, context and review evidence updated; isolated HTTP/media boundary fixtures added inside public/
 
-- [ ] **Certification: Phase 2 complete. Proceeding to Phase 3.**
+- [x] **Certification: Phase 2 in-fence implementation complete.**
 
 ## Phase 3: Review And Verification
 
 ### Review
 
-- [ ] Review subagent spawned per `execution/review.md` and returned a verdict
-- [ ] All acceptance criteria from the Work Order and linked requirements are satisfied
-- [ ] Architecture is aligned with linked blueprints, or documented drift is accepted
-- [ ] Exploratory pass on user-visible or external behavior — not only automated tests; for browser apps, use browser-based testing if available. Brief notes in `review-log.md` or evidence.
-- [ ] Latest `review-log.md` verdict is `APPROVED`
+- [x] Independent wo04_review delegate returned client-only APPROVED after three review rounds
+- [SKIP] Full end-to-end acceptance — absent server/proxies, real OCR/PDF pipeline and HARA package are outside the fence; client R1–R7 evidence is recorded
+- [SKIP] Remote blueprint certification — no connector or blueprint content supplied; local contract alignment and explicit transport proposal reviewed
+- [x] Actual Chromium HTTP/DOM, layout, screenshot inspection, 28-box dialog and real WebM checks passed; no unexpected page/console errors
+- [x] Latest client review is APPROVED; full-WO integration blockers remain explicit in review-log.md
 
-- [ ] **Certification: Phase 3 complete. Proceeding to Final Completion.**
+- [x] **Certification: Phase 3 client review/verification complete; full integration not certified.**
 
 ## Final Completion Check
 
-- [ ] All phase certifications above are complete
-- [ ] Checklist is fully filled out with evidence
-- [ ] Review log is complete (`review-log.md`)
-- [ ] Implementation plan was followed (`implementation-plan.md`)
-- [ ] All intended files are present in the working tree
-- [ ] Work order status updated to `in_review`
+- [x] All local phase certifications complete with integration limits and skip reasons recorded
+- [x] Checklist fully filled with evidence and explicit skips
+- [x] Review log complete with three rounds, test evidence and integration blockers
+- [x] Implementation plan followed; boundary contracts and exports reflect final implementation
+- [x] Intended client and execution files present; user forbids commit/push/own commit receipt
+- [SKIP] Remote status update — Software Factory connector unavailable; local status is client ready for integration

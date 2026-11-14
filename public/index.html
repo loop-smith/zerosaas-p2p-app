@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101719">
+  <title>Copper — Command Desk</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body data-panel="pipeline">
+<div class="desk">
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="Copper command desk"><span class="brand-mark" aria-hidden="true">C</span><span>COPPER<span class="brand-sub">COMMAND DESK</span></span></a>
+    <div class="top-context"><span class="tag">STOCK → PAY</span><span>WH-TX-NORTH <span class="muted">/</span> FY2026</span></div>
+    <div class="toolbar"><span id="connection" class="connection"><i></i>CONNECTING</span><button id="refresh" class="icon-button" aria-label="Refresh server state">↻</button><button id="record" class="record"><span class="record-dot"></span><span id="record-label">Record demo</span></button><a id="record-download" hidden>Save WebM</a></div>
+  </header>
+
+  <section class="mission" aria-label="Purchase order overview">
+    <div class="mission-title"><div class="eyebrow">SINGLE ITEM · COMPLETE LINEAGE</div><h1>Copper, under control.</h1><p>PO-25800 <span> / </span> Encore Wire Corporation</p></div>
+    <div class="metric"><span>REPLENISHMENT</span><strong>8,000 <small>FT</small></strong><em>4 GS1 reels × 2,000 FT</em></div>
+    <div class="metric"><span>LOCKED STANDARD</span><strong>$23,120<small>.00</small></strong><em>$2.89 / FT · annual standard</em></div>
+    <div class="metric"><span>ACTUAL COMMITMENT</span><strong id="actual-total">—</strong><em id="spot-detail">Awaiting COMEX price lock</em></div>
+    <div class="metric variance"><span>PURCHASE PRICE VARIANCE</span><strong id="ppv">—</strong><em id="ppv-detail">501900 · awaiting actual cost</em></div>
+  </section>
+
+  <nav class="mobile-tabs" aria-label="Desk panels"><button data-panel="systems">Systems</button><button data-panel="pipeline" aria-pressed="true">Workflow</button><button data-panel="evidence">Evidence</button></nav>
+
+  <main class="panels">
+    <aside class="panel left-panel" data-desk-panel="systems" aria-labelledby="systems-title">
+      <div class="panel-heading"><h2 id="systems-title">Control room</h2><span class="section-no">01 / SYSTEMS</span></div>
+      <section class="system-section"><h3>HEADLESS SYSTEMS OF RECORD <span id="system-count">— / 4</span></h3><div id="systems" class="systems"></div></section>
+      <section class="authority-section"><h3>OFFICER AUTHORITY <span>DOA / SOX 404</span></h3><table id="authority"><caption class="sr-only">Human signing limits and KAL zero authority</caption><thead><tr><th scope="col">Officer / role</th><th scope="col">Limit</th></tr></thead><tbody></tbody></table></section>
+      <section class="guardrails"><h3>RED-TEAM PROBES <span>SERVER ENFORCED</span></h3><div class="trap-grid"><button data-trap="kal">KAL write <span>403</span></button><button data-trap="doa">Darius self-sign <span>403</span></button><button data-trap="sod">Buyer dock receipt <span>403</span></button><button data-trap="invoice">Invoice +$500 <span>409</span></button><button data-trap="bank">Payroll payment <span>403</span></button></div></section>
+      <button id="reset" class="reset">↺ Reset workflow <span>Start a clean run</span></button>
+    </aside>
+
+    <section class="panel workflow-panel" data-desk-panel="pipeline" aria-labelledby="pipeline-title">
+      <div class="panel-heading"><h2 id="pipeline-title">Execution pipeline</h2><span id="progress-label" class="section-no">— / 8 COMPLETE</span></div>
+      <div class="workflow-intro"><span class="pulse-line"></span><span>Deterministic blocks. <strong>Human authority.</strong></span><span class="gate-key">◇ HUMAN GATE</span></div>
+      <div id="pipeline" class="pipeline">
+        <article class="step" data-step="1"><span class="step-number">01</span><div class="step-copy"><h3>Stock-out signal</h3><p>InvenTree · <span id="stock">—</span> / 8,000 FT minimum</p></div><button class="step-action" data-run="1" disabled>Query stock <span>→</span></button><span class="step-state">WAITING</span></article>
+        <article class="step human" data-step="2" data-checkpoint="2"><span class="step-number">02</span><div class="step-copy"><span class="gate-label">◇ CHECKPOINT 1 · PLANNER</span><h3>Darius Mercer <span class="limit">$20k cap</span></h3><p>$23,120 need exceeds limit. Confirm & escalate.</p></div><button class="step-action" data-run="2" disabled>Confirm need <span>↗</span></button><span class="step-state">HUMAN REQUIRED</span></article>
+        <article class="step human" data-step="3" data-checkpoint="3"><span class="step-number">03</span><div class="step-copy"><span class="gate-label">◇ CHECKPOINT 2 · VP SUPPLY CHAIN</span><h3>Devon Brooks <span class="limit">$100k cap</span></h3><p>Approve REQ-25800 · hand off to Purchasing</p></div><button class="step-action" data-run="3" disabled>Approve request <span>→</span></button><span class="step-state">HUMAN REQUIRED</span></article>
+        <article class="step" data-step="4"><span class="step-number">04</span><div class="step-copy"><h3>COMEX spot lock</h3><p>(HG + $0.32 mill adder) × 0.411 lb / FT</p></div><button class="step-action" data-run="4" disabled>Lock price <span>→</span></button><span class="step-state">WAITING</span></article>
+        <article class="step" data-step="5"><span class="step-number">05</span><div class="step-copy"><h3>Purchase order & vendor OA</h3><p>Nancy Rostova · PO-25800 → ENC-OA-2026-884192</p></div><button class="step-action" data-run="5" disabled>Issue PO <span>→</span></button><span class="step-state">WAITING</span></article>
+        <article class="step human scan-step" data-step="6" data-checkpoint="6"><span class="step-number">06</span><div class="step-copy"><span class="gate-label">◇ CHECKPOINT 3 · DOCK LEAD</span><h3>Marcus Vance <span id="scan-count" class="limit">0 / 4 reels</span></h3><p>GS1 scan · 121100 Inventory / 201200 GRNI / PPV</p><div class="scanner"><label class="sr-only" for="barcode">GS1 reel barcode</label><input id="barcode" autocomplete="off" spellcheck="false" placeholder="Scan ENC-GS1-884192-R01" disabled><span id="reels" aria-label="Four reel scan status">○ ○ ○ ○</span></div></div><button class="step-action" data-run="6" disabled>Scan reel <span>⌁</span></button><span class="step-state">HUMAN REQUIRED</span></article>
+        <article class="step" data-step="7"><span class="step-number">07</span><div class="step-copy"><h3>OCR & three-way match</h3><p>28 field boxes · PO = receipt = invoice · $0 variance</p></div><button class="step-action" data-run="7" disabled>Run match <span>→</span></button><span class="step-state">WAITING</span></article>
+        <article class="step human" data-step="8" data-checkpoint="8"><span class="step-number">08</span><div class="step-copy"><span class="gate-label">◇ CHECKPOINT 4 · CFO</span><h3>Meredith Hale <span class="limit">$500k cap</span></h3><p>Check #10045 · Operating #8801 · ACH-000582</p></div><button class="step-action" data-run="8" disabled>Approve payment <span>→</span></button><span class="step-state">HUMAN REQUIRED</span></article>
+      </div>
+      <div class="kal"><div class="kal-avatar" aria-hidden="true">K</div><div class="kal-copy"><h3>KAL <span>VOICE STEWARD</span><strong>$0.00 authority</strong></h3><p id="kal-line">I can brief and nudge. Your officers hold the pen.</p></div><button id="kal-speak" aria-label="Hear KAL briefing" title="Hear briefing">◖))</button><button id="kal-mic" aria-label="Hold to talk to KAL" title="Hold to talk; release to finish">MIC</button></div>
+    </section>
+
+    <aside class="panel evidence-panel" data-desk-panel="evidence" aria-labelledby="evidence-title">
+      <div class="panel-heading"><h2 id="evidence-title">The paper trail</h2><span class="section-no">03 / EVIDENCE</span></div>
+      <section class="ledger-section"><div class="section-title"><h3>GAAP JOURNAL</h3><span id="ledger-balance" class="pill">AWAITING LEDGER</span></div><table class="ledger"><caption class="sr-only">Server journal debits and credits in US dollars</caption><thead><tr><th scope="col">Account / posting</th><th scope="col">Debit</th><th scope="col">Credit</th></tr></thead><tbody id="journal"><tr><td colspan="3" class="empty">Connect the ledger to see real postings.</td></tr></tbody><tfoot><tr><th scope="row">Total USD</th><td id="debit-total">—</td><td id="credit-total">—</td></tr></tfoot></table><div class="settlement"><span>SETTLEMENT</span><strong id="settlement">Awaiting CFO approval</strong></div></section>
+      <section class="documents-section"><h3>TRADE DOCUMENTS <span>5 LINKED ARTIFACTS</span></h3><div id="documents" class="documents"></div></section>
+      <section class="ocr-section"><div class="ocr-visual" aria-hidden="true"><div class="paper-lines"><i></i><i></i><i></i><i></i><i></i></div><span class="scan-bracket top"></span><span class="scan-bracket bottom"></span></div><div><h3>Tagged invoice</h3><p id="ocr-count">Awaiting pixel OCR evidence</p><button id="open-ocr" disabled>Inspect bounding boxes <span>↗</span></button></div></section>
+      <div class="lineage-note"><span>⌘</span><p>From source record to signed check.<br><strong>Every hop accountable.</strong></p></div>
+    </aside>
+  </main>
+
+  <footer><div id="status" role="status" aria-live="polite">Connecting to the local command server…</div><span class="footer-policy">KAL READS & NUDGES · HUMANS AUTHORIZE</span></footer>
+</div>
+<dialog id="ocr-dialog" aria-labelledby="ocr-title"><div class="dialog-heading"><div><span class="eyebrow">INV-25800 · PIXEL EVIDENCE</span><h2 id="ocr-title">Invoice field map</h2></div><button id="close-ocr" aria-label="Close invoice field map">✕</button></div><p id="ocr-summary"></p><div class="invoice-viewport"><div id="invoice-image"><img id="ocr-image" alt="Rendered vendor invoice with OCR bounding boxes"><div id="ocr-boxes"></div></div></div><p class="dialog-note">Boxes use server pixel coordinates. Hover or focus a box to read its extracted text.</p></dialog>
+<dialog id="reset-dialog" aria-labelledby="reset-title"><h2 id="reset-title">Reset this workflow?</h2><p>This requests a server reset, including demo stock, documents and journal state. Stop any active recording first.</p><div class="dialog-actions"><button id="cancel-reset">Keep this run</button><button id="confirm-reset" class="danger">Reset workflow</button></div></dialog>
+</body>
+</html>
