@@ -593,6 +593,7 @@
     }
 
     // Step 3 -> Step 4: VP Devon signs ceiling, fires live outbound COMEX API call, and STOPS on Step 4!
+    let spotGateUnlockedAt = 0;
     async function approveCheckpoint2Devon() {
       if (busyAction) return;
       busyAction = true;
@@ -608,24 +609,27 @@
           return;
         }
         STATE = r1.data;
-        // Show outbound TLS handshake dialing COMEX Copper feed, then STOP cleanly on Step 4!
+        // Show outbound TLS handshake dialing COMEX Copper feed while keeping busyAction=true, then STOP cleanly on Step 4!
         liveShowcasePhase = 'spot_calling';
-        busyAction = false;
         renderAll();
         await new Promise(r => setTimeout(r, 450));
 
         const r2 = await postStepRaw('wf1_check_spot');
         liveShowcasePhase = null;
+        spotGateUnlockedAt = Date.now() + 450;
         if (r2.ok) {
           STATE = r2.data;
           const stNow = STATE.runtimeState[selectedDeal];
+          busyAction = false;
           renderAll();
           if (stNow?.lastVoiceBrief) speakText(stNow.lastVoiceBrief, stNow.activeVoiceRole || 'ops_steward');
         } else {
           if (r2.data?.state) STATE = r2.data.state;
+          busyAction = false;
           renderAll();
         }
       } finally {
+        liveShowcasePhase = null;
         busyAction = false;
         busyBannerText = '';
       }
@@ -651,6 +655,7 @@
 
     // Step 4 -> Step 5: Central Purchasing clicks "OK to Proceed" -> Cuts PO-25800 + Receives Encore Vendor Ack ENC-OA-2026-884192 -> STOPS on Step 5!
     function proceedStep4CutPo() {
+      if (busyAction || liveShowcasePhase === 'spot_calling' || Date.now() < spotGateUnlockedAt) return;
       executeStewardSequence([
         { action: 'wf1_commit_po', label: 'Central Purchasing cutting PO-25800 at live COMEX spot price…' },
         { action: 'wf1_vendor_ack', label: 'Receiving Encore Wire Vendor Ack ENC-OA-2026-884192 (ship & delivery dates)…' },
