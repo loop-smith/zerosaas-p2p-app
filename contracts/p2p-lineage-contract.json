@@ -1,0 +1,296 @@
+{
+  "schema": "p2p.stocked-item.lineage-contract.v3",
+  "provenance": {
+    "sourceGate": "BOSS-8090 Brownfield Intake Gate v1 (Goldilocks One-Shot Factory Handoff)",
+    "handoffModel": "BOSS delivers this single Goldilocks Package into 8090 Software Factory (Refinery -> Foundry -> Planner -> Validator) and steps offstage; Software Factory <-> HARA execute WO-01..WO-06.",
+    "archifyRevision": "REV-02",
+    "streamId": "WF-P2P-5A",
+    "constellationHandoff": "P2M (WF-P2M-1A Supply Chain) -> P2P (WF-P2P-1A..1D + WF-P2P-2B Standard Cost & PPV)",
+    "targetProject": "P2P Workflow App",
+    "targetRepo": "https://github.com/loop-smith/8090-p2p-app",
+    "aiSteward": {
+      "id": "EMP-AI-KAL",
+      "bossAgentId": "AGT-8090-KAL-01",
+      "name": "KAL",
+      "phonetic": "Cal",
+      "role": "Zero-Authority P2P Workflow Steward (Read, Orchestrate & Nudge Only)",
+      "signingLimitUsd": 0,
+      "dbWriteCredentials": 0,
+      "guardrailPolicy": "Any write or checkpoint signing attempt by KAL returns HTTP 403 AI_STEWARD_ZERO_AUTHORITY with $0.00 book/bank impact."
+    },
+    "purviewSeat": {
+      "empId": "EMP-0002",
+      "name": "Nancy Rostova",
+      "title": "Centralized Purchasing Lead ($50,000 Signing Limit)",
+      "doaLimitUsd": 50000,
+      "mandate": "Owns live COMEX copper spot-price discovery, Encore Wire 1-line Purchase Order execution, and Vendor Order Acknowledgement verification."
+    }
+  },
+  "scope": "1-Item Stocked Copper Replenishment P2P Stream (8 Steps = Automated Deterministic Blocks + 4 Human Approve Checkpoints: Step 1 SQL Stock-Out Signal -> Step 2 Planner Darius $20k Signing Limit Escalation -> Step 3 VP Devon $100k Signing Limit Approval -> Steps 4-5 Auto COMEX Spot Buy, PO-25800 & Vendor OA ENC-OA-2026-884192 -> Step 6 Marcus 4-Reel GS1 Dock Scan Gun, $23,120 Std Cost, 201200 GRNI & 501900 PPV -> Step 7 Auto RapidOCR Tagging & $0.00 3-Way Match -> Step 8 CFO Meredith Hale Check #10045 / ACH-000582)",
+  "workflowStewards": [
+    {
+      "id": "WF-00",
+      "bossWorkflowId": "WF-P2M-1A",
+      "constellation": "P2M (Plan, Supply Chain & Execute)",
+      "code": "WMS-SIGNAL",
+      "name": "Supply Chain Stock-Out & Signing Limit Block",
+      "deterministicUnits": [
+        "InvenTree SQL Stock-Out Query (1 stocked item id=218 ITM-CU-20-BARE: 0 FT on hand < 8,000 FT minimum @ $2.89/FT rolling standard = $23,120.00)",
+        "HRM Signing Limit Gate ($20,000.00 Planner Cap vs. $23,120.00 Standard -> HTTP 403 Self-Approval Block)",
+        "Cross-Constellation Signing Tree Handoff (Routes VP-Approved REQ-25800 from P2M Supply Chain into P2P Centralized Purchasing)"
+      ],
+      "humanGate": "Human Checkpoint #1: Supply Chain Planner Darius Mercer (EMP-0021, $20,000 Signing Limit) confirms need on REQ-25800 (8,000 FT @ $2.89/FT = $23,120.00). Exceeds $20k limit -> Human Checkpoint #2: VP Supply Chain Devon Brooks (EMP-0005, $100,000 Signing Limit) approves and hands off from P2M into P2P."
+    },
+    {
+      "id": "WF-01",
+      "bossWorkflowId": "WF-P2P-1A",
+      "constellation": "P2P (Procure to Pay)",
+      "code": "CENTRAL-BUY",
+      "name": "Centralized Purchasing & Vendor OA Block",
+      "deterministicUnits": [
+        "Live COMEX Copper (HG) Spot API + Pure ASTM B8 Wire-Mill Formula ((spotPerLb + $0.32 mill adder) * 0.411 lb/FT)",
+        "Annual Standard Cost vs. Actual Spot PPV Calculator ($23,120.00 Annual Std Cost vs ~$21,600.00 Live Spot = ~-$1,520.00 Favorable PPV)",
+        "WMS 1-Line Purchase Order Writer (PO-25800.pdf) & Signed Vendor Order Acknowledgement (ENC-OA-2026-884192.pdf) Logger ($2.89/FT Annual Standard Cost stays locked all year)"
+      ],
+      "humanGate": "Automated after VP Devon signs Step 3 (within $50k Centralized Purchasing Signing Limit of Nancy Rostova, EMP-0002; $0.00 GL liability until physical dock scan)."
+    },
+    {
+      "id": "WF-02",
+      "bossWorkflowId": "WF-P2P-1B",
+      "constellation": "P2P (Procure to Pay)",
+      "code": "DOCK-SCAN",
+      "name": "Warehouse Dock Scan, Standard Cost & PPV Block",
+      "deterministicUnits": [
+        "Bill of Lading (BOL-25800.pdf) & Packing Slip / ASTM B8 Mill Cert (PS-25800.pdf) SHA-256 Hasher",
+        "WMS Physical Stock Writer (4 x 2,000-FT GS1-barcoded master reels ENC-GS1-884192-R01..R04 = +8,000 FT into stock_stockitem: 0 FT -> 8,000 FT replenished)",
+        "hledger --strict Standard Cost + PPV Poster (DR 121100 WMS Inventory Stock $23,120.00 Std Cost / CR 201200 GRNI ~$21,600.00 Actual PO / CR 501900 Purchase Price Variance ~-$1,520.00 Favorable PPV)"
+      ],
+      "humanGate": "Human Checkpoint #3: Warehouse Dock Lead Marcus Vance (EMP-0003) performs 4 sequential handheld GS1 barcode scans across 4 x 2,000-FT master reels (822 lbs/reel = 3,288 lbs net Cu) at WH-TX-NORTH; SOX 404 blocks Buyer Nancy (EMP-0002) with HTTP 403 if she attempts dock self-receipt."
+    },
+    {
+      "id": "WF-03",
+      "bossWorkflowId": "WF-P2P-1C",
+      "constellation": "P2P (Procure to Pay)",
+      "code": "OCR-3WAY",
+      "name": "AP Intake, RapidOCR Tagging & 3-Way Match Block",
+      "deterministicUnits": [
+        "RapidOCR ONNX Bounding-Box Field Tagger (INV-25800.pdf -> Vendor, PO #, 8,000 FT, Unit Price, Total Due)",
+        "Penny-Math Verifier (8,000 FT x Locked Spot Rate == Total Due; HTTP 409 MATCH_VARIANCE_HOLD on any over-bill)",
+        "Deterministic 3-Way Match (Ordered PO-25800 == Received BOL-25800 == Invoiced INV-25800 -> Approved to Pay)"
+      ],
+      "humanGate": "Automated under Controller AP Voucher Policy (Duncan Vance, EMP-0001, $250k Signing Limit); clears 201200 GRNI to $0.00 into 201100 Trade Payables and queues for CFO."
+    },
+    {
+      "id": "WF-04",
+      "bossWorkflowId": "WF-P2P-1D",
+      "constellation": "P2P (Procure to Pay)",
+      "code": "CFO-CHECK",
+      "name": "CFO Payment & Bank Disbursement Block",
+      "deterministicUnits": [
+        "6-Officer Segregation-of-Duties Verifier + KAL Zero-Authority Enforcer (HTTP 403 on collision or AI write attempt)",
+        "Operating Bank Policy Guard (101100 Operating Checking #8801 required; 101200 Payroll Checking #4409 blocked >$5,000)",
+        "hledger --strict Payment Writer (DR 201100 Trade AP / CR 101100 Operating Checking) + PAID Stamp on PO-25800 & INV-25800"
+      ],
+      "humanGate": "Human Checkpoint #4: Chief Financial Officer Meredith Hale (EMP-0007, $500,000 Signing Limit) approves payment, cutting Check #10045 / ACH-000582 and settling GRNI and Trade AP to $0.00."
+    },
+    {
+      "id": "WF-05",
+      "bossWorkflowId": "WF-P2P-2B",
+      "constellation": "P2P (Procure to Pay · Standard Cost & PPV Ledger)",
+      "code": "STD-COST-PPV",
+      "name": "Annual Standard Cost & Purchase Price Variance (PPV) Block",
+      "deterministicUnits": [
+        "FY2026 Annual Standard Cost Lock (InvenTree part_partpricing stays locked at $2.89/FT = $23,120.00 all year — never overwritten mid-year)",
+        "GAAP 501900 Purchase Price Variance (PPV) Posting (Actual Spot PO ~$21,600.00 - Standard Cost $23,120.00 = ~-$1,520.00 Favorable PPV)"
+      ],
+      "humanGate": "Automated GAAP standard-cost variance accounting: Inventory 121100 carries $23,120.00 Standard Cost while 501900 PPV records Purchasing's exact variance against Standard Cost."
+    }
+  ],
+  "primaryItem": {
+    "dealId": "PO-25800",
+    "stockedItemCountInWms": 1,
+    "lineItemCount": 1,
+    "lowStockTrigger": {
+      "onHandStockFt": 0,
+      "onHandValueUsd": 0.00,
+      "minThresholdFt": 8000,
+      "reelCount": 4,
+      "ftPerReel": 2000,
+      "reelBarcodes": ["ENC-GS1-884192-R01", "ENC-GS1-884192-R02", "ENC-GS1-884192-R03", "ENC-GS1-884192-R04"],
+      "copperLbPerFt": 0.411,
+      "copperWeightLbs": 3288,
+      "plannerRequester": "EMP-0021 Darius Mercer ($20,000 Signing Limit -> Escalates)",
+      "escalatedApprover": "EMP-0005 Devon Brooks (VP Supply Chain, $100,000 Signing Limit)",
+      "upstreamRequest": "REQ-25800",
+      "catalogUnitPriceUsd": 2.89,
+      "catalogEstimateUsd": 23120.00
+    },
+    "liveSpotPriceApi": {
+      "primaryEndpoint": "https://api.gold-api.com/price/HG",
+      "fallbackEndpoint": "https://query1.finance.yahoo.com/v8/finance/chart/HG=F?interval=1d&range=5d",
+      "copperWeightLbs": 3288,
+      "millDrawFabricationPerLbUsd": 0.32,
+      "astmB8LbPerFt": 0.411,
+      "referenceSpotPerLbUsd": 6.2602,
+      "referenceLockedUnitPriceFt": 2.70
+    },
+    "vendorName": "Encore Wire Corporation",
+    "wmsSupplierId": 181,
+    "wmsPartId": 218,
+    "wmsSupplierPartId": 124,
+    "wmsLocationId": 469,
+    "sku": "ITM-CU-20-BARE",
+    "description": "2/0 AWG Bare Stranded Copper Wire (4 x 2,000-FT GS1-Barcoded Master Wooden Reels · ASTM B8 19-Strand · 3,288 lbs Net Cu)",
+    "uom": "FT",
+    "quantityFt": 8000,
+    "spotCopperPerLbUsd": 6.2602,
+    "unitPriceUsd": 2.70,
+    "spotSavingsUsd": 1520.00,
+    "totalUsd": 21600.00,
+    "settlement": {
+      "checkNumber": "Check #10045",
+      "achTrace": "ACH-000582"
+    },
+    "tradeDocuments": {
+      "purchaseOrder": "PO-25800.pdf",
+      "orderAcknowledgementNumber": "ENC-OA-2026-884192",
+      "orderAcknowledgement": "ENC-OA-2026-884192.pdf",
+      "billOfLading": "BOL-25800.pdf",
+      "packingSlipAndMillCert": "PS-25800.pdf",
+      "vendorInvoice": "INV-25800.pdf"
+    }
+  },
+  "semanticBindings": [
+    {
+      "canonical_element": "VendorMaster",
+      "element_layer": "MDM",
+      "source_system": "WMS",
+      "table_name": "company_company",
+      "key_column": "id",
+      "value_column": "name",
+      "fk_relation": "Referenced by order_purchaseorder.supplier_id and part_supplierpart.supplier_id (both -> company_company.id); id=181 resolves to Encore Wire Corporation."
+    },
+    {
+      "canonical_element": "ItemCatalog",
+      "element_layer": "MDM",
+      "source_system": "WMS",
+      "table_name": "part_part",
+      "key_column": "id",
+      "value_column": "name",
+      "fk_relation": "Strictly 1 stocked item in WMS: id=218 (ITM-CU-20-BARE) carries units='FT', minimum_stock=8000, and part_partpricing.internal_cost_min=2.89 ($23,120.00 standard)."
+    },
+    {
+      "canonical_element": "SupplierPartMap",
+      "element_layer": "MDM",
+      "source_system": "WMS",
+      "table_name": "part_supplierpart",
+      "key_column": "id",
+      "value_column": "SKU",
+      "fk_relation": "part_id -> part_part.id; supplier_id -> company_company.id; id=124 maps Encore Wire SKU ITM-CU-20-BARE."
+    },
+    {
+      "canonical_element": "WarehouseLocation",
+      "element_layer": "MDM",
+      "source_system": "WMS",
+      "table_name": "stock_stocklocation",
+      "key_column": "id",
+      "value_column": "name",
+      "fk_relation": "Self-referencing parent_id -> stock_stocklocation.id; id=469 resolves to receiving hub WH-TX-NORTH."
+    },
+    {
+      "canonical_element": "PurchaseOrderHeader",
+      "element_layer": "P2P_FLOW",
+      "source_system": "WMS",
+      "table_name": "order_purchaseorder",
+      "key_column": "id",
+      "value_column": "reference",
+      "fk_relation": "supplier_id -> company_company.id; supplier_reference stores confirmed Vendor OA ENC-OA-2026-884192 ETA and PAID Check #10045 / ACH-000582 stamp."
+    },
+    {
+      "canonical_element": "PurchaseOrderLine",
+      "element_layer": "P2P_FLOW",
+      "source_system": "WMS",
+      "table_name": "order_purchaseorderlineitem",
+      "key_column": "id",
+      "value_column": "quantity",
+      "fk_relation": "order_id -> order_purchaseorder.id; part_id -> part_supplierpart.id; single 1-line commitment for 8,000 FT at locked live COMEX spot rate."
+    },
+    {
+      "canonical_element": "PhysicalStockReceipt",
+      "element_layer": "P2P_FLOW",
+      "source_system": "WMS",
+      "table_name": "stock_stockitem",
+      "key_column": "id",
+      "value_column": "quantity",
+      "fk_relation": "purchase_order_id -> order_purchaseorder.id; part_id -> part_part.id; seeded at 0 FT on boot, then replenished +8,000 FT across 4 x 2,000-FT GS1-barcoded reels (ENC-GS1-884192-R01..R04) via dock scan BOL-25800."
+    },
+    {
+      "canonical_element": "DepartmentCostCenter",
+      "element_layer": "GOVERNANCE_SOX",
+      "source_system": "HRM",
+      "table_name": "hrm_beehive_department",
+      "key_column": "beehive_fg_id",
+      "value_column": "name",
+      "fk_relation": "Logical join via beehive_fg_id (FG-11 Warehouse & Central Receiving Hub) to hrm_employee.beehive_fg_id."
+    },
+    {
+      "canonical_element": "OfficerAuthorityDOA",
+      "element_layer": "GOVERNANCE_DOA_SOX",
+      "source_system": "HRM",
+      "table_name": "hrm_doa_authority_seat",
+      "key_column": "emp_id",
+      "value_column": "approval_limit_usd",
+      "fk_relation": "Enforces Signing Limits & 6-Officer Segregation of Duties across Planner Darius ($20k), VP Devon ($100k), Purchasing Nancy ($50k), Dock Marcus, Controller Duncan ($250k), and CFO Meredith ($500k), while AI Steward KAL holds $0.00."
+    },
+    {
+      "canonical_element": "GAAP_InventoryAsset",
+      "element_layer": "LEDGER_GAAP",
+      "source_system": "LEDGER",
+      "table_name": "company.journal",
+      "key_column": "account_code",
+      "value_column": "Assets:121100-WMS-Inventory-Stock",
+      "fk_relation": "Subledger tie-out from stock_stockitem receipt (+8,000 FT @ $2.89/FT FY2026 Annual Standard Cost = $23,120.00) to GAAP Inventory Asset 121100, with spot variance booked to Expenses:501900-Purchase-Price-Variance."
+    },
+    {
+      "canonical_element": "GAAP_GRIR_Clearing",
+      "element_layer": "LEDGER_GAAP",
+      "source_system": "LEDGER",
+      "table_name": "company.journal",
+      "key_column": "account_code",
+      "value_column": "Liabilities:201200-GRNI-Goods-Received-Not-Invoiced",
+      "fk_relation": "Goods Received Not Invoiced (GRNI) accrued liability posted upon BOL-25800 + PS-25800 dock scan; clears to $0.00 upon 3-Way Match."
+    },
+    {
+      "canonical_element": "GAAP_TradeAP",
+      "element_layer": "LEDGER_GAAP",
+      "source_system": "LEDGER",
+      "table_name": "company.journal",
+      "key_column": "account_code",
+      "value_column": "Liabilities:201100-AP-Trade-Payables",
+      "fk_relation": "Trade payable posted when PO-25800 == BOL-25800 == INV-25800 ($0.00 variance); clears to $0.00 on CFO Check #10045 / ACH-000582."
+    },
+    {
+      "canonical_element": "GAAP_OperatingCash",
+      "element_layer": "LEDGER_GAAP",
+      "source_system": "LEDGER",
+      "table_name": "company.journal",
+      "key_column": "account_code",
+      "value_column": "Assets:101100-Operating-Checking",
+      "fk_relation": "Primary operating bank account for Check #10045 / ACH-000582; Payroll Checking 101200 is deterministically blocked above $5,000."
+    }
+  ],
+  "controlFrameworks": {
+    "fourLayerActionGovernance": [
+      "Layer 1 (Internal Controls): Parameterized SQLite FK Enforcement + hledger --strict Double-Entry Gate + $0.00 AI Steward Cap",
+      "Layer 2 (Autonomous Oversight): Deterministic 3-Way Match Variance & Bank-Policy Sentinel",
+      "Layer 3 (Cryptographic Audit): Append-Only SHA-256 Hash Chain (PO -> OA -> BOL -> PS -> EML -> INV PDF -> OCR Boxes -> SQL PK -> Journal)",
+      "Layer 4 (Executive Fiduciary Gate): Active Runtime Human Checkpoint #4 (CFO Meredith Hale, EMP-0007) before Check #10045 / ACH-000582 Release"
+    ],
+    "sox404": "6-Officer Segregation of Duties & Signing Limits + AI Steward Zero-Write Isolation (KAL = $0.00 Signing Limit, HTTP 403 on any write attempt)",
+    "soc2AndSecurity": [
+      "CC6.1 Strict 3-Plane Segregation (KAL Reads/Nudges Only; Deterministic Blocks & Verified Humans Write)",
+      "PI1.3 RapidOCR Penny-Math & SQLite Foreign-Key Processing Integrity",
+      "CC8.1 Immutable Hashed Hop-Lineage Trail"
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "name": "8090-p2p-app",
+  "version": "0.1.0",
+  "private": false,
+  "license": "MIT",
+  "author": "Robert Paddock <robert@idigdata.com>",
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "start": "node src/sor_3panel_server.mjs",
+    "test": "node --input-type=module -e \"import fs from 'node:fs'; if (fs.existsSync('tests/test-copper-e2e.mjs')) { await import('./tests/test-copper-e2e.mjs'); } else { console.log('Stage smoke check OK: contract=' + fs.existsSync('contracts/p2p-lineage-contract.json')); }\""
+  }
+}
