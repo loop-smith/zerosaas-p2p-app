@@ -1,20 +1,45 @@
-# ZeroSaaS P2P — Headless Copper Stock-to-Pay ERP (`8090-p2p-app`)
+# ZeroSaaS P2P — Headless Copper Stock-to-Pay ERP (`zerosaas-p2p-app`)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
-[![Built With: 8090 Software Factory](https://img.shields.io/badge/SDLC-8090%20Software%20Factory-1d4ed8)](#planned-8090-software-factory-build-queue-wo-01--wo-06)
-[![Headless SoRs: 4 MIT Databases](https://img.shields.io/badge/Systems%20of%20Record-4%20MIT%20Databases-0f766e)](#planned-8090-software-factory-build-queue-wo-01--wo-06)
+[![Built With: 8090 Software Factory](https://img.shields.io/badge/SDLC-8090%20Software%20Factory-1d4ed8)](#8090-software-factory-traceability-sf-wo-1--wo-11--commits--qualify-reviews)
+[![Headless SoRs: 4 MIT Databases](https://img.shields.io/badge/Systems%20of%20Record-4%20MIT%20Databases-0f766e)](#8090-software-factory-build-queue-wo-01--wo-06)
 
 > **Most AI procurement demos hand an LLM a corporate credit card, a database password, and a prayer. Try showing that to a sitting CFO, Controller, or external SOX 404 auditor — you won't make it past the lobby.**
 
 Project scaffold initialized live at the **EVOLVE: 8090 AI Hackathon** (`2026-11-13`) from upstream **BOSS** brownfield enterprise discovery for end-to-end build-out through **8090 Software Factory** (`Refinery` ➔ `Foundry` ➔ `Planner` ➔ `Validator`).
 
-## Planned 8090 Software Factory Build Queue (`WO-01` .. `WO-06`)
+> Repository renamed from `8090-p2p-app` to **`zerosaas-p2p-app`** (`loop-smith/zerosaas-p2p-app`).
 
-A self-contained, **`100%` MIT-licensed industrial P2P workflow application** on a single zero-scroll (`100vh`) command screen for single-item stocked commodity replenishment (`PO-25800` · `8,000 FT` `2/0 AWG` ASTM B8 Bare Stranded Copper = `8 × 1,000-FT` GS1-barcoded wooden master reels / `3,288 lbs` net Cu):
+## 8090 Software Factory Build Queue (`WO-01` .. `WO-06`)
+
+A self-contained, **`100%` MIT-licensed industrial P2P workflow application** on a single zero-scroll (`100vh`) command screen for single-item stocked commodity replenishment (`PO-25800` · `8,000 FT` `2/0 AWG` ASTM B8 Bare Stranded Copper = `4 × 2,000-FT` GS1-barcoded wooden master reels `ENC-GS1-884192-R01..R04` / `3,288 lbs` net Cu):
 
 - **`4` Real Headless Systems of Record (`100%` MIT in `/seeds`, Zero Toy Mocks):** `InvenTree` WMS (`115` tables, strictly `1` stocked copper item `ITM-CU-20-BARE`), `Django-CRM` (`150` tables), `Headless HRM` (`6` human signing limits + `$0.00` AI cap), and an `89`-account double-entry GAAP general ledger (`coa_seed.journal`, `hledger --strict` compatible with locked `$2.89/FT` FY2026 Annual Standard Cost = `$23,120.00` + `501900` Purchase Price Variance `PPV`).
-- **`KAL` Zero-Authority Voice Steward (`$0.00` Signing Limit, `0` DB/GL/Bank Write Credentials):** Orchestrates deterministic workflow blocks and `<500ms` ElevenLabs `Turbo v2.5` voice briefings while enforcing **`HTTP 403 AI_STEWARD_ZERO_AUTHORITY`** on any unapproved commitment attempt and pausing strictly at **4 Human Checkpoints** (`Darius $20k` ➔ `VP Devon $100k` ➔ `Marcus 8-Reel GS1 Dock Scan` ➔ `CFO Meredith Check #10045`).
+- **`KAL` Zero-Authority Voice Steward (`$0.00` Signing Limit, `0` DB/GL/Bank Write Credentials):** Orchestrates deterministic workflow blocks and `<500ms` ElevenLabs `Turbo v2.5` voice briefings while enforcing **`HTTP 403 AI_STEWARD_ZERO_AUTHORITY`** on any unapproved commitment attempt and pausing strictly at **4 Human Checkpoints** (`Darius $20k` ➔ `VP Devon $100k` ➔ `Marcus 4-Reel GS1 Dock Scan` ➔ `CFO Meredith Check #10045`).
 - **`3` Clean External/Sidecar Pipes — Zero API Maze:** (1) **ElevenLabs** (`Eleven Turbo v2.5` TTS + `Scribe` STT), (2) **Warm Local `RapidOCR` Sidecar** (`Apache-2.0` / `BSD-3` / `MIT-CMU` — mints `PO-25800`, Vendor OA `ENC-OA-2026-884192`, `BOL-25800`, `PS-25800`, `INV-25800` and extracts `28` pixel OCR boxes for `$0.00`-variance 3-Way Match), and (3) **Live COMEX Copper (`HG`) Spot Feed** (`gold-api.com` + `Yahoo Finance` fallback, locking `~$2.70/FT = ~$21,600.00` for `-$1,520.00` favorable `501900 PPV`).
+
+## 8090 Software Factory Traceability (SF `WO-1` .. `WO-11` ⇄ Commits ⇄ Qualify Reviews)
+
+The build ran in a live 2-way 8090 Software Factory loop:
+
+- **Organization:** `ab209dd1-ce3e-4eda-9839-f5982b4b1c22`
+- **Project:** `ZeroSaaS P2P` (`9e2da614-7738-46a6-9152-69c4ec850ed5`)
+- **Anchors:**
+  - Refinery `KB-00`: `2fb45197-ecd8-463e-b72b-db79275329e3`
+  - Foundry `REQ-01`: `1fc08c46-ed36-4a14-99a3-0eae8de04206`
+  - Architecture Blueprint `BP-01`: `61e1a72e-d90f-4d32-a3b6-a4b002ed4d2d`
+  - Feature Blueprint: `bf2a43c7-eea6-4ea6-839a-6d83ae12b8a8`
+  - Agent Session: `6efbe532-dc88-467d-89fd-db361b5d1f75`
+
+Each Planner Work Order maps to a build WO and then to a commit on `main`. An independent Qualify Review then checks each commit. A `FAIL` verdict returns to the Validator as a typed follow-up work order. The full forward and backward matrix, the Qualify Review ledger and the open items are in **[`docs/software-factory-trace.md`](./docs/software-factory-trace.md)**.
+
+| SF Planner WO | Build WO | Commit | Qualify Review |
+| --- | --- | --- | --- |
+| SF WO-1 Validate brownfield contracts · SF WO-2 Stocked-copper inventory | `HARA WO-01` | `3769d7e6` | ✅ PASS |
+| SF WO-3 KAL zero-authority · SF WO-4 Darius/Devon gates · SF WO-5 Dock GS1 intake · SF WO-7 COMEX pricing · SF WO-8 `501900` PPV ledger · SF WO-9 Disbursement `#8801` vs `#4409` controls | `HARA WO-02` | `11e6a606` | ✅ PASS |
+| SF WO-6 28-box 3-way reconciliation | `HARA WO-03-A` | `2ba3ae52` | ✅ PASS (sidecar scope) |
+| UI Command Desk (cross-cutting) | `HARA WO-04-A` | `1ad7f604` | ❌ FAIL ➔ Validator follow-up `WO-04-A.f1` (open) |
+| SF WO-10 Audit recovery · SF WO-11 PO-25800 E2E | `HARA WO-05-A` & `HARA WO-06` | not yet landed | ⏳ pending |
 
 ## Pre-Event Planning & Third-Party Tool / License Disclosure (EVOLVE Rules §10)
 
