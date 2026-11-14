@@ -1,4 +1,4 @@
-"""Real Chromium projection checks for the ZeroSaaS P2P workbench (SF WO-13).
+"""Real Chromium projection checks for the ZeroSaaS P2P workbench (SF WO-13, WO-14).
 
 Runs against an isolated HTTP boundary fixture and against the real kernel.
 This does not certify server accounting, authentication, OCR or ElevenLabs.
@@ -146,6 +146,13 @@ def check_shell_bounds(page):
       return failures;
     }""")
 
+def assert_fits_every_desktop(page):
+    # Mid-run states carry the longest step-card text and the RF readout line.
+    for width, height in DESKTOP:
+        page.set_viewport_size({"width": width, "height": height})
+        assert check_shell_bounds(page) == [], f"{width}x{height}: {check_shell_bounds(page)}"
+    page.set_viewport_size({"width": 1440, "height": 900})
+
 def test_white_workbench_shell_layout_and_views_fit_one_screen(desk):
     page = open_desk(desk)
     assert page.title() == "ZeroSaaS P2P · Headless Stock-to-Pay ERP & KAL Steward"
@@ -179,21 +186,37 @@ def test_eight_steps_four_gates_reel_scanner_ocr_trial_balance_and_packets(desk)
     page.locator('[data-trap="sod"]').click()
     page.wait_for_function("document.querySelector('#status').textContent.includes('SOX_SOD_VIOLATION')")
     assert desk["state"]["steps"][4]["status"] == "complete"
+    page.locator('#barcode').fill('ENC-GS1-884192-R09')
+    page.locator('#barcode').press('Enter')
+    assert 'UNKNOWN_REEL' in page.locator('#rf-last').inner_text()
+    assert len([item for item in desk["requests"] if item[0] == "/api/step/6"]) == 0
     for index, barcode in enumerate(REELS):
         if index < 2:
             page.locator(f'[data-reel="{barcode}"]').click()
-        else:
-            page.locator('#barcode').fill(barcode)
+        elif index == 2:
+            page.locator('#barcode').fill(f"]C1{barcode}")
             page.locator('#barcode').press('Enter')
+        else:
+            # Keyboard-wedge burst with focus outside any field.
+            page.evaluate("document.activeElement.blur()")
+            page.keyboard.type(barcode)
+            page.keyboard.press('Enter')
         page.wait_for_function(f"document.querySelector('#scan-count').textContent === '{index+1} / 4 reels'")
         if index < 3:
             assert page.locator(f'[data-reel="{barcode}"]').is_disabled()
             assert page.locator('[data-step="6"] .step-state').inner_text() == 'IN PROGRESS'
+            assert page.locator('#rf-last').inner_text().startswith(f"✓ {barcode[-3:]} received")
+    assert page.locator('#rf-feet').inner_text() == '8,000 / 8,000 FT · 3,288 lbs Cu'
+    assert_fits_every_desktop(page)
     run_step(page, 7)
+    assert_fits_every_desktop(page)
     page.wait_for_function("!document.querySelector('#open-ocr').disabled")
     page.locator('#open-ocr').click()
     assert page.locator('.ocr-box').count() == 28
     assert page.locator('.ocr-box').first.get_attribute('aria-label') == '1: Field 1'
+    assert page.locator('#ocr-fields .ocr-field').count() == 5
+    page.locator('.ocr-box').nth(1).click()
+    assert page.locator('#ocr-selected').inner_text().startswith('Box 2: “Field 2”')
     durations = page.evaluate("""async () => {
       const {render} = await import('/app.js');
       const snapshot = await (await fetch('/api/state')).json(), samples = [];
@@ -202,7 +225,16 @@ def test_eight_steps_four_gates_reel_scanner_ocr_trial_balance_and_packets(desk)
     }""")
     assert max(durations) < 16, durations
     page.locator('#close-ocr').click()
-    run_step(page, 8)
+    # CFO check view: a draft awaiting the CFO, signed from the view through the Step 8 server write.
+    page.locator('#open-check').click()
+    assert page.locator('#check-stamp').inner_text() == 'AWAITING CFO'
+    assert page.locator('#check-words').inner_text() == 'Twenty-one thousand six hundred and 00/100 dollars'
+    page.locator('#sign-check').click()
+    page.wait_for_function("document.querySelector('[data-step=\"8\"]').classList.contains('done')")
+    assert page.locator('#check-stamp').inner_text() == 'PAID'
+    assert page.locator('#check-amount').inner_text() == '$21,600.00'
+    assert page.locator('#sign-check').is_disabled()
+    page.locator('#close-check').click()
     assert page.locator('#settlement').inner_text() == 'PAID · Check #10045'
     writes = [payload for path, payload in desk["requests"] if path.startswith('/api/step/')]
     assert writes[-1] == {"actor": "EMP-0007", "bankAccount": "101100"}

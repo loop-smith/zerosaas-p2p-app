@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-// ZeroSaaS P2P workbench client suite (SF WO-13). File name kept: the task card runs it by this path.
-import { validateState, safeDocumentUrl, request, speak, refresh, runStep, render, trialBalance, REELS, REFUSALS, startRecording, stopRecording } from "./app.js";
+// ZeroSaaS P2P workbench client suite (SF WO-13, WO-14). File name kept: the task card runs it by this path.
+import { validateState, safeDocumentUrl, request, speak, refresh, runStep, render, trialBalance, REELS, REFUSALS, startRecording, stopRecording,
+  stewardIntent, stewardReply, parseReelScan, tagOcrFields, checkWords } from "./app.js";
 
 const snapshot = {
   steps: Array.from({length: 8}, (_, index) => ({n: index + 1, status: index === 0 ? 'complete' : 'pending'})),
@@ -120,6 +121,69 @@ test("snapshot validation rejects malformed status, documents and out-of-image O
   ]) assert.throws(() => validateState({...snapshot, ...extra}));
 });
 
+const atStep = (done, extra = {}) => ({...snapshot, steps: snapshot.steps.map(step => ({...step, status: step.n <= done ? 'complete' : 'pending'})), ...extra});
+
+test("KAL voice intents are read-only: write verbs get the $0 refusal and never reach the network", async () => {
+  for (const [text, intent] of [
+    ["Approve payment now", "refuse"], ["Sign check 10045", "refuse"], ["Pay the invoice", "refuse"], ["Reset the queue", "refuse"], ["Scan reel two", "refuse"], ["Issue the PO", "refuse"],
+    ["Is there any issue with the reset?", "status"],
+    ["Show me the check", "check"], ["Was the CFO payment made?", "check"], ["Open the invoice OCR boxes", "invoice"],
+    ["How many reels were received at the dock?", "dock"], ["Is the ledger balanced?", "ledger"], ["Which SOX guardrails apply?", "governance"],
+    ["What happens next?", "status"], ["", "status"],
+  ]) assert.equal(stewardIntent(text), intent, text);
+  const original = globalThis.fetch;
+  let calls = 0;
+  try {
+    globalThis.fetch = async () => { calls++; throw new Error("no network"); };
+    assert.match(stewardReply("refuse", atStep(7)), /zero dollars.*Step 8 needs Meredith Hale at the step card\. Human officers authorize every checkpoint\.$/);
+    assert.match(stewardReply("refuse", atStep(0)), /Step 1 needs the system stock query/);
+    assert.match(stewardReply("refuse", atStep(8)), /All eight steps are already complete/);
+    assert.match(stewardReply("status", null), /disconnected/);
+    assert.match(stewardReply("status", atStep(2)), /^2 of 8 steps confirmed\. VP Devon must approve the request\./);
+    assert.match(stewardReply("check", atStep(5)), /only after the three-way match/);
+    assert.equal(stewardReply("dock", atStep(5, {scans: [{barcode: REELS[1], ft: 2000}]})), "1 of 4 reels received, 2,000 of 8,000 feet. Marcus Vance must scan R01, R03, R04.");
+    assert.match(stewardReply("dock", atStep(3)), /Dock scanning opens at step 6/);
+    assert.match(stewardReply("invoice", atStep(6)), /not matched yet/);
+    assert.equal(stewardReply("ledger", snapshot), "The journal is balanced. Debits $0.00 equal credits $0.00 across 0 postings.");
+    assert.equal(calls, 0);
+  } finally { globalThis.fetch = original; }
+});
+
+test("RF wedge reads drop AIM prefixes and terminators and mirror the server scan refusals", () => {
+  assert.deepEqual(parseReelScan(`]C1${REELS[0]}\r\n`), {code: REELS[0], error: null});
+  assert.deepEqual(parseReelScan(" enc-gs1-884192-r02\t"), {code: REELS[1], error: null});
+  assert.equal(parseReelScan(`${REELS[3]}\x1d`).code, REELS[3]);
+  assert.deepEqual(parseReelScan("ENC-GS1-884192-R05"), {code: "ENC-GS1-884192-R05", error: "UNKNOWN_REEL"});
+  assert.equal(parseReelScan("\r\n").error, "NO_BARCODE");
+  assert.equal(parseReelScan(undefined).error, "NO_BARCODE");
+  assert.equal(parseReelScan(REELS[2], [{barcode: REELS[2], ft: 2000}]).error, "DUPLICATE_SCAN");
+});
+
+test("OCR field tagging finds the five match fields on single-line and split RapidOCR boxes", () => {
+  const line = (text, y, x = 36, width = 300) => ({text, x, y, width, height: 14});
+  const boxes = [line("VENDOR OA: ENC-OA-2026-884192", 60), line("VENDOR: Encore Wire Corporation", 40), line("PURCHASE ORDER: PO-25800", 50),
+    line("QUANTITY FT: 8000", 70), line("UNIT PRICE USD: 2.70", 80), line("TOTAL DUE USD: 21600.00", 90)];
+  assert.deepEqual(tagOcrFields({boxes}).map(field => [field.key, field.value, field.indices]),
+    [["vendor", "Encore Wire Corporation", [1]], ["po", "PO-25800", [2]], ["quantity", "8000", [3]], ["unit", "2.70", [4]], ["total", "21600.00", [5]]]);
+  // Label and value split into two boxes: the nearest box to the right on the same line is the value.
+  const split = tagOcrFields({boxes: [line("TOTAL DUE USD:", 90, 36, 110), line("99.00", 300, 200, 60), line("21599.00", 91, 400, 70), line("21600.00", 91, 160, 70)]});
+  assert.deepEqual(split.find(field => field.key === "total"), {key: "total", label: "Total due USD", indices: [0, 3], value: "21600.00"});
+  assert.deepEqual(split.find(field => field.key === "vendor"), {key: "vendor", label: "Vendor", indices: [], value: null});
+  // Real RapidOCR drops inter-word spaces; the sidecar parser also accepts a full-width colon.
+  const squeezed = tagOcrFields({boxes: [line("VENDOROA:ENC-OA-2026-884192", 30), line("VENDOR:EncoreWireCorporation", 40), line("PURCHASEORDER:PO-25800", 50),
+    line("QUANTITYFT:8000", 70), line("UNITPRICEUSD：2.70", 80), line("TOTALDUEUSD:21600.00", 90)]});
+  assert.deepEqual(squeezed.map(field => field.value), ["EncoreWireCorporation", "PO-25800", "8000", "2.70", "21600.00"]);
+  assert.deepEqual(tagOcrFields(null).map(field => field.indices.length), [0, 0, 0, 0, 0]);
+});
+
+test("check amounts print as legal words with cents over 100", () => {
+  assert.equal(checkWords(21600), "Twenty-one thousand six hundred and 00/100 dollars");
+  assert.equal(checkWords(23120.5), "Twenty-three thousand one hundred twenty and 50/100 dollars");
+  assert.equal(checkWords(1000001.07), "One million one and 07/100 dollars");
+  assert.equal(checkWords(0.99), "Zero and 99/100 dollars");
+  for (const bad of [-1, NaN, 1e12, undefined]) assert.equal(checkWords(bad), "—");
+});
+
 test("a cancelled pending display permission cannot restart capture", async () => {
   const saved = new Map(['navigator', 'isSecureContext', 'MediaRecorder', 'MediaStream'].map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
   let resolveCapture;
@@ -180,6 +244,10 @@ test("real server snapshots and client actions share the kernel contract", async
     }
     const received = await read();
     assert.equal(received.item.onHandFt, 8000);
+    // WO-14 RF scanner and voice steward read the same server scans.
+    assert.equal(parseReelScan(`]C1${REELS[0]}\r`, received.scans).error, "DUPLICATE_SCAN");
+    assert.equal(stewardReply("dock", received), "4 of 4 reels received, 8,000 of 8,000 feet. The dock receipt is complete.");
+    assert.match(stewardReply("check", received), /only after the three-way match/);
     assert.equal(received.journal.entries.length, 1);
     assert.equal(received.journal.balanced, true);
     assert.equal(received.journal.debitUsd, 23120);
@@ -193,6 +261,12 @@ test("real server snapshots and client actions share the kernel contract", async
     assert.equal(paid.steps.filter(step => step.status === 'complete').length, 8);
     assert.equal(paid.journal.entries.length, 3);
     assert.deepEqual(writes.at(-1), ['/api/step/8', {actor: 'EMP-0007', bankAccount: '101100'}]);
+    // WO-14 CFO check view and voice steward read the real payment and match records.
+    assert.equal(stewardReply("check", paid), "Check #10045 paid $21,600.00 to Encore Wire Corporation from Operating Checking #8801.");
+    assert.equal(paid.payment.approvedBy, "EMP-0007");
+    assert.equal(paid.match.varianceUsd, 0);
+    assert.match(stewardReply("invoice", paid), /^Three-way match cleared at \$0\.00 variance\. This run matched PO-derived invoice fields/);
+    assert.equal(checkWords(paid.payment.amountUsd), "Twenty-one thousand six hundred and 00/100 dollars");
     // Right-rail trial balance: the six WO-13 accounts net from the real kernel journal, DR == CR.
     const book = trialBalance(paid);
     const net = code => { const sum = book.codes.get(code); return sum ? sum.debit - sum.credit : 0; };

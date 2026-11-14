@@ -19,7 +19,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { startServer } from '../src/sor_3panel_server.mjs';
 import { CONTRACT } from '../src/lineage_core.mjs';
-import { validateState } from '../public/app.js';
+import { validateState, tagOcrFields } from '../public/app.js';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const AI = CONTRACT.provenance.aiSteward;
@@ -324,6 +324,9 @@ try {
     const png = Buffer.from(await image.arrayBuffer());
     assert.equal(png.subarray(1, 4).toString(), 'PNG');
     assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [snap.ocr.width, snap.ocr.height]);
+    // WO-14 bbox viewer: the five match fields are tagged on real RapidOCR boxes (RapidOCR drops inter-word spaces).
+    const fields = Object.fromEntries(tagOcrFields(snap.ocr).map((f) => [f.key, f.value?.replace(/\s/g, '')]));
+    assert.deepEqual(fields, { vendor: CONTRACT.primaryItem.vendorName.replace(/\s/g, ''), po: CONTRACT.primaryItem.dealId, quantity: '8000', unit: '2.70', total: '21600.00' }, JSON.stringify(fields));
   });
 
   await must('Check #10045 pays once; replay, amount tamper, and a concurrent double post do not pay again', async () => {

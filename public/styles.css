@@ -1,5 +1,5 @@
 @charset "UTF-8";
-/* ZeroSaaS P2P · white enterprise workbench (SF WO-13, REQ-P2P-012, BP-01 ADR-006). */
+/* ZeroSaaS P2P · white enterprise workbench (SF WO-13, REQ-P2P-012, BP-01 ADR-006); interactive parity (SF WO-14). */
 :root {
   color-scheme: light;
   --bg-app: #f1f5f9; --bg-panel: #ffffff; --bg-subtle: #f8fafc; --border: #e2e8f0; --text-main: #0f172a;
@@ -105,7 +105,13 @@ a[aria-disabled="true"] { color: var(--text-muted); pointer-events: none; text-d
 .step-card h2 { font-size: 15px; font-weight: 700; }
 .actor { font-size: 12px; font-weight: 600; color: var(--blue); }
 #run-step { align-self: flex-start; margin-top: 4px; padding: 7px 14px; }
-.scanner { display: flex; align-items: center; gap: 6px; padding: 6px; background: var(--bg-subtle); border: 1px dashed var(--border); border-radius: 6px; }
+.scanner { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px; background: var(--bg-subtle); border: 1px dashed var(--border); border-radius: 6px; }
+/* Dock RF readout: received feet and the last read, one line under the reels. */
+.rf-readout { flex-basis: 100%; display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 11px; color: var(--text-muted); }
+#rf-meter { flex: none; width: 88px; height: 8px; }
+#rf-feet { flex: none; font-variant-numeric: tabular-nums; font-weight: 600; }
+#rf-last { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: ui-monospace, Consolas, monospace; }
+#rf-last[data-tone="ok"] { color: var(--green); } #rf-last[data-tone="bad"] { color: var(--red); }
 .reels { display: flex; gap: 4px; }
 .reels button { padding: 4px 7px; font-size: 11px; font-family: ui-monospace, Consolas, monospace; }
 .reels button.scanned { background: var(--green-soft); border-color: #bbf7d0; color: var(--green); opacity: 1; }
@@ -164,6 +170,7 @@ a[aria-disabled="true"] { color: var(--text-muted); pointer-events: none; text-d
 .packet-state { font-size: 10px; font-weight: 700; color: var(--text-muted); white-space: nowrap; }
 .packet-trail li.ready { background: var(--green-soft); border-color: #bbf7d0; }
 .packet-trail li.ready .packet-state, .packet-trail li.ready .packet-no { color: var(--green); }
+.mini { flex: none; padding: 1px 6px; font-size: 10.5px; }
 .ocr-stage { display: flex; gap: 12px; align-items: center; }
 .ocr-stage p { font-size: 12px; margin: 3px 0 6px; }
 .ocr-thumb { flex: none; width: 56px; height: 70px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-subtle); display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 7px; }
@@ -183,12 +190,40 @@ dialog.wide { max-width: min(980px, calc(100vw - 32px)); width: 100%; }
 #ocr-image { display: block; width: 100%; height: auto; }
 .ocr-box { position: absolute; padding: 0; border: 1.5px solid var(--blue); background: rgba(29, 78, 216, .08); border-radius: 2px; }
 .ocr-box:hover { background: rgba(29, 78, 216, .2); }
+.ocr-box.field { border-color: var(--green); background: rgba(21, 128, 61, .12); }
+.ocr-box.selected { border-width: 2.5px; border-color: var(--amber); background: rgba(180, 83, 9, .18); }
+.ocr-layout { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 12px; margin-bottom: 8px; }
+.ocr-side { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.ocr-fields { display: flex; flex-direction: column; gap: 4px; }
+.ocr-field { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; width: 100%; text-align: left; padding: 5px 8px; border-left: 3px solid var(--green); }
+.ocr-field strong { font-size: 12px; overflow-wrap: anywhere; }
+.ocr-field:disabled { border-left-color: var(--amber); }
+.ocr-selected { font-size: 11.5px; color: var(--text-muted); overflow-wrap: anywhere; }
+
+/* CFO check view. */
+dialog.check-modal { width: 100%; max-width: min(680px, calc(100vw - 32px)); }
+.check-face { position: relative; display: flex; flex-direction: column; gap: 10px; padding: 16px 18px; border: 1px solid #bfdbfe; border-radius: 6px; background: repeating-linear-gradient(135deg, var(--blue-soft) 0 12px, #f8fbff 12px 24px); overflow: hidden; }
+.check-line { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.check-line.pay { border-bottom: 1px solid var(--text-main); padding-bottom: 4px; }
+.check-line.pay strong { flex: 1; font-size: 15px; }
+.check-amount { font-size: 16px; font-weight: 750; font-variant-numeric: tabular-nums; padding: 2px 8px; border: 1px solid var(--text-main); background: var(--bg-panel); }
+.check-words { font-style: italic; border-bottom: 1px solid var(--border); padding-bottom: 4px; margin: 0; }
+.mono { font-family: ui-monospace, Consolas, monospace; }
+.signature b { font-family: "Brush Script MT", "Segoe Script", cursive; font-size: 15px; font-weight: 400; }
+.check-stamp { position: absolute; right: 26%; top: 38%; transform: rotate(-12deg); padding: 3px 12px; border: 3px solid var(--amber); border-radius: 6px; color: var(--amber); font-size: 20px; font-weight: 800; letter-spacing: .12em; opacity: .8; pointer-events: none; }
+.check-face[data-stamp="paid"] .check-stamp { border-color: var(--green); color: var(--green); }
+.check-facts { display: flex; flex-direction: column; gap: 4px; margin: 12px 0; font-size: 12px; }
+.check-facts > div { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 8px; }
+.check-facts dt { color: var(--text-muted); font-weight: 600; }
 
 /* Tighter desktop widths keep the one-screen shell. */
 @media (max-width: 1320px) { :root { --rail-left: 212px; --rail-right: 340px; font-size: 12.5px; } .brand-flow { max-width: 360px; } }
 @media (max-width: 1100px) { :root { --rail-left: 196px; --rail-right: 300px; } .brand-flow { display: none; } .lenses { grid-template-columns: 1fr 1fr; } .flow-grid { grid-template-columns: 1fr; } }
 @media (max-height: 680px) { .book { display: none; } }
 @media (max-height: 780px) {
+  /* Pays for the WO-14 RF readout line in the step card on 720/768px screens. */
+  .views-area { padding: 10px 14px; } .view { gap: 8px; }
+  .flow-strip li { padding: 5px 7px; } .step-card { gap: 3px; } .scanner { padding: 4px 6px; gap: 4px; }
   .rail { gap: 8px; padding: 10px; }
   .packet-trail li { padding: 2px 6px; }
   .grid-table th, .grid-table td { padding: 2px 6px; }
@@ -202,5 +237,5 @@ dialog.wide { max-width: min(980px, calc(100vw - 32px)); width: 100%; }
   .workbench { grid-template-columns: 1fr; }
   .rail, .views-area { overflow: visible; }
   .flow-strip { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .two-col, .book, .lenses { grid-template-columns: 1fr; }
+  .two-col, .book, .lenses, .ocr-layout { grid-template-columns: 1fr; }
 }

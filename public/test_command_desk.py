@@ -1,4 +1,4 @@
-"""SF WO-13 ZeroSaaS P2P workbench checks (REQ-P2P-012..020, BP-01 ADR-006).
+"""SF WO-13 ZeroSaaS P2P workbench checks (REQ-P2P-012..020, BP-01 ADR-006) and SF WO-14 interactive parity.
 
 Static markup, stylesheet and source checks; no backend or persistent state root.
 The file name is kept from WO-04 because the task card runs the public/ suite by path.
@@ -119,7 +119,7 @@ def test_left_rail_views_item_and_drawers():
     assert labels["flow"] == ["1. P2P Flow Desk", "Step —/8"]
     assert labels["registers"] == ["2. DB & GL Registers"]
     assert labels["sox"] == ["3. SOX & White House SI"]
-    assert labels["factory"] == ["4. Software Factory", "WO 1-13"]
+    assert labels["factory"] == ["4. Software Factory", "WO 1-14"]
     assert "Step ${completed + 1}/8" in APP
     assert parsed.attrs["data-view-panel"] == ["flow", "registers", "sox", "factory"]
     assert "Start KAL · P2P Steward" in HTML
@@ -127,7 +127,7 @@ def test_left_rail_views_item_and_drawers():
         assert fact in HTML
     assert {"open-guardrails", "guardrail-dialog", "open-ledger", "ledger-dialog", "journal", "systems", "authority"} <= parsed.ids
     assert "Guardrail Tests" in HTML and "GL &amp; Audit Register" in HTML
-    for wo in range(1, 14):
+    for wo in range(1, 15):
         assert f"<td>WO-{wo}</td>" in HTML
 
 
@@ -178,6 +178,27 @@ def test_server_contract_only_and_no_embedded_secrets_or_remote_dependencies():
         assert re.search(rf"export (async )?(function|const) {name}\b", APP), name
 
 
+def test_wo14_voice_rf_ocr_and_check_controls():
+    parsed = markup()
+    for name in ("stewardIntent", "stewardReply", "parseReelScan", "tagOcrFields", "checkWords"):
+        assert re.search(rf"export (async )?(function|const) {name}\b", APP), name
+    # Voice steward: a session toggle; voice moves only open views or viewers and never call request().
+    assert 'id="kal-speak" class="primary" aria-pressed="false"' in HTML
+    moves = APP.split("const STEWARD_MOVES = {", 1)[1].split("};", 1)[0]
+    assert "request(" not in moves and "runStep" not in moves and "fetch" not in moves
+    # Dock RF scanner: reel buttons, the wedge field and run-step all go through the same parsed scan path.
+    assert {"rf-meter", "rf-feet", "rf-last", "barcode", "scan-count"} <= parsed.ids
+    assert 'max="8000"' in HTML
+    assert APP.count("scan(") >= 4 and "authorize(6" not in APP
+    # RapidOCR bbox viewer: match-field list and box readout beside the invoice image.
+    assert {"ocr-fields", "ocr-selected", "ocr-boxes", "ocr-image"} <= parsed.ids
+    # CFO check view: opened from the packet trail; signing is the Step 8 server write as EMP-0007.
+    assert {"open-check", "check-dialog", "close-check", "check-face", "check-stamp", "check-amount", "check-words", "check-signer", "check-match", "sign-check"} <= parsed.ids
+    assert "$('sign-check').addEventListener('click', () => authorize(8))" in APP
+    assert "if (step === 8) payload.bankAccount = '101100';" in APP
+    assert "BANK_POLICY_VIOLATION" in HTML
+
+
 def test_every_element_id_the_client_touches_exists():
     # No browser runs in every lane, so pin the DOM contract statically: a missing id would throw in render() or boot().
     referenced = set(re.findall(r"(?:\$|setText)\('([a-z0-9-]+)'", APP))
@@ -198,7 +219,7 @@ def test_no_internal_strings_in_published_files():
     forbidden = ["".join(parts) for parts in (("agen", "tics"), ("ener", "getics"), ("rig", "org"), ("flow", "craft"), ("/ho", "me/"), ("/m", "nt/"), ("hara-", "lanes"))]
     files = [path for path in PUBLIC.iterdir() if path.is_file()]
     files += [ROOT / "README.md", ROOT / "docs/software-factory-trace.md"]
-    files += sorted((ROOT / ".sw-factory/WO-13").glob("*.md"))
+    files += sorted((ROOT / ".sw-factory/WO-13").glob("*.md")) + sorted((ROOT / ".sw-factory/WO-14").glob("*.md"))
     for path in files:
         text = path.read_text(encoding="utf-8").lower()
         for word in forbidden:

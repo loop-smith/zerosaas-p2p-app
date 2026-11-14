@@ -1,8 +1,8 @@
 # ZeroSaaS P2P — Headless Copper Stock-to-Pay ERP (`zerosaas-p2p-app`)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
-[![Built With: 8090 Software Factory](https://img.shields.io/badge/SDLC-8090%20Software%20Factory-1d4ed8)](#8090-software-factory-traceability-sf-wo-1--wo-13--commits--qualify-reviews)
-[![Planner: 12/13 Work Orders Completed, WO-13 in review](https://img.shields.io/badge/Planner-12%2F13%20Completed%20%C2%B7%20WO--13%20in%20review-b45309)](./docs/software-factory-trace.md)
+[![Built With: 8090 Software Factory](https://img.shields.io/badge/SDLC-8090%20Software%20Factory-1d4ed8)](#8090-software-factory-traceability-sf-wo-1--wo-14--commits--qualify-reviews)
+[![Planner: 12/14 Work Orders Completed, WO-13 and WO-14 in review](https://img.shields.io/badge/Planner-12%2F14%20Completed%20%C2%B7%20WO--13%20%26%20WO--14%20in%20review-b45309)](./docs/software-factory-trace.md)
 [![Headless SoRs: 4 MIT Databases](https://img.shields.io/badge/Systems%20of%20Record-4%20MIT%20Databases-0f766e)](#8090-software-factory-build-queue-wo-01--wo-06)
 
 > **Most AI procurement demos hand an LLM a corporate credit card, a database password, and a prayer. Try showing that to a sitting CFO, Controller, or external SOX 404 auditor — you won't make it past the lobby.**
@@ -24,15 +24,24 @@ A self-contained, **`100%` MIT-licensed industrial P2P workflow application** on
 `npm start` serves the workbench at `http://127.0.0.1:3590`. It is one 1440×900 screen with no scrolling:
 
 - **48px topbar:** `[P2P]` badge, the `ZeroSaaS P2P` brand and the stock-to-pay flow line, a live `GAAP DR == CR` pill, KAL voice mute, push-to-talk **Ask KAL**, a consent-gated WebM **Record** button and a confirmation-gated **Reset Queue** (`POST /api/reset`).
-- **Left rail (236px):** **Start KAL · P2P Steward**, four views (`1. P2P Flow Desk` with a `Step N/8` tag, `2. DB & GL Registers`, `3. SOX & White House SI`, `4. Software Factory` with a `WO 1-13` tag), the `ITM-CU-20-BARE` stocked-item box, and drawers for **Guardrail Tests** and the **GL & Audit Register**.
+- **Left rail (236px):** **Start KAL · P2P Steward**, four views (`1. P2P Flow Desk` with a `Step N/8` tag, `2. DB & GL Registers`, `3. SOX & White House SI`, `4. Software Factory` with a `WO 1-14` tag), the `ITM-CU-20-BARE` stocked-item box, and drawers for **Guardrail Tests** and the **GL & Audit Register**.
 - **Center stage:** the 8-step flow strip (`WMS Signal` ➔ `Supply Chain` ➔ `VP Approval` ➔ `Spot & PO` ➔ `Order Ack` ➔ `Dock Scan` ➔ `OCR & Match` ➔ `Cut Check`), the active step card with the 4-reel GS1 scanner, five probe triggers (`403` KAL `$0`, `403` Darius `>$20k`, `403` dock SoD, `409` invoice variance, `403` Petty `#4409`), the KAL `$0.00` steward banner, and a compact balance sheet and P&L.
 - **Right rail (392px):** the live 6-account GAAP trial balance (`121100`, `201200`, `201100`, `501900`, `101100`, `101200`, DR == CR), the 6-document packet trail (Stock Signal, `PO-25800`, `OA-25800`, `BOL-25800`, `INV-25800`, Check `#10045`) and the RapidOCR 28-box invoice viewer.
 
 Every number comes from `GET /api/state`. Every write goes through `POST /api/step/:n` or `POST /api/reset`, and every document through `GET /docs/:name`. The browser never approves, posts or pays.
 
-## 8090 Software Factory Traceability (SF `WO-1` .. `WO-13` ⇄ Commits ⇄ Qualify Reviews)
+## Interactive Parity (`SF WO-14`)
 
-The build ran in a live 2-way 8090 Software Factory loop. **12 / 13** Planner Work Orders are Completed, and Validator Theme `THM-1` is Resolved. `SF WO-13` (from Theme `THM-2`) is built and waits for its Qualify Review.
+`SF WO-14` makes the four interactive parts of the workbench work end to end. No server route or refusal code changed:
+
+- **KAL voice steward:** **Start KAL** starts a steward session. KAL briefs once, then narrates each server-confirmed step, dock reel and reset. Push-to-talk questions are mapped to read-only intents (status, dock, invoice, check, ledger, governance), and KAL may open the matching view or viewer. Any write verb (approve, sign, pay, scan, reset …) gets KAL's `$0.00` answer and names the human officer the next step needs. Voice never calls a write route.
+- **Dock RF scanner:** the reel buttons, the barcode field and keyboard-wedge bursts typed anywhere on screen all use one parser. It strips AIM symbology prefixes (`]C1`) and CR/LF/Tab/GS terminators. Unknown, duplicate or empty reads are refused locally with the server's own codes (`UNKNOWN_REEL`, `DUPLICATE_SCAN`, `NO_BARCODE`), so a bad read never becomes a write. A readout shows received feet and pounds of copper (`n × 2,000 FT`, `822 lbs` per reel) and the last read, and a short tone confirms or rejects each read (muted with KAL).
+- **RapidOCR bounding-box viewer:** the 28+ server boxes are drawn over the invoice image. The five match fields (Vendor, PO #, Quantity FT, Unit price USD, Total due USD) are tagged in green and listed beside the image. Click a box or a field to read its text, confidence and pixel position. The tagger accepts the same label forms as the sidecar parser, including RapidOCR's dropped spaces (`TOTALDUEUSD:21600.00`).
+- **CFO check view:** **View ↗** on the Check `#10045` packet opens the check face: payee, amount in figures and words, drawing account, memo, ACH trace, signer, three-way match, funding policy and journal effect. It shows `DRAFT`, then `AWAITING CFO` after Step 7, then `PAID` once the server reports the payment. **Sign as CFO** is the same Step 8 server write as the step card (`EMP-0007`, `101100`).
+
+## 8090 Software Factory Traceability (SF `WO-1` .. `WO-14` ⇄ Commits ⇄ Qualify Reviews)
+
+The build ran in a live 2-way 8090 Software Factory loop. **12 / 14** Planner Work Orders are Completed, and Validator Theme `THM-1` is Resolved. `SF WO-13` (from Theme `THM-2`, commit `c5026200`) and `SF WO-14` are built and wait for their Qualify Reviews.
 
 - **Organization:** `ab209dd1-ce3e-4eda-9839-f5982b4b1c22`
 - **Project:** `ZeroSaaS P2P` (`9e2da614-7738-46a6-9152-69c4ec850ed5`)
@@ -50,7 +59,8 @@ The build ran in a live 2-way 8090 Software Factory loop. **12 / 13** Planner Wo
   - Feedback `FB-3` (product owner UX change order): `0ce52256-27a7-4167-b1ea-ea9628ad7a00`
   - Theme `THM-2` *ZeroSaaS P2P White Enterprise Workbench & Brand Change Order* (Urgent, open): `d3ab7474-57fa-40f0-9876-c0099c863806`
   - Foundry `REQ-01` extended with `REQ-P2P-012`..`REQ-P2P-020`; `BP-01` updated with `ADR-006` (48px topbar + 3-column white layout)
-  - Planner `SF WO-13` *Implement ZeroSaaS P2P White Enterprise Workbench & Brand Redesign* (`97cb2858-1488-4b34-829c-b0162ea65be3`): built, awaiting Qualify Review
+  - Planner `SF WO-13` *Implement ZeroSaaS P2P White Enterprise Workbench & Brand Redesign* (`97cb2858-1488-4b34-829c-b0162ea65be3`): built (`c5026200`), awaiting Qualify Review
+  - Planner `SF WO-14` *Implement ZeroSaaS P2P Interactive Parity (Voice Steward, Dock RF Scanner, RapidOCR BBox & CFO Check View)*: built by `HARA WO-14`, awaiting Qualify Review. Only the title reached the build row; its UUID and source records were not delivered.
 
 Each Planner Work Order maps to a build WO and then to a commit on `main`. An independent Qualify Review then checks each commit. A `FAIL` verdict returns to the Validator as a typed follow-up work order. Two of those findings were also filed in the Validator as `FB-1` and `FB-2` and grouped into Theme `THM-1`. The Planner then issued `SF WO-12`, which is now Completed.
 
@@ -70,13 +80,14 @@ The full forward and backward matrix, the Qualify Review ledger and the closed i
 | SF WO-11 PO-25800 E2E | `HARA WO-05` (`T19` ➔ `T19.f1`) | `11a63009` ➔ `cae71057` | ❌ FAIL (`null` sidecar reply) ➔ ✅ PASS |
 | SF WO-12 Route contract & replay hardening (from `THM-1`) | `HARA WO-04-A.f1` + `WO-06` + `T19.f1` | `9094b2bb`, `fca1c225`, `cae71057` | ✅ PASS |
 | Rename follow-up (`WO-08` R10) | `HARA WO-08` ➔ `T20` | `8721678d` ➔ `c1d69467` | ❌ FAIL (R10) ➔ ✅ R10 closed |
-| SF WO-13 White Enterprise Workbench & brand (from `THM-2`) | `HARA WO-13` | the `HARA WO-13` commit | 🔄 Awaiting Qualify Review |
+| SF WO-13 White Enterprise Workbench & brand (from `THM-2`) | `HARA WO-13` | `c5026200` | 🔄 Awaiting Qualify Review |
+| SF WO-14 Interactive parity: voice steward, dock RF scanner, RapidOCR boxes, CFO check view | `HARA WO-14` | the `HARA WO-14` commit | 🔄 Awaiting Qualify Review |
 
 Run the full verification with `npm test`. It runs `tests/test-sidecar-reply.mjs` and then `tests/test-copper-e2e.mjs` (26 self-checks and 12 integrated red-team checks). The workbench client suite is `node --test public/command-desk.test.mjs`, and `python3 -m pytest seeds sidecar public -q` runs the seed, sidecar and workbench checks.
 
 ## Pre-Event Planning & Third-Party Tool / License Disclosure (EVOLVE Rules §10)
 
-- **Pre-Event Planning Disclosure:** Per EVOLVE FAQ (*brainstorming, problem exploration, wireframing, and tech-stack setup permitted prior to kickoff*), upstream brownfield workflow discovery (`BOSS` export) and the static P2P target schema contract (`contracts/p2p-lineage-contract.json`) were prepared prior to kickoff; `100%` of application server code, UI, OCR sidecar, ledger bindings, voice steward, and test suites in this repository are built live during the event via **8090 Software Factory** (`WO-01`..`WO-13`). The `SF WO-13` workbench UI was written fresh from its Work Order; no pre-event UI file was copied.
+- **Pre-Event Planning Disclosure:** Per EVOLVE FAQ (*brainstorming, problem exploration, wireframing, and tech-stack setup permitted prior to kickoff*), upstream brownfield workflow discovery (`BOSS` export) and the static P2P target schema contract (`contracts/p2p-lineage-contract.json`) were prepared prior to kickoff; `100%` of application server code, UI, OCR sidecar, ledger bindings, voice steward, and test suites in this repository are built live during the event via **8090 Software Factory** (`WO-01`..`WO-14`). The `SF WO-13` workbench UI was written fresh from its Work Order; no pre-event UI file was copied.
 - **Open-Source Libraries, External APIs, Partner & AI Coding Tools (`100%` MIT-Compatible):**
   - `Node.js 22+` (`node:sqlite`, `node:http`, `node:crypto`) — MIT License
   - `SQLite 3` + `4` MIT Headless Seeds (`InvenTree` WMS MIT · `Django-CRM` MIT · `Headless HRM` MIT · `89`-account `coa_seed.journal` MIT) — Public Domain & MIT

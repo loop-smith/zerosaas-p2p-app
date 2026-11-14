@@ -31,12 +31,12 @@
 
   <main class="workbench">
     <aside class="rail rail-left" aria-label="Navigation">
-      <button id="kal-speak" class="primary">Start KAL · P2P Steward</button>
+      <button id="kal-speak" class="primary" aria-pressed="false" title="Start a KAL steward session: a briefing now, then narration of each server-confirmed step">Start KAL · P2P Steward</button>
       <nav class="views" aria-label="Workbench views">
         <button data-view="flow" aria-pressed="true"><span>1. P2P Flow Desk</span><em id="nav-step" class="tag">Step —/8</em></button>
         <button data-view="registers" aria-pressed="false"><span>2. DB &amp; GL Registers</span></button>
         <button data-view="sox" aria-pressed="false"><span>3. SOX &amp; White House SI</span></button>
-        <button data-view="factory" aria-pressed="false"><span>4. Software Factory</span><em class="tag">WO 1-13</em></button>
+        <button data-view="factory" aria-pressed="false"><span>4. Software Factory</span><em class="tag">WO 1-14</em></button>
       </nav>
       <section class="item-box" aria-labelledby="item-title">
         <h2 id="item-title" class="label">WMS Stocked Item</h2>
@@ -86,6 +86,11 @@
                 <label class="sr-only" for="barcode">GS1 reel barcode</label>
                 <input id="barcode" autocomplete="off" spellcheck="false" placeholder="Scan ENC-GS1-884192-R01" disabled>
                 <span id="scan-count" class="tag">0 / 4 reels</span>
+                <div class="rf-readout">
+                  <meter id="rf-meter" min="0" max="8000" value="0" aria-label="Feet received at the dock"></meter>
+                  <span id="rf-feet">0 / 8,000 FT · 0 lbs Cu</span>
+                  <span id="rf-last" aria-live="polite">RF idle · dock opens at Step 6</span>
+                </div>
               </div>
               <button id="run-step" class="primary" data-run="1" disabled>Authorize step</button>
             </article>
@@ -146,8 +151,8 @@
         </section>
 
         <section class="view" data-view-panel="factory" aria-labelledby="factory-title" hidden>
-          <div class="view-head"><h1 id="factory-title">8090 Software Factory · WO-1..WO-13</h1><span class="muted">Refinery → Foundry → Planner → Validator</span></div>
-          <p class="loop">FB-3 → THM-2 → REQ-P2P-012..020 + BP-01 ADR-006 → SF WO-13 (this workbench)</p>
+          <div class="view-head"><h1 id="factory-title">8090 Software Factory · WO-1..WO-14</h1><span class="muted">Refinery → Foundry → Planner → Validator</span></div>
+          <p class="loop">FB-3 → THM-2 → REQ-P2P-012..020 + BP-01 ADR-006 → SF WO-13 (white workbench) → SF WO-14 (interactive parity)</p>
           <table class="grid-table lineage"><caption class="sr-only">Software Factory work order lineage</caption>
             <thead><tr><th scope="col">SF WO</th><th scope="col">Planner work order</th><th scope="col">Commit</th><th scope="col">Qualify</th></tr></thead>
             <tbody>
@@ -163,7 +168,8 @@
               <tr><td>WO-10</td><td>Audit recovery and red-team replay</td><td>fca1c225 · cae71057</td><td class="ok">PASS</td></tr>
               <tr><td>WO-11</td><td>PO-25800 end to end</td><td>cae71057</td><td class="ok">PASS</td></tr>
               <tr><td>WO-12</td><td>Route contract and replay hardening</td><td>9094b2bb · fca1c225 · cae71057</td><td class="ok">PASS</td></tr>
-              <tr class="current"><td>WO-13</td><td>White Enterprise Workbench &amp; brand</td><td>this build</td><td class="warn">In review</td></tr>
+              <tr><td>WO-13</td><td>White Enterprise Workbench &amp; brand</td><td>c5026200</td><td class="warn">Qualify pending</td></tr>
+              <tr class="current"><td>WO-14</td><td>Interactive parity: voice, RF scan, OCR boxes, check</td><td>this build</td><td class="warn">In review</td></tr>
             </tbody>
           </table>
         </section>
@@ -196,7 +202,7 @@
           <li data-packet="oa"><span class="packet-no">3</span><div><strong>OA-25800</strong><small><a data-document="ENC-OA-2026-884192.pdf" target="_blank" rel="noopener noreferrer" aria-disabled="true">ENC-OA-2026-884192.pdf</a></small></div><span class="packet-state">PENDING</span></li>
           <li data-packet="bol"><span class="packet-no">4</span><div><strong>BOL-25800</strong><small><a data-document="BOL-25800.pdf" target="_blank" rel="noopener noreferrer" aria-disabled="true">BOL-25800.pdf</a> · <a data-document="PS-25800.pdf" target="_blank" rel="noopener noreferrer" aria-disabled="true">PS-25800.pdf</a></small></div><span class="packet-state">PENDING</span></li>
           <li data-packet="inv"><span class="packet-no">5</span><div><strong>INV-25800</strong><small><a data-document="INV-25800.pdf" target="_blank" rel="noopener noreferrer" aria-disabled="true">INV-25800.pdf</a></small></div><span class="packet-state">PENDING</span></li>
-          <li data-packet="check"><span class="packet-no">6</span><div><strong>Check #10045</strong><small>Operating #8801 · ACH-000582</small></div><span class="packet-state">PENDING</span></li>
+          <li data-packet="check"><span class="packet-no">6</span><div><strong>Check #10045</strong><small>Operating #8801 · ACH-000582</small></div><button id="open-check" class="ghost mini" aria-label="Open the CFO check view">View ↗</button><span class="packet-state">PENDING</span></li>
         </ol>
       </article>
       <article class="card ocr-stage">
@@ -207,7 +213,23 @@
   </main>
 </div>
 
-<dialog id="ocr-dialog" class="modal wide" aria-labelledby="ocr-title"><div class="dialog-head"><div><span class="label">INV-25800 · pixel evidence</span><h2 id="ocr-title">Invoice field map</h2></div><button id="close-ocr" class="ghost" aria-label="Close invoice field map">✕</button></div><p id="ocr-summary"></p><div class="invoice-viewport"><div id="invoice-image"><img id="ocr-image" alt="Rendered vendor invoice with OCR bounding boxes"><div id="ocr-boxes"></div></div></div><p class="muted small">Boxes use server pixel coordinates. Hover or focus a box to read its text.</p></dialog>
+<dialog id="ocr-dialog" class="modal wide" aria-labelledby="ocr-title"><div class="dialog-head"><div><span class="label">INV-25800 · pixel evidence</span><h2 id="ocr-title">Invoice field map</h2></div><button id="close-ocr" class="ghost" aria-label="Close invoice field map">✕</button></div><p id="ocr-summary"></p><div class="ocr-layout"><div class="invoice-viewport"><div id="invoice-image"><img id="ocr-image" alt="Rendered vendor invoice with OCR bounding boxes"><div id="ocr-boxes"></div></div></div><aside class="ocr-side" aria-labelledby="ocr-fields-title"><h3 id="ocr-fields-title" class="label">Three-way match fields</h3><ol id="ocr-fields" class="ocr-fields"></ol><p id="ocr-selected" class="ocr-selected" aria-live="polite">Select a box or a match field to read its text, confidence and pixel position.</p></aside></div><p class="muted small">Boxes use server pixel coordinates. Green boxes are the fields the server matched against PO-25800 and BOL-25800.</p></dialog>
+<dialog id="check-dialog" class="modal check-modal" aria-labelledby="check-title"><div class="dialog-head"><div><span class="label">CFO check view · human gate 4</span><h2 id="check-title">Check #10045 · PO-25800 settlement</h2></div><button id="close-check" class="ghost" aria-label="Close the check view">✕</button></div>
+  <div id="check-face" class="check-face" data-stamp="draft">
+    <div class="check-line"><strong>ZeroSaaS P2P · Accounts Payable</strong><span id="check-no" class="mono">Check #10045</span></div>
+    <div class="check-line pay"><span class="muted small">Pay to the order of</span><strong id="check-payee">Encore Wire Corporation</strong><span id="check-amount" class="check-amount">—</span></div>
+    <p id="check-words" class="check-words">Amount set by the PO-25800 COMEX price lock</p>
+    <div class="check-line small"><span>Memo · PO-25800 · INV-25800 · BOL-25800</span><span id="check-bank">Drawn on Operating #8801 · 101100</span></div>
+    <div class="check-line small"><span id="check-ach" class="mono">ACH trace issued on payment</span><span class="signature">Authorized signature · <b id="check-signer">Awaiting Meredith Hale · CFO</b></span></div>
+    <span id="check-stamp" class="check-stamp">DRAFT</span>
+  </div>
+  <dl class="check-facts">
+    <div><dt>Three-way match</dt><dd id="check-match">Pending the Step 7 three-way match</dd></div>
+    <div><dt>Funding policy</dt><dd>Operating #8801 only · Payroll/Petty #4409 is refused above $5,000 (403 BANK_POLICY_VIOLATION)</dd></div>
+    <div><dt>Journal</dt><dd id="check-journal">Posts on signature · DR 201100 Trade AP / CR 101100 Operating #8801</dd></div>
+  </dl>
+  <div class="dialog-actions"><button id="sign-check" class="primary" disabled>Sign as CFO Meredith Hale · Step 8</button></div>
+</dialog>
 <dialog id="reset-dialog" class="modal" aria-labelledby="reset-title"><h2 id="reset-title">Reset the P2P queue?</h2><p>This asks the server to reset stock, documents and the journal for a clean run. Stop any recording first.</p><div class="dialog-actions"><button id="cancel-reset" class="ghost">Keep this run</button><button id="confirm-reset" class="danger">Reset Queue</button></div></dialog>
 <dialog id="record-dialog" class="modal" aria-labelledby="record-title"><h2 id="record-title">Record this screen?</h2><p>Your browser will ask which screen to share and may ask for the microphone. The WebM stays on this computer; nothing is uploaded.</p><div class="dialog-actions"><button id="cancel-record" class="ghost">Cancel</button><button id="confirm-record" class="primary">I consent · start recording</button></div></dialog>
 <dialog id="guardrail-dialog" class="modal drawer" aria-labelledby="guardrail-title"><div class="dialog-head"><h2 id="guardrail-title">Guardrail Tests</h2><button id="close-guardrails" class="ghost" aria-label="Close guardrail tests">✕</button></div><p class="muted">Probe results seen by this browser session. The server decides every outcome.</p><table class="grid-table"><thead><tr><th scope="col">Probe</th><th scope="col">Expected</th><th scope="col">Observed</th></tr></thead><tbody id="guardrail-log"></tbody></table></dialog>
