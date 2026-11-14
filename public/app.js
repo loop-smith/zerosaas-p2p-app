@@ -982,34 +982,17 @@
         const res = await fetch('/api/reset', { method: 'POST' });
         STATE = await res.json();
         kalBadgeText = 'KAL · P2P STEWARD ($0 SIGNING LIMIT)';
+        kalSubtitle = 'Standing by at Step 1 — trigger the WMS stock-out sweep whenever you are ready.';
         renderAll();
-        await autoStartStep1Signal();
       } finally {
         if (topBtn) topBtn.textContent = '↺ Reset Queue';
       }
-    }
-
-    async function autoStartStep1Signal() {
-      const st = STATE?.runtimeState?.[selectedDeal];
-      if (!st || st.kal_started || computeStepIndex(st) !== 0 || busyAction) return;
-      try {
-        const { ok, data } = await postStepRaw('wf0_detect_stockout');
-        if (ok && data) {
-          STATE = data;
-          const stNow = STATE.runtimeState?.[selectedDeal];
-          renderAll();
-          if (stNow?.lastVoiceBrief) {
-            void speakText(stNow.lastVoiceBrief, stNow.activeVoiceRole || 'ops_steward');
-          }
-        }
-      } catch {}
     }
 
     async function loadState() {
       const res = await fetch('/api/state');
       STATE = await res.json();
       renderAll();
-      await autoStartStep1Signal();
     }
 
     function setView(v) {
@@ -1551,8 +1534,9 @@
         `;
       }
 
-      // STEP 1 (stepIdx === 0): WMS STOCK-OUT SIGNAL (STARTS IN BOX 1 WITH KAL SPEAKING -> ROUTES TO SUPPLY CHAIN!)
+      // STEP 1 (stepIdx === 0): QUIET UNTIL TRIGGERED -> KAL SPEAKS IN BOX 1 -> ROUTES TO SUPPLY CHAIN!
       if (stepIdx === 0) {
+        const triggered = Boolean(st.kal_started);
         return `
           <div class="officer-desk">
             <div class="desk-banner" style="background:linear-gradient(90deg, #fff1f2 0%, #eff6ff 100%);">
@@ -1560,16 +1544,20 @@
                 <div class="cp-eyebrow" style="color:#b91c1c;">🚨 STEP 1 OF 8 · WMS STOCK-OUT SIGNAL (0 FT ON HAND &lt; 8,000 FT SAFETY STOCK · <code>WO-01</code>)</div>
                 <div class="cp-title">WMS Stock-Out Alert: 0 FT Bare Copper On Hand — Below 8,000 FT Safety Stock</div>
                 <div class="cp-desc">
-                  Warehouse SQLite (<code>wms_inventree.sqlite3</code>) triggered a live stock-out: <strong>0 FT on hand</strong> against our <strong>8,000 FT safety stock</strong>. Replenishment of <strong>8,000 FT (4 reels)</strong> is ready to send to Supply Chain.
+                  Warehouse SQLite (<code>wms_inventree.sqlite3</code>) shows <strong>0 FT on hand</strong> against our <strong>8,000 FT safety stock</strong> — we need <strong>8,000 FT (4 reels)</strong> replenished through Supply Chain.
                 </div>
               </div>
               <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
                 <button class="btn-guard-inline" onclick="runGuardrailTest('kal_rogue_attempt')" title="Optional Red-Team Demo: Force KAL ($0 limit) to attempt a rogue PO/check write">
                   🤖 Rogue KAL (403)
                 </button>
-                <button class="btn-approve" onclick="proceedStep1RouteToDarius()">
-                  ✓ Route Signal to Supply Chain ➔
-                </button>
+                ${triggered
+                  ? `<button class="btn-approve" onclick="proceedStep1RouteToDarius()">
+                       ✓ Route Signal to Supply Chain ➔
+                     </button>`
+                  : `<button class="btn-approve blue" onclick="startKalSteward()">
+                       ⚡ Trigger WMS Stock-Out Sweep
+                     </button>`}
               </div>
             </div>
             <div class="desk-stage">
