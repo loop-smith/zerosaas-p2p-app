@@ -2,7 +2,7 @@
     let selectedDeal = 'PO-25800';
     let activeView = 'workflow'; // 'workflow' | 'registers' | 'security' | 'factory'
     let activeDocTab = 'auto';   // 'auto' | 'stock' | 'po' | 'bol' | 'invoice'
-    let deskSubView = 'exec_brief'; // 'exec_brief' | 'auto' | 'books' | 'voucher' | 'spot' | 'oa' | 'ocr'
+    let deskSubView = 'auto';    // 'auto' | 'exec_brief' | 'books' | 'voucher' | 'spot' | 'oa' | 'ocr'
     let liveShowcasePhase = null; // null | 'spot_calling' | 'email_arrived'
     let showcaseTimer = null;
     let selectedRegSys = 'wms';
@@ -23,7 +23,7 @@
     let kalAutopilotEpoch = 0;
     let briefHighlightCard = 0; // 0=origin, 1..4=areas
     let briefHighlightTimer = null;
-    let kalSubtitle = 'Executive Overview ready — press "Have KAL Give Demo" to hear KAL walk through the architecture and run all 8 steps.';
+    let kalSubtitle = 'Safety-Stock Replenishment Workflow ready — live WMS copper stock-out (0 FT < 8,000 FT safety stock) staged at Step 1.';
     let kalBadgeText = 'KAL · P2P STEWARD ($0 SIGNING LIMIT)';
     let dockScannedReels = new Set();
     let lastFlashedReelSeq = 0;
@@ -706,7 +706,7 @@
       return { ok: res.ok, status: res.status, data };
     }
 
-    const EXEC_BRIEF_SPEECH = 'Good day. Welcome to ZeroSaaS Procure-to-Pay—compiled in 8090 Software Factory from six clean-room BOSS discovery workshops across eleven and a half hours and three hundred twenty-eight client files. Instead of expensive per-seat ERP licenses, we pair zero-authority Binary Intelligence with four human signing officers across four headless open-source databases. Today we will hit four areas: warehouse stock-out and signing limits, live COMEX copper pricing, Bay 4 barcode scanning with neural invoice OCR, and segregated CFO check settlement. Let us begin the live demo.';
+    const EXEC_BRIEF_SPEECH = 'Good day. Welcome to ZeroSaaS Procure-to-Pay—compiled in 8090 Software Factory from six clean-room BOSS discovery workshops and three hundred thirty-six client files. We loaded thirty-five specification files into Software Factory, generating eleven initial Work Orders plus seven Change Orders across four Validator rounds—eighteen completed Work Orders total—pairing zero-authority Binary Intelligence with four human signing officers. Let us begin the live Safety-Stock Replenishment workflow.';
 
     function toggleExecBriefView() {
       if (activeView !== 'workflow') {
@@ -1206,14 +1206,14 @@
       closeModal();
       setView('workflow');
       activeDocTab = 'auto';
-      deskSubView = 'exec_brief';
+      deskSubView = 'auto';
       const topBtn = document.getElementById('topResetBtn');
       if (topBtn) topBtn.textContent = '⏳ Resetting…';
       try {
         const res = await fetch('/api/reset', { method: 'POST' });
         STATE = await res.json();
         kalBadgeText = 'KAL · P2P STEWARD ($0 SIGNING LIMIT)';
-        kalSubtitle = 'Executive Overview ready — press "Have KAL Give Demo" to hear KAL walk through the architecture and run all 8 steps.';
+        kalSubtitle = 'Safety-Stock Replenishment Workflow ready — live WMS copper stock-out (0 FT < 8,000 FT safety stock) staged at Step 1.';
         renderAll();
       } finally {
         if (topBtn) topBtn.textContent = '↺ Reset Queue';
@@ -1297,6 +1297,17 @@
       renderLeftSummary(d, st);
       renderCenter();
       renderRight();
+      try {
+        if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
+          window.parent.postMessage({
+            type: 'zerosaas-status',
+            stepIdx,
+            kalAutopilotActive,
+            presenterPaused,
+            paid: Boolean(st.wf4_ach_released),
+          }, '*');
+        }
+      } catch {}
     }
 
     function renderLeftSummary(d, st) {
@@ -1388,7 +1399,7 @@
         <div class="steps-card">
           <div class="steps-head">
             <div style="font-weight:800;color:var(--text-main);">
-              Supply Chain (<code>P2M</code> · Steps 1–3) ➔ Procure-to-Pay (<code>P2P</code> · Steps 4–8) · ${esc(d.id)} — <span style="color:var(--blue);">${stepIdx >= 8 ? 'All 8 Steps Complete · Ledger Balanced' : `Step ${stepIdx + 1} of 8`}</span>
+              Safety-Stock Replenishment Workflow (WMS Stock-Out ➔ P2P Check) · ${esc(d.id)} — <span style="color:var(--blue);">${stepIdx >= 8 ? 'All 8 Steps Complete · Ledger Balanced' : `Step ${stepIdx + 1} of 8`}</span>
             </div>
             <div style="display:flex;gap:10px;font-size:10.5px;color:var(--text-muted);font-weight:700;white-space:nowrap;">
               <span><span class="step-kind kind-auto">⚡ AUTO+OK</span> Binary Intelligence</span>
@@ -1788,23 +1799,17 @@
         `;
       }
 
-      // STEP 1 (stepIdx === 0): QUIET UNTIL KAL WOKEN UP -> KAL INTRODUCES BOSS -> 8090 APP + BOX 1 SIGNAL -> ROUTES TO SUPPLY CHAIN!
+      // STEP 1 (stepIdx === 0): SAFETY-STOCK REPLENISHMENT WORKFLOW — WMS STOCK-OUT SIGNAL FROM SUPPLY CHAIN!
       if (stepIdx === 0) {
         const triggered = Boolean(st.kal_started);
         return `
           <div class="officer-desk">
-            <div class="desk-banner" style="background:linear-gradient(90deg, ${triggered ? '#fff1f2 0%, #eff6ff 100%' : '#eff6ff 0%, #f8fafc 100%'});">
+            <div class="desk-banner" style="background:linear-gradient(90deg, #fff1f2 0%, #eff6ff 100%);">
               <div>
-                <div class="cp-eyebrow" style="color:${triggered ? '#b91c1c' : '#1d4ed8'};">${triggered
-                  ? '🚨 STEP 1 OF 8 · WMS STOCK-OUT SIGNAL (0 FT ON HAND &lt; 8,000 FT SAFETY STOCK · <code>WO-01</code>)'
-                  : '🏛️ BOSS 8090 CLIENT PACKAGE ➔ 8090 SOFTWARE FACTORY ➔ LIVE HEADLESS ERP (STEP 1 OF 8)'}</div>
-                <div class="cp-title">${triggered
-                  ? 'WMS Stock-Out Alert: 0 FT Bare Copper On Hand — Below 8,000 FT Safety Stock'
-                  : 'ZeroSaaS P2P — Compiled in 8090 Software Factory from Clean-Room BOSS Client Discovery'}</div>
+                <div class="cp-eyebrow" style="color:#b91c1c;">🚨 STEP 1 OF 8 · SAFETY-STOCK REPLENISHMENT WORKFLOW (WMS STOCK-OUT SIGNAL · <code>WO-01</code>)</div>
+                <div class="cp-title">WMS Stock-Out Alert: 0 FT Bare Copper On Hand — Below 8,000 FT Safety Stock</div>
                 <div class="cp-desc">
-                  ${triggered
-                    ? 'Warehouse SQLite (<code>wms_inventree.sqlite3</code>) shows <strong>0 FT on hand</strong> against our <strong>8,000 FT safety stock</strong> — we need <strong>8,000 FT (4 reels)</strong> replenished through Supply Chain.'
-                    : 'Clean-room client workshops, signing limits, and data spine packaged from <strong>BOSS 8090</strong> into <strong>8090 Software Factory</strong> — pairing <strong>$0.00 Binary Intelligence</strong> with <strong>4 Human Officers</strong>.'}
+                  Warehouse SQLite (<code>wms_inventree.sqlite3</code>) shows <strong>0 FT on hand</strong> against our <strong>8,000 FT safety stock</strong> — routing <strong>8,000 FT (4 reels)</strong> replenishment into Supply Chain.
                 </div>
               </div>
               <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
@@ -1818,8 +1823,11 @@
                      <button class="btn-approve" onclick="proceedStep1RouteToDarius()">
                        ✓ Route Signal to Supply Chain ➔
                      </button>`
-                  : `<button class="btn-approve" onclick="startKalFullDemo()">
-                       ▶ Have KAL Give Full Demo
+                  : `<button class="btn-top" onclick="proceedStep1RouteToDarius()" title="Step through manually click-by-click">
+                       Route Signal ➔
+                     </button>
+                     <button class="btn-approve" onclick="startKalStepsOnly()">
+                       ▶ Run Live Workflow (Steps 1–8)
                      </button>`}
               </div>
             </div>
@@ -3497,11 +3505,11 @@
                 <div class="brief-origin-list">
                   <div class="brief-origin-item ${kalAutopilotActive && hc === 0 ? 'active' : ''}">
                     <div class="brief-origin-title">
-                      <span>🏛️ Clean-Room BOSS 8090 Client Discovery</span>
-                      <span class="badge b-amber">6 Workshops · 328 Files</span>
+                      <span>🏛️ BOSS Digital Twin ➔ 8090 Software Factory</span>
+                      <span class="badge b-amber">35 Specs ➔ 11 WOs + 7 COs</span>
                     </div>
                     <div class="brief-origin-desc">
-                      Distilled from real client discovery workshops, meeting notes, org chart, signing limits, and legacy SOPs — packaged cleanly into <strong>8090 Software Factory</strong> (<code>WO-01..WO-18</code>).
+                      <strong>6 workshops</strong> &amp; <strong>336 client files</strong> distilled into <strong>35 specs</strong> loaded into <strong>8090 Software Factory</strong> — generating <strong>11 initial Work Orders</strong> + <strong>7 Change Orders</strong> (<strong>18/18 built</strong>).
                     </div>
                   </div>
                   <div class="brief-origin-item ${kalAutopilotActive && hc === 0 ? 'active' : ''}">
@@ -3622,6 +3630,23 @@
       window.toggleExecBriefView = toggleExecBriefView;
       window.togglePresenterPause = togglePresenterPause;
       window.toggleVoiceListen = toggleVoiceListen;
+      window.addEventListener('message', (ev) => {
+        if (!ev || !ev.data || ev.data.type !== 'zerosaas-cmd') return;
+        if (!/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/i.test(String(ev.origin || ''))) return;
+        const cmd = ev.data.cmd;
+        if (cmd === 'start') {
+          deskSubView = 'auto';
+          void startKalFullDemo(true);
+        } else if (cmd === 'pause') {
+          togglePresenterPause();
+        } else if (cmd === 'setPaused') {
+          if (Boolean(ev.data.paused) !== presenterPaused) togglePresenterPause();
+        } else if (cmd === 'stop') {
+          stopKalAutopilot();
+        } else if (cmd === 'reset') {
+          void resetDemo(true);
+        }
+      });
       void loadState();
     }
 

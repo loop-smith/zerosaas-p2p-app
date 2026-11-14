@@ -1018,7 +1018,7 @@ export function createWorkbenchEngine({
       st.wf0_signal_routed = false;
       st.lastGuardrailBlock = null;
       st.activeVoiceRole = 'ops_steward';
-      st.lastVoiceBrief = 'Good day. Warehouse management triggered a stock-out alert on 2/0 AWG bare copper—0 feet on hand, below our 8,000-foot safety stock, ready to route to Supply Chain.';
+      st.lastVoiceBrief = 'Good day. Our Safety-Stock Replenishment workflow just triggered on a live warehouse stock-out—0 feet of 2/0 AWG bare copper on hand against our 8,000-foot safety stock, ready to route to Supply Chain.';
       recordAuditEvent(
         dealId,
         'STEP-1-KAL-START',
