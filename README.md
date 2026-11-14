@@ -32,16 +32,17 @@ Every number comes from `GET /api/state`. Every write goes through `POST /api/st
 
 ## Interactive Parity (`SF WO-14`)
 
-`SF WO-14` makes the four interactive parts of the workbench work end to end. No server route or refusal code changed:
+`SF WO-14` (`44cad6d1`) makes the four interactive parts of the workbench work end to end. It changed no server route or refusal code. The follow-up `T21` added the voice proxy routes described below:
 
-- **KAL voice steward:** **Start KAL** starts a steward session. KAL briefs once, then narrates each server-confirmed step, dock reel and reset. Push-to-talk questions are mapped to read-only intents (status, dock, invoice, check, ledger, governance), and KAL may open the matching view or viewer. Any write verb (approve, sign, pay, scan, reset …) gets KAL's `$0.00` answer and names the human officer the next step needs. Voice never calls a write route.
+- **KAL voice steward:** **Start KAL** starts a steward session. KAL briefs once, then narrates each server-confirmed step, dock reel and reset. Push-to-talk questions are mapped to read-only intents (status, dock, invoice, check, ledger, governance), and KAL may open the matching view or viewer. Any write verb (approve, sign, pay, wire, scan, reset …) gets KAL's `$0.00` answer and names the human officer the next step needs. The vendor's name is not a verb: "Tell me about Encore Wire" is a read-only check question, while "Wire the money" is refused. Voice never calls a write route.
+- **Zero-secret voice proxy (`T21`):** the server proxies `POST /api/kal/speak` (`{"text"}` ➔ ElevenLabs `eleven_turbo_v2_5` audio) and `POST /api/kal/transcribe` (`audio/webm` ➔ ElevenLabs `scribe_v1` ➔ `{"text"}`). The ElevenLabs key is read from the server's runtime environment on every request. It is never stored in the repository or `public/`, and it never appears in a response or a log. Set it when you start the server: `ELEVENLABS_API_KEY` (required), and optionally `ELEVENLABS_VOICE_ID`, `ELEVENLABS_TTS_MODEL`, `ELEVENLABS_STT_MODEL` and `ELEVENLABS_BASE_URL`. With no key set, both routes answer `503 KAL_VOICE_UNCONFIGURED`, and the desk uses browser speech. Upstream failures answer `502 KAL_VOICE_UPSTREAM` without relaying the upstream body. Bad input is refused before any upstream call with `400 BAD_TEXT` (more than 1,500 characters, or empty), `400 NO_AUDIO` or `415 UNSUPPORTED_MEDIA_TYPE`. The voice routes never reach the kernel.
 - **Dock RF scanner:** the reel buttons, the barcode field and keyboard-wedge bursts typed anywhere on screen all use one parser. It strips AIM symbology prefixes (`]C1`) and CR/LF/Tab/GS terminators. Unknown, duplicate or empty reads are refused locally with the server's own codes (`UNKNOWN_REEL`, `DUPLICATE_SCAN`, `NO_BARCODE`), so a bad read never becomes a write. A readout shows received feet and pounds of copper (`n × 2,000 FT`, `822 lbs` per reel) and the last read, and a short tone confirms or rejects each read (muted with KAL).
 - **RapidOCR bounding-box viewer:** the 28+ server boxes are drawn over the invoice image. The five match fields (Vendor, PO #, Quantity FT, Unit price USD, Total due USD) are tagged in green and listed beside the image. Click a box or a field to read its text, confidence and pixel position. The tagger accepts the same label forms as the sidecar parser, including RapidOCR's dropped spaces (`TOTALDUEUSD:21600.00`).
-- **CFO check view:** **View ↗** on the Check `#10045` packet opens the check face: payee, amount in figures and words, drawing account, memo, ACH trace, signer, three-way match, funding policy and journal effect. It shows `DRAFT`, then `AWAITING CFO` after Step 7, then `PAID` once the server reports the payment. **Sign as CFO** is the same Step 8 server write as the step card (`EMP-0007`, `101100`).
+- **CFO check view:** **View ↗** on the Check `#10045` packet opens the check face: payee, amount in figures and words, drawing account, memo, ACH trace (`ACH-000582`, printed once), signer, three-way match, funding policy and journal effect. It shows `DRAFT`, then `AWAITING CFO` after Step 7, then `PAID` once the server reports the payment. **Sign as CFO** is the same Step 8 server write as the step card (`EMP-0007`, `101100`).
 
 ## 8090 Software Factory Traceability (SF `WO-1` .. `WO-14` ⇄ Commits ⇄ Qualify Reviews)
 
-The build ran in a live 2-way 8090 Software Factory loop. **12 / 14** Planner Work Orders are Completed, and Validator Theme `THM-1` is Resolved. `SF WO-13` (from Theme `THM-2`, commit `c5026200`) and `SF WO-14` are built and wait for their Qualify Reviews.
+The build ran in a live 2-way 8090 Software Factory loop. **12 / 14** Planner Work Orders are Completed, and Validator Theme `THM-1` is Resolved. `SF WO-13` (from Theme `THM-2`, commit `c5026200`) and `SF WO-14` (commit `44cad6d1`, polished by `T21`) are built and wait for their Qualify Reviews.
 
 - **Organization:** `ab209dd1-ce3e-4eda-9839-f5982b4b1c22`
 - **Project:** `ZeroSaaS P2P` (`9e2da614-7738-46a6-9152-69c4ec850ed5`)
@@ -60,7 +61,7 @@ The build ran in a live 2-way 8090 Software Factory loop. **12 / 14** Planner Wo
   - Theme `THM-2` *ZeroSaaS P2P White Enterprise Workbench & Brand Change Order* (Urgent, open): `d3ab7474-57fa-40f0-9876-c0099c863806`
   - Foundry `REQ-01` extended with `REQ-P2P-012`..`REQ-P2P-020`; `BP-01` updated with `ADR-006` (48px topbar + 3-column white layout)
   - Planner `SF WO-13` *Implement ZeroSaaS P2P White Enterprise Workbench & Brand Redesign* (`97cb2858-1488-4b34-829c-b0162ea65be3`): built (`c5026200`), awaiting Qualify Review
-  - Planner `SF WO-14` *Implement ZeroSaaS P2P Interactive Parity (Voice Steward, Dock RF Scanner, RapidOCR BBox & CFO Check View)*: built by `HARA WO-14`, awaiting Qualify Review. Only the title reached the build row; its UUID and source records were not delivered.
+  - Planner `SF WO-14` *Implement ZeroSaaS P2P Interactive Parity (Voice Steward, Dock RF Scanner, RapidOCR BBox & CFO Check View)*: built by `HARA WO-14` (`44cad6d1`), awaiting Qualify Review. Only the title reached the build row; its UUID and source records were not delivered.
 
 Each Planner Work Order maps to a build WO and then to a commit on `main`. An independent Qualify Review then checks each commit. A `FAIL` verdict returns to the Validator as a typed follow-up work order. Two of those findings were also filed in the Validator as `FB-1` and `FB-2` and grouped into Theme `THM-1`. The Planner then issued `SF WO-12`, which is now Completed.
 
@@ -81,9 +82,9 @@ The full forward and backward matrix, the Qualify Review ledger and the closed i
 | SF WO-12 Route contract & replay hardening (from `THM-1`) | `HARA WO-04-A.f1` + `WO-06` + `T19.f1` | `9094b2bb`, `fca1c225`, `cae71057` | ✅ PASS |
 | Rename follow-up (`WO-08` R10) | `HARA WO-08` ➔ `T20` | `8721678d` ➔ `c1d69467` | ❌ FAIL (R10) ➔ ✅ R10 closed |
 | SF WO-13 White Enterprise Workbench & brand (from `THM-2`) | `HARA WO-13` | `c5026200` | 🔄 Awaiting Qualify Review |
-| SF WO-14 Interactive parity: voice steward, dock RF scanner, RapidOCR boxes, CFO check view | `HARA WO-14` | the `HARA WO-14` commit | 🔄 Awaiting Qualify Review |
+| SF WO-14 Interactive parity: voice steward, dock RF scanner, RapidOCR boxes, CFO check view | `HARA WO-14` + `T21` | `44cad6d1` + the `T21` commit | 🔄 Awaiting Qualify Review |
 
-Run the full verification with `npm test`. It runs `tests/test-sidecar-reply.mjs` and then `tests/test-copper-e2e.mjs` (26 self-checks and 12 integrated red-team checks). The workbench client suite is `node --test public/command-desk.test.mjs`, and `python3 -m pytest seeds sidecar public -q` runs the seed, sidecar and workbench checks.
+Run the full verification with `npm test`. It runs `tests/test-sidecar-reply.mjs` and then `tests/test-copper-e2e.mjs` (26 self-checks and 13 integrated red-team checks). The workbench client suite is `node --test public/command-desk.test.mjs`, and `python3 -m pytest seeds sidecar public -q` runs the seed, sidecar and workbench checks.
 
 ## Pre-Event Planning & Third-Party Tool / License Disclosure (EVOLVE Rules §10)
 

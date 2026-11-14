@@ -208,13 +208,15 @@ export function trialBalance(snapshot) {
 }
 
 // Voice steward intents. Write verbs come first: KAL answers them with its $0.00 limit and never calls the server.
+// "Wire" is a write verb, but not inside the vendor's name: "Encore Wire" alone asks about the payee (last row).
 const INTENTS = [
-  ['refuse', /\b(approve|authori[sz]e|sign|pay|release|post|override|wire|cut|scan|receive|lock|escalate|transfer|delete|reset\s+(the\s+)?(queue|run|workflow|demo)|issue\s+(the\s+|a\s+)?(po|purchase order|check|payment))\b/i],
+  ['refuse', /\b(approve|authori[sz]e|sign|pay|release|post|override|(?<!\bencore[\s-]*)wire|cut|scan|receive|lock|escalate|transfer|delete|reset\s+(the\s+)?(queue|run|workflow|demo)|issue\s+(the\s+|a\s+)?(po|purchase order|check|payment))\b/i],
   ['check', /\b(the check|check\s*#?\s*10045|10045|payment|paid|settle\w*|cfo|disburse\w*)\b/i],
   ['invoice', /\b(invoice|ocr|rapidocr|box(es)?|three[- ]way|3[- ]way|match)\b/i],
   ['dock', /\b(dock|scan\w+|reels?|barcodes?|receiv\w+|rf)\b/i],
   ['ledger', /\b(ledger|trial balance|balanced?|journal|gl|debits?|credits?)\b/i],
   ['governance', /\b(sox|governance|guardrails?|refus\w*|probes?|controls?)\b/i],
+  ['check', /\b(encore|payee)\b/i],
 ];
 export const stewardIntent = text => INTENTS.find(([, pattern]) => pattern.test(String(text ?? '')))?.[0] ?? 'status';
 
@@ -457,6 +459,9 @@ function scan(raw) {
     failure => { report('bad', `✕ ${failure.code ?? 'NOT SENT'} · ${code}`); status(failure.message, true); });
 }
 
+// The kernel's trace already reads "ACH-000582"; prefix only a bare trace so the face never shows "ACH ACH-…".
+export const achLabel = ach => { const trace = str(ach); return trace && /^ACH\b/i.test(trace) ? trace : `ACH ${trace ?? '—'}`; };
+
 // CFO check view: a draft until the server reports the payment; the face reads only server state.
 function renderCheck(snapshot, completed, active) {
   const payment = snapshot?.payment, match = isObject(snapshot?.match) ? snapshot.match : null;
@@ -468,7 +473,7 @@ function renderCheck(snapshot, completed, active) {
   setText('check-amount', money(amount));
   setText('check-words', amount === undefined ? 'Amount set by the PO-25800 COMEX price lock' : checkWords(amount));
   setText('check-bank', `Drawn on ${str(payment?.bankLabel) ?? 'Operating #8801'} · ${str(payment?.bankAccount) ?? '101100'}`);
-  setText('check-ach', payment ? `ACH ${str(payment.ach) ?? '—'}` : 'ACH trace issued on payment');
+  setText('check-ach', payment ? achLabel(payment.ach) : 'ACH trace issued on payment');
   setText('check-signer', payment ? `${officer(payment.approvedBy) ?? str(payment.approvedBy) ?? 'CFO'} · CFO` : 'Awaiting Meredith Hale · CFO');
   setText('check-match', match ? `${str(match.po) ?? 'PO'} = ${str(match.bol) ?? 'BOL'} = ${str(match.invoice) ?? 'INV'} · ${money(match.varianceUsd ?? 0)} variance · ${str(match.source) ?? 'server'}` : 'Pending the Step 7 three-way match');
   setText('check-journal', `${payment ? 'Posted' : 'Posts on signature'} · DR 201100 Trade AP / CR 101100 Operating #8801`);

@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 // ZeroSaaS P2P workbench client suite (SF WO-13, WO-14). File name kept: the task card runs it by this path.
 import { validateState, safeDocumentUrl, request, speak, refresh, runStep, render, trialBalance, REELS, REFUSALS, startRecording, stopRecording,
-  stewardIntent, stewardReply, parseReelScan, tagOcrFields, checkWords } from "./app.js";
+  stewardIntent, stewardReply, parseReelScan, tagOcrFields, checkWords, achLabel } from "./app.js";
 
 const snapshot = {
   steps: Array.from({length: 8}, (_, index) => ({n: index + 1, status: index === 0 ? 'complete' : 'pending'})),
@@ -130,6 +130,9 @@ test("KAL voice intents are read-only: write verbs get the $0 refusal and never 
     ["Show me the check", "check"], ["Was the CFO payment made?", "check"], ["Open the invoice OCR boxes", "invoice"],
     ["How many reels were received at the dock?", "dock"], ["Is the ledger balanced?", "ledger"], ["Which SOX guardrails apply?", "governance"],
     ["What happens next?", "status"], ["", "status"],
+    // The vendor's name is not the write verb "wire"; wiring money still is.
+    ["Tell me about Encore Wire", "check"], ["Who is the payee?", "check"], ["Show the Encore Wire invoice", "invoice"],
+    ["How many Encore-Wire reels arrived?", "dock"], ["Wire the money to Encore Wire", "refuse"], ["Wire funds", "refuse"],
   ]) assert.equal(stewardIntent(text), intent, text);
   const original = globalThis.fetch;
   let calls = 0;
@@ -184,6 +187,14 @@ test("check amounts print as legal words with cents over 100", () => {
   for (const bad of [-1, NaN, 1e12, undefined]) assert.equal(checkWords(bad), "—");
 });
 
+test("the check face prints the ACH trace with one ACH prefix", () => {
+  assert.equal(achLabel("ACH-000582"), "ACH-000582");
+  assert.equal(achLabel("ach 000582"), "ach 000582");
+  assert.equal(achLabel("000582"), "ACH 000582");
+  assert.equal(achLabel("ACHE-1"), "ACH ACHE-1");
+  for (const missing of [undefined, null, "", 582]) assert.equal(achLabel(missing), "ACH —");
+});
+
 test("a cancelled pending display permission cannot restart capture", async () => {
   const saved = new Map(['navigator', 'isSecureContext', 'MediaRecorder', 'MediaStream'].map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
   let resolveCapture;
@@ -219,7 +230,7 @@ test("real server snapshots and client actions share the kernel contract", async
   const original = globalThis.fetch;
   let service;
   try {
-    service = await startServer({port: 0, offline: true, sandboxDir: join(dir, 'sandbox'), seedsDir: join(dir, 'missing-seeds'), hledgerBin: false});
+    service = await startServer({port: 0, offline: true, sandboxDir: join(dir, 'sandbox'), seedsDir: join(dir, 'missing-seeds'), hledgerBin: false, voiceEnv: {}});
     const writes = [];
     // Resolve browser-relative URLs at the network boundary; the app and kernel remain real.
     globalThis.fetch = (route, options) => {
@@ -267,6 +278,7 @@ test("real server snapshots and client actions share the kernel contract", async
     assert.equal(paid.match.varianceUsd, 0);
     assert.match(stewardReply("invoice", paid), /^Three-way match cleared at \$0\.00 variance\. This run matched PO-derived invoice fields/);
     assert.equal(checkWords(paid.payment.amountUsd), "Twenty-one thousand six hundred and 00/100 dollars");
+    assert.equal(achLabel(paid.payment.ach), "ACH-000582");
     // Right-rail trial balance: the six WO-13 accounts net from the real kernel journal, DR == CR.
     const book = trialBalance(paid);
     const net = code => { const sum = book.codes.get(code); return sum ? sum.debit - sum.credit : 0; };
@@ -281,8 +293,20 @@ test("real server snapshots and client actions share the kernel contract", async
     assert.deepEqual(reset.scans, []);
     assert.deepEqual(reset.journal.entries, []);
     assert.equal(reset.payment, null);
+    // The real /api/kal/speak route with no ElevenLabs key answers 503 at once, and KAL falls back to browser speech.
+    const spoken = [];
+    globalThis.SpeechSynthesisUtterance = class { constructor(text) {this.text = text;} };
+    globalThis.speechSynthesis = {cancel() {}, speak(value) {spoken.push(value.text);}};
+    assert.equal(await speak("Queue reset."), "browser");
+    assert.deepEqual(spoken, ["Queue reset."]);
+    assert.deepEqual(writes.at(-1), ['/api/kal/speak', {text: 'Queue reset.'}]);
+    const voice = await original(new URL('/api/kal/speak', service.url), {method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{"text":"x"}'});
+    assert.equal(voice.status, 503);
+    assert.equal((await voice.json()).code, 'KAL_VOICE_UNCONFIGURED');
+    assert.equal(validateState(await request('/api/state')).journal.entries.length, 0);
   } finally {
     globalThis.fetch = original;
+    delete globalThis.speechSynthesis; delete globalThis.SpeechSynthesisUtterance;
     if (service) await new Promise(resolve => service.server.close(resolve));
     rmSync(dir, {recursive: true, force: true});
   }

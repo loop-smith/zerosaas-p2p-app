@@ -14,7 +14,7 @@ The Planner then issued `SF WO-14` (interactive parity for the workbench: voice 
 
 - **Snapshot (UTC):** `2026-11-14T06:35Z`
 - **Repository:** `loop-smith/zerosaas-p2p-app`, formerly `8090-p2p-app`
-- **Planner status:** **12 / 14** Work Orders Completed. `SF WO-13` is built by `HARA WO-13` (`c5026200`) and `SF WO-14` by `HARA WO-14`; both wait for their Qualify Reviews. Theme `THM-1` Resolved; Theme `THM-2` stays open until `SF WO-13` passes.
+- **Planner status:** **12 / 14** Work Orders Completed. `SF WO-13` is built by `HARA WO-13` (`c5026200`) and `SF WO-14` by `HARA WO-14` (`44cad6d1`, polished by `HARA T21`); both wait for their Qualify Reviews. Theme `THM-1` Resolved; Theme `THM-2` stays open until `SF WO-13` passes.
 
 ## 1. Live 8090 Software Factory Anchors
 
@@ -50,7 +50,7 @@ The Planner then issued `SF WO-14` (interactive parity for the workbench: voice 
        ├──► follow-up work order (WO-04-A.f1, T19.f1) ──► back into the build queue
        ├──► Theme THM-1 ──► Planner SF WO-12 ──► Completed; THM-1 Resolved
        └──► FB-3 ──► Theme THM-2 ──► REQ-P2P-012..020 + BP-01 ADR-006 ──► Planner SF WO-13 ──► HARA WO-13 (awaiting Qualify Review)
-                                                                          Planner SF WO-14 ──► HARA WO-14 (awaiting Qualify Review)
+                                                                          Planner SF WO-14 ──► HARA WO-14 (44cad6d1) + T21 (awaiting Qualify Review)
 ```
 
 - **Forward direction (plan to code):**
@@ -78,7 +78,7 @@ The Planner then issued `SF WO-14` (interactive parity for the workbench: voice 
 | **SF WO-11** | PO-25800 end-to-end (`tests/test-copper-e2e.mjs`, ≥16 live assertions) | `HARA WO-05` (`T19` ➔ `T19.f1`) | `11a63009` ➔ `cae71057` | `T19.q2`: **FAIL** (`null` `/generate` sidecar reply) ➔ `T19.f1.q`: **PASS** | ✅ Completed / PASS |
 | **SF WO-12** | Harden live `/api/step/:n` route contracts and adversarial replay guards (Urgent, Fix; from `THM-1`) | `HARA WO-04-A.f1` + `HARA WO-06` + `HARA T19.f1` | `9094b2bb`, `fca1c225`, `cae71057` | `WO-04-A.f1.q`: **PASS**; `WO-06.q`: **PASS**; `T19.f1.q`: **PASS** | ✅ Completed / PASS |
 | **SF WO-13** | Implement ZeroSaaS P2P White Enterprise Workbench & Brand Redesign (Urgent; from `THM-2`; `REQ-P2P-012`..`020`, `BP-01` `ADR-006`) | `HARA WO-13` | `c5026200` | `WO-13.q`: not yet run | 🔄 Built; awaiting Qualify Review |
-| **SF WO-14** | Implement ZeroSaaS P2P Interactive Parity (Voice Steward, Dock RF Scanner, RapidOCR BBox & CFO Check View) | `HARA WO-14` | the `HARA WO-14` commit | `WO-14.q`: not yet run | 🔄 Built; awaiting Qualify Review |
+| **SF WO-14** | Implement ZeroSaaS P2P Interactive Parity (Voice Steward, Dock RF Scanner, RapidOCR BBox & CFO Check View) | `HARA WO-14` | `44cad6d1` | `WO-14.q`: not yet run | 🔄 Built; awaiting Qualify Review |
 
 ### Cross-cutting: UI Command Desk and the Validator Feedback Loop
 
@@ -137,6 +137,14 @@ Evidence for `SF WO-12` is in [`.sw-factory/WO-12/`](../.sw-factory/WO-12/).
 
 New exports: `stewardIntent`, `stewardReply`, `parseReelScan`, `tagOcrFields`, `checkWords`. The client still reads only `GET /api/state` and `GET /docs/:name`, and still writes only `POST /api/step/:n` and `POST /api/reset`. Server, kernel, routes and refusal codes are unchanged. `tests/test-copper-e2e.mjs` gains one assertion: the five fields are tagged on real RapidOCR boxes from the sidecar. Evidence is in [`.sw-factory/WO-14/`](../.sw-factory/WO-14/).
 
+**What `HARA T21` changed on top of `44cad6d1`.** Two WO-14 follow-up findings, and the voice proxy the desk already called:
+
+- **Encore Wire intent.** The refuse pattern treated "wire" in the vendor's name as the write verb, so "Tell me about Encore Wire" got KAL's `$0.00` refusal. "Wire" is still refused as a verb ("Wire the money to Encore Wire"). "Encore Wire" or "payee" alone now maps to the read-only `check` intent.
+- **ACH prefix.** The kernel's trace already reads `ACH-000582`, and the check face printed `ACH ACH-000582`. The new pure export `achLabel` adds the `ACH` prefix only to a bare trace.
+- **Zero-secret voice proxy.** `src/sor_3panel_server.mjs` now serves `POST /api/kal/speak` (`{"text"}` ➔ ElevenLabs `eleven_turbo_v2_5` audio) and `POST /api/kal/transcribe` (`audio/webm` ➔ ElevenLabs `scribe_v1` ➔ `{"text"}`). The key is read from the server's runtime env (`ELEVENLABS_API_KEY`) on each request. No key is in the repository or `public/`, and no response or log echoes it. With the key unset, both routes answer `503 KAL_VOICE_UNCONFIGURED` and the desk falls back to browser speech. New refusal codes: `400 BAD_TEXT`, `400 NO_AUDIO`, `502 KAL_VOICE_UPSTREAM`, `503 KAL_VOICE_UNCONFIGURED`. The voice routes never reach the kernel, and KAL's steward identity is still refused on them. The kernel, the step and reset routes, and their refusal codes are unchanged.
+
+`tests/test-copper-e2e.mjs` gains a 13th red-team check. It drives the proxy against a loopback stand-in for `api.elevenlabs.io` and checks that the key is forwarded only as `xi-api-key`, that upstream bodies are never relayed, that bad input is refused before any upstream call, and that the journal and audit chain do not change.
+
 ## 4. Backward Matrix — Commit ➔ SF Planner WOs
 
 | Commit | Subject | HARA WO | SF WOs satisfied | Qualify Review verdict (summary) |
@@ -156,7 +164,8 @@ New exports: `stewardIntent`, `stewardReply`, `parseReelScan`, `tagOcrFields`, `
 | `6db3195f` | FIX `tests_failed` on `WO-08.f1` | `WO-08.f2` | — (kept R10 open rather than land red) | n/a (documentation). `WO-08.f1` was refused `tests_failed` and never landed. |
 | `c1d69467` | Update `contracts/p2p-lineage-contract.json` (`targetRepo`) and regenerate `seeds/coa_seed.journal` | `T20` | Closes `WO-08` R10 | Seeds drift check and 23 seed tests green at landing (`.sw-factory/WO-12/review-log.md` Round 3). |
 | `c5026200` | White Enterprise Workbench & Brand Redesign (`public/`) | `WO-13` | SF WO-13 (`FB-3`, `THM-2`) | Not yet qualified. In-fence review APPROVED (`.sw-factory/WO-13/review-log.md`). |
-| the `HARA WO-14` commit | Interactive parity: voice steward, dock RF scanner, RapidOCR boxes, CFO check view (`public/`) | `WO-14` | SF WO-14 | Not yet qualified. In-fence review in `.sw-factory/WO-14/review-log.md`. |
+| `44cad6d1` | Interactive parity: voice steward, dock RF scanner, RapidOCR boxes, CFO check view (`public/`) | `WO-14` | SF WO-14 | Not yet qualified. In-fence review in `.sw-factory/WO-14/review-log.md`. |
+| the `HARA T21` commit | WO-14 follow-ups (Encore Wire intent, ACH prefix) + zero-secret `/api/kal/speak` and `/api/kal/transcribe` proxy | `T21` | SF WO-14 | Not yet qualified. |
 
 Every listed build commit is a fast-forward on `main`. Each landed with its fenced test commands green before qualification.
 
@@ -176,7 +185,7 @@ Every listed build commit is a fast-forward on `main`. Each landed with its fenc
 | `T19.f1.q` | `cae71057` | `11a63009` | **PASS** | — | — (closes `T19.q2` FAIL) |
 | `WO-08.q` | `8721678d` | `cae71057` | **FAIL** | — | R10 (`targetRepo`): `WO-08.f1` refused `tests_failed` (stale journal digest) ➔ `WO-08.f2` (`6db3195f`) ➔ `T20` (`c1d69467`) closes R10 |
 | `WO-13.q` | `c5026200` | `c1d69467` | Not yet run | — | — |
-| `WO-14.q` | the `HARA WO-14` commit | `c5026200` | Not yet run | — | — |
+| `WO-14.q` | `44cad6d1` | `c5026200` | Not yet run | — | — |
 
 `—` in *Lines deleted* means the review did not record a count.
 

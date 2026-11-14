@@ -4,12 +4,13 @@
 // Sandbox is a temp directory; committed seeds/ are only copied.
 //
 // Locked refusal codes (do not rename):
-//   400 BAD_ACTOR | BAD_JSON
+//   400 BAD_ACTOR | BAD_JSON | BAD_TEXT | NO_AUDIO
 //   403 AI_STEWARD_ZERO_AUTHORITY | BANK_POLICY_VIOLATION | SEAT_NOT_AUTHORIZED
 //   405 write to a non-route (body code NOT_FOUND)
 //   409 STEP_ALREADY_COMPLETE | STEP_OUT_OF_ORDER | DUPLICATE_SCAN | MATCH_VARIANCE_HOLD
 //   415 UNSUPPORTED_MEDIA_TYPE
 //   422 INVALID_QUANTITY | UNKNOWN_REEL | NO_BARCODE | UNKNOWN_BANK_ACCOUNT
+//   502 KAL_VOICE_UPSTREAM | 503 KAL_VOICE_UNCONFIGURED (the /api/kal/speak and /api/kal/transcribe voice proxy)
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
@@ -17,7 +18,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { startServer } from '../src/sor_3panel_server.mjs';
+import http from 'node:http';
+import { startServer, createAppServer } from '../src/sor_3panel_server.mjs';
 import { CONTRACT } from '../src/lineage_core.mjs';
 import { validateState, tagOcrFields } from '../public/app.js';
 
@@ -67,7 +69,7 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'p2p-redteam-'));
 const sandboxDir = path.join(tmp, 'sor-sandbox');
 const sidecar = await startSidecar(path.join(sandboxDir, 'docs'));
 const { server, url, kernel } = await startServer({
-  port: 0, host: '127.0.0.1', sandboxDir, offline: true, fresh: true, ocrUrl: sidecar.url,
+  port: 0, host: '127.0.0.1', sandboxDir, offline: true, fresh: true, ocrUrl: sidecar.url, voiceEnv: {},
 }).catch((e) => {
   sidecar.proc.kill();
   throw e;
@@ -385,6 +387,79 @@ try {
     assert.equal((await ocrHealth.json()).engine, 'rapidocr-onnxruntime');
     assert.equal(sidecar.docsDir, kernel.docsDir);
   });
+
+  await must('KAL voice proxy: key only in runtime env, never echoed; unset is 503; voice never touches the book', async () => {
+    const before = { journal: (await journal()).entries.length, audit: (await call('GET', '/api/audit')).body.entries.length };
+    // Unset key: the booted server (voiceEnv {}) refuses at once so the desk falls back to browser speech.
+    await refusal(call('POST', '/api/kal/speak', { text: 'Status' }), 503, 'KAL_VOICE_UNCONFIGURED');
+    await refusal(call('POST', '/api/kal/transcribe', 'webm', { 'content-type': 'audio/webm' }), 503, 'KAL_VOICE_UNCONFIGURED');
+    // Configured: a loopback stand-in for api.elevenlabs.io records what the proxy forwards.
+    const KEY = `sk-test-${crypto.randomBytes(12).toString('hex')}`;
+    const seen = [];
+    let upstreamStatus = 200;
+    const upstream = http.createServer(async (req, res) => {
+      const chunks = [];
+      for await (const chunk of req) chunks.push(chunk);
+      seen.push({ url: req.url, key: req.headers['xi-api-key'], type: req.headers['content-type'], body: Buffer.concat(chunks) });
+      if (upstreamStatus !== 200) return res.writeHead(upstreamStatus, { 'content-type': 'application/json' }).end(JSON.stringify({ detail: `bad key ${KEY}` }));
+      if (req.url.startsWith('/v1/speech-to-text')) return res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ text: 'Approve Check 10045', language_code: 'en', words: [{ text: KEY }] }));
+      return res.writeHead(200, { 'content-type': 'audio/mpeg' }).end(Buffer.from('ID3-fake-mp3'));
+    });
+    await new Promise((resolve) => upstream.listen(0, '127.0.0.1', resolve));
+    const voiceEnv = { ELEVENLABS_API_KEY: ` ${KEY} `, ELEVENLABS_BASE_URL: `http://127.0.0.1:${upstream.address().port}/`, ELEVENLABS_VOICE_ID: 'voice/../x' };
+    const proxy = createAppServer(kernel, { voiceEnv });
+    await new Promise((resolve) => proxy.listen(0, '127.0.0.1', resolve));
+    const voiceUrl = `http://127.0.0.1:${proxy.address().port}`;
+    const post = (route, body, type) => fetch(voiceUrl + route, { method: 'POST', headers: { 'content-type': type }, body });
+    try {
+      const spoken = await post('/api/kal/speak', JSON.stringify({ text: 'Three of four reels received.' }), 'application/json');
+      assert.equal(spoken.status, 200);
+      assert.equal(spoken.headers.get('content-type'), 'audio/mpeg');
+      assert.equal(Buffer.from(await spoken.arrayBuffer()).toString(), 'ID3-fake-mp3');
+      assert.equal(seen[0].url, '/v1/text-to-speech/voice%2F..%2Fx?output_format=mp3_44100_128');
+      assert.equal(seen[0].key, KEY);
+      assert.deepEqual(JSON.parse(seen[0].body), { text: 'Three of four reels received.', model_id: 'eleven_turbo_v2_5' });
+      const webm = Buffer.from([0x1a, 0x45, 0xdf, 0xa3, 1, 2, 3, 4]);
+      const heard = await post('/api/kal/transcribe', webm, 'audio/webm');
+      const heardText = await heard.text();
+      assert.equal(heard.status, 200, heardText);
+      assert.deepEqual(JSON.parse(heardText), { text: 'Approve Check 10045' });
+      assert.equal(seen[1].url, '/v1/speech-to-text');
+      assert.equal(seen[1].key, KEY);
+      assert.match(seen[1].type, /^multipart\/form-data; boundary=/);
+      assert.match(seen[1].body.toString('latin1'), /name="model_id"\r\n\r\nscribe_v1\r\n/);
+      assert.ok(seen[1].body.includes(webm));
+      // Bad input is refused before any upstream call.
+      const calls = seen.length;
+      for (const body of [{}, { text: ' ' }, { text: 7 }, { text: 'x'.repeat(1501) }]) {
+        const r = await post('/api/kal/speak', JSON.stringify(body), 'application/json');
+        assert.equal(r.status, 400);
+        assert.equal((await r.json()).code, 'BAD_TEXT');
+      }
+      assert.equal((await post('/api/kal/speak', 'Status', 'text/plain')).status, 415);
+      assert.equal((await post('/api/kal/transcribe', webm, 'application/json')).status, 415);
+      assert.equal((await (await post('/api/kal/transcribe', Buffer.alloc(0), 'audio/webm')).json()).code, 'NO_AUDIO');
+      assert.equal(seen.length, calls);
+      // Upstream failure: 502 without relaying the upstream body, which here quotes the key.
+      upstreamStatus = 401;
+      for (const [route, body, type] of [['/api/kal/speak', '{"text":"x"}', 'application/json'], ['/api/kal/transcribe', webm, 'audio/webm']]) {
+        const r = await post(route, body, type);
+        const text = await r.text();
+        assert.equal(r.status, 502, text);
+        assert.equal(JSON.parse(text).code, 'KAL_VOICE_UPSTREAM');
+        assert.equal(text.includes(KEY), false);
+      }
+      // Voice is read-only: KAL's steward identity is still refused, and no journal or audit row was written.
+      assert.equal((await fetch(voiceUrl + '/api/kal/speak', { method: 'POST', headers: { 'content-type': 'application/json', 'x-actor': KAL }, body: '{"text":"x"}' })).status, 403);
+      const health = await (await fetch(`${voiceUrl}/api/health`)).text();
+      assert.equal(health.includes(KEY), false);
+    } finally {
+      await new Promise((resolve) => proxy.close(resolve));
+      await new Promise((resolve) => upstream.close(resolve));
+    }
+    assert.equal((await journal()).entries.length, before.journal);
+    assert.equal((await call('GET', '/api/audit')).body.entries.length, before.audit);
+  });
 } finally {
   sidecar.proc.kill();
   await new Promise((resolve) => server.close(resolve));
@@ -392,7 +467,7 @@ try {
   fs.rmSync(tmp, { recursive: true, force: true });
 }
 
-const EXPECTED = 12;
+const EXPECTED = 13;
 console.log(`${passed} red-team checks passed`);
 if (passed !== EXPECTED) {
   throw new Error(`expected ${EXPECTED} red-team checks, ran ${passed}`);
