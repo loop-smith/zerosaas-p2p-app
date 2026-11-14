@@ -368,10 +368,10 @@ try {
     assert.equal((await call('GET', '/api/audit')).body.valid, true);
   });
 
-  await must('command desk and JSON reads answer on the loopback server', async () => {
+  await must('ZeroSaaS P2P workbench and JSON reads answer on the loopback server', async () => {
     const page = await call('GET', '/');
     assert.equal(page.status, 200);
-    assert.match(String(page.body), /Copper — Command Desk/);
+    assert.match(String(page.body), /<title>ZeroSaaS P2P · Headless Stock-to-Pay ERP &amp; KAL Steward<\/title>/);
     const health = await call('GET', '/api/health');
     assert.equal(health.status, 200);
     assert.equal(health.body.ok, true);

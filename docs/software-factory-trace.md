@@ -1,15 +1,18 @@
 # 8090 Software Factory ⇄ Build Traceability Matrix (`zerosaas-p2p-app`)
 
-This file traces each **8090 Software Factory Planner Work Order** (`SF WO-1` .. `SF WO-12`) both ways:
+This file traces each **8090 Software Factory Planner Work Order** (`SF WO-1` .. `SF WO-13`) both ways:
 
 - **Forward:** from each SF Work Order to the build work order (`HARA WO-xx`) that implements it, then to the commit on `main`, then to its independent **Qualify Review** verdict.
 - **Backward:** from each commit on `main` to the SF Work Orders it satisfies.
 
-The SF Work Orders came out of the live 2-way **Refinery ➔ Foundry ➔ Planner ➔ Validator** loop. Validator feedback went back into the build queue as follow-up work orders. It also went back into the Software Factory as Feedback (`FB-1`, `FB-2`), a Theme (`THM-1`) and a Planner Work Order (`SF WO-12`).
+The SF Work Orders came out of the live 2-way **Refinery ➔ Foundry ➔ Planner ➔ Validator** loop. Validator feedback went back into the build queue as follow-up work orders. It also went back into the Software Factory twice:
 
-- **Snapshot (UTC):** `2026-11-14T04:11Z`
+- Feedback `FB-1` and `FB-2` ➔ Theme `THM-1` ➔ Planner Work Order `SF WO-12` (route contract and replay hardening).
+- Feedback `FB-3` ➔ Theme `THM-2` ➔ Foundry `REQ-P2P-012`..`REQ-P2P-020` and `BP-01` `ADR-006` ➔ Planner Work Order `SF WO-13` (white enterprise workbench and brand).
+
+- **Snapshot (UTC):** `2026-11-14T05:55Z`
 - **Repository:** `loop-smith/zerosaas-p2p-app`, formerly `8090-p2p-app`
-- **Planner status:** **12 / 12** Work Orders Completed. Theme `THM-1` Resolved.
+- **Planner status:** **12 / 13** Work Orders Completed. `SF WO-13` is built by `HARA WO-13` and waits for its Qualify Review. Theme `THM-1` Resolved; Theme `THM-2` stays open until `SF WO-13` passes.
 
 ## 1. Live 8090 Software Factory Anchors
 
@@ -25,19 +28,25 @@ The SF Work Orders came out of the live 2-way **Refinery ➔ Foundry ➔ Planner
 | Validator Feedback | `FB-1` — Command Desk UI/server route mismatch | `f817adb9-0be8-49fe-9cfe-9eaa599b9f2e` |
 | Validator Feedback | `FB-2` — SOX 404 red-team replay, GS1 reel, KAL spoof and 28-box `409` regression checks | `804e1202-8162-4fca-9f6f-55d051f7b8df` |
 | Validator Theme | `THM-1` — ZeroSaaS P2P Route Contract & SOX 404 Adverse Replay Hardening (Resolved) | `2c9639f9-302f-4fa9-801d-8fcc162b2920` |
+| Validator Feedback | `FB-3` — Product owner UX change order: replace the dark desk with the white ZeroSaaS P2P workbench | `0ce52256-27a7-4167-b1ea-ea9628ad7a00` |
+| Validator Theme | `THM-2` — ZeroSaaS P2P White Enterprise Workbench & Brand Change Order (Urgent; open) | `d3ab7474-57fa-40f0-9876-c0099c863806` |
+| Foundry Requirement extension | `REQ-P2P-012`..`REQ-P2P-020` under `REQ-01` | `REQ-01` above |
+| Foundry Architecture Decision | `ADR-006` in `BP-01` — 48px topbar + 3-column white layout | `BP-01` above |
+| Planner Work Order | `SF WO-13` — Implement ZeroSaaS P2P White Enterprise Workbench & Brand Redesign | `97cb2858-1488-4b34-829c-b0162ea65be3` |
 
 > **REQ-01 identifier note:** the local per-WO indexes `.sw-factory/WO-01..WO-06/context.md` still list `c2bd88dc-6cf0-41d2-8a20-6eb60e9b3dbc` as `REQ-01`. That value was recorded when the WO execution plans were staged (commit `5baba895`). This matrix uses the current Foundry `REQ-01` identifier above.
 
 ## 2. The 2-Way Loop
 
 ```text
- Refinery KB-00 ──► Foundry REQ-01 ──► BP-01 Architecture + Feature Blueprint ──► Planner SF WO-1..WO-12
+ Refinery KB-00 ──► Foundry REQ-01 ──► BP-01 Architecture + Feature Blueprint ──► Planner SF WO-1..WO-13
        ▲                                                                                  │
        │                                                                                  ▼
- Validator FB-1 / FB-2 ◄── Qualify Review (PASS / FAIL) ◄── commit on main ◄── HARA WO-xx build (.sw-factory/WO-xx)
+ Validator FB-1 / FB-2 / FB-3 ◄── Qualify Review (PASS / FAIL) ◄── commit on main ◄── HARA WO-xx build (.sw-factory/WO-xx)
        │
        ├──► follow-up work order (WO-04-A.f1, T19.f1) ──► back into the build queue
-       └──► Theme THM-1 ──► Planner SF WO-12 ──► Completed; THM-1 Resolved
+       ├──► Theme THM-1 ──► Planner SF WO-12 ──► Completed; THM-1 Resolved
+       └──► FB-3 ──► Theme THM-2 ──► REQ-P2P-012..020 + BP-01 ADR-006 ──► Planner SF WO-13 ──► HARA WO-13 (awaiting Qualify Review)
 ```
 
 - **Forward direction (plan to code):**
@@ -48,7 +57,7 @@ The SF Work Orders came out of the live 2-way **Refinery ➔ Foundry ➔ Planner
   - A `FAIL` verdict produces a typed follow-up work order. The follow-up records the failing command, the expected behavior and a fix direction.
   - The same findings were filed in the Validator as `FB-1` and `FB-2`. Both were grouped into Theme `THM-1`, linked to `REQ-01` and `BP-01`. The Planner issued `SF WO-12` from `THM-1`.
 
-## 3. Forward Matrix — SF Planner WO ➔ HARA WO ➔ Commit ➔ Qualify Review (12 rows)
+## 3. Forward Matrix — SF Planner WO ➔ HARA WO ➔ Commit ➔ Qualify Review (13 rows)
 
 | SF WO | Planner Work Order | HARA WO | Commit on `main` | Qualify Review | Status |
 | --- | --- | --- | --- | --- | --- |
@@ -64,6 +73,7 @@ The SF Work Orders came out of the live 2-way **Refinery ➔ Foundry ➔ Planner
 | **SF WO-10** | Audit recovery (red-team replay / tamper / spoof regression, `.sw-factory` certification) | `HARA WO-06` + `HARA T19.f1` | `fca1c225`, `cae71057` | `WO-06.q`: **PASS**; `T19.f1.q`: **PASS** | ✅ Completed / PASS |
 | **SF WO-11** | PO-25800 end-to-end (`tests/test-copper-e2e.mjs`, ≥16 live assertions) | `HARA WO-05` (`T19` ➔ `T19.f1`) | `11a63009` ➔ `cae71057` | `T19.q2`: **FAIL** (`null` `/generate` sidecar reply) ➔ `T19.f1.q`: **PASS** | ✅ Completed / PASS |
 | **SF WO-12** | Harden live `/api/step/:n` route contracts and adversarial replay guards (Urgent, Fix; from `THM-1`) | `HARA WO-04-A.f1` + `HARA WO-06` + `HARA T19.f1` | `9094b2bb`, `fca1c225`, `cae71057` | `WO-04-A.f1.q`: **PASS**; `WO-06.q`: **PASS**; `T19.f1.q`: **PASS** | ✅ Completed / PASS |
+| **SF WO-13** | Implement ZeroSaaS P2P White Enterprise Workbench & Brand Redesign (Urgent; from `THM-2`; `REQ-P2P-012`..`020`, `BP-01` `ADR-006`) | `HARA WO-13` | the `HARA WO-13` commit | `WO-13.q`: not yet run | 🔄 Built; awaiting Qualify Review |
 
 ### Cross-cutting: UI Command Desk and the Validator Feedback Loop
 
@@ -99,6 +109,20 @@ This is the backward half of the loop. Each Validator finding became a tracked w
 
 Evidence for `SF WO-12` is in [`.sw-factory/WO-12/`](../.sw-factory/WO-12/).
 
+### Validator Round-Trip 2: FB-3 ➔ THM-2 ➔ SF WO-13 (White Enterprise Workbench & Brand)
+
+| Record | Content | Closed by | Status |
+| --- | --- | --- | --- |
+| `FB-3` (`0ce52256`) | The product owner rejected the dark `public/` desk from `WO-04-A`, on its look and on its name. The app is ZeroSaaS P2P, a headless procure-to-pay ERP, not a copper desk. | `HARA WO-13` | 🔄 Built; awaiting Qualify Review |
+| `THM-2` (`d3ab7474`) | ZeroSaaS P2P White Enterprise Workbench & Brand Change Order (Urgent). Groups `FB-3`. | `SF WO-13` | Open |
+| `REQ-P2P-012`..`020` | Foundry extension of `REQ-01`: light palette, `ZeroSaaS P2P` brand, 48px topbar, left rail with 4 views, 8-step flow strip, live trial balance, 6-document packet trail, consent-gated recorder, confirmation-gated reset | `HARA WO-13` | Built |
+| `BP-01` `ADR-006` | 100vh shell: 48px white topbar + `236px \| minmax(0, 1fr) \| 392px` grid at the 1440×900 boundary | `HARA WO-13` | Built |
+| `SF WO-13` (`97cb2858`) | Implement ZeroSaaS P2P White Enterprise Workbench & Brand Redesign | `HARA WO-13` | In Progress ➔ awaiting `WO-13.q` |
+
+**Root cause of the "Copper Command Desk" name.** Software Factory did not name the desk. Before kickoff we wrote a local fallback work-order list for the bridge that turns Planner Work Orders into build rows (`sf_wo_bridge.py --from-fallback`). Its `WO-04` entry was titled *Deliver One-Screen (100vh Zero-Scroll) Copper Command Desk*. The `WO-04` row was lit from that fallback title, and the builder built what the title said, including the dark look. Both Qualify Reviews of that row (`WO-04-A.q` FAIL, `WO-04-A.f1.q` PASS) checked the client/server contract, not the brand. The fix went back through the Software Factory instead of being patched directly: `FB-3` ➔ `THM-2` ➔ `REQ-P2P-012`..`020` + `ADR-006` ➔ `SF WO-13`.
+
+**What `HARA WO-13` changed.** `public/index.html`, `public/styles.css` and the DOM layer of `public/app.js` were written fresh from the `SF WO-13` specification. No pre-event UI file was copied. The exported client API is unchanged (`validateState`, `REELS`, `REFUSALS`, `safeDocumentUrl`, `request`, `refresh`, `runStep`, `render`, `speak`, `startRecording`, `stopRecording`), and `trialBalance` was added for the right-rail trial balance. The client still reads only `GET /api/state` and `GET /docs/:name`, and still writes only `POST /api/step/:n` and `POST /api/reset`. Server, kernel, routes and refusal codes are unchanged. `tests/test-copper-e2e.mjs` changes one assertion: it now matches the new page title instead of the old one. Evidence is in [`.sw-factory/WO-13/`](../.sw-factory/WO-13/).
+
 ## 4. Backward Matrix — Commit ➔ SF Planner WOs
 
 | Commit | Subject | HARA WO | SF WOs satisfied | Qualify Review verdict (summary) |
@@ -114,6 +138,10 @@ Evidence for `SF WO-12` is in [`.sw-factory/WO-12/`](../.sw-factory/WO-12/).
 | `9094b2bb` | FIX qualify-finding on `WO-04-A` | `WO-04-A.f1` | UI Command Desk, SF WO-12 (`FB-1`) | **PASS**: `validateState` accepts the real snapshot; step writes use `/api/step/:n`. |
 | `11a63009` | Integrate `src/` (`:3590`) + `sidecar/` (`:3591`) + `public/` + `seeds/`; wire the end-to-end suite | `WO-05` (`T19`) | SF WO-6 (kernel wiring), SF WO-11 | **FAIL** (`T19.q2`): a `null` sidecar `/generate` reply gave `500 INTERNAL_ERROR`. Follow-up `T19.f1` opened. |
 | `cae71057` | FIX qualify-finding on `T19` | `T19.f1` | SF WO-10, SF WO-11, SF WO-12 (`FB-2`) | **PASS**: non-object sidecar replies are an audited `503 OCR_UNAVAILABLE`; `npm test` runs `tests/test-sidecar-reply.mjs` and `tests/test-copper-e2e.mjs`. |
+| `8721678d` | Finalize 12/12 Software Factory Traceability | `WO-08` | SF WO-12 evidence (`.sw-factory/WO-12/`), rename metadata | **FAIL** (`WO-08.q`): acceptance R10 unmet; `contracts/p2p-lineage-contract.json` still targeted `8090-p2p-app`. Regression checks passed. |
+| `6db3195f` | FIX `tests_failed` on `WO-08.f1` | `WO-08.f2` | — (kept R10 open rather than land red) | n/a (documentation). `WO-08.f1` was refused `tests_failed` and never landed. |
+| `c1d69467` | Update `contracts/p2p-lineage-contract.json` (`targetRepo`) and regenerate `seeds/coa_seed.journal` | `T20` | Closes `WO-08` R10 | Seeds drift check and 23 seed tests green at landing (`.sw-factory/WO-12/review-log.md` Round 3). |
+| the `HARA WO-13` commit | White Enterprise Workbench & Brand Redesign (`public/`) | `WO-13` | SF WO-13 (`FB-3`, `THM-2`) | Not yet qualified. In-fence review APPROVED (`.sw-factory/WO-13/review-log.md`). |
 
 Every listed build commit is a fast-forward on `main`. Each landed with its fenced test commands green before qualification.
 
@@ -131,6 +159,8 @@ Every listed build commit is a fast-forward on `main`. Each landed with its fenc
 | `T19.q` | `11a63009` | `9094b2bb` | Not run (review slot unlaunched) ➔ re-routed | — | Re-run as `T19.q2` |
 | `T19.q2` | `11a63009` | `9094b2bb` | **FAIL** | — | `T19.f1`: refuse a non-object sidecar reply with an audited `503 OCR_UNAVAILABLE` |
 | `T19.f1.q` | `cae71057` | `11a63009` | **PASS** | — | — (closes `T19.q2` FAIL) |
+| `WO-08.q` | `8721678d` | `cae71057` | **FAIL** | — | R10 (`targetRepo`): `WO-08.f1` refused `tests_failed` (stale journal digest) ➔ `WO-08.f2` (`6db3195f`) ➔ `T20` (`c1d69467`) closes R10 |
+| `WO-13.q` | the `HARA WO-13` commit | `c1d69467` | Not yet run | — | — |
 
 `—` in *Lines deleted* means the review did not record a count.
 
@@ -144,7 +174,8 @@ Every listed build commit is a fast-forward on `main`. Each landed with its fenc
 | `WO-04-A` / `WO-04-A.f1` | `.sw-factory/WO-04/` | APPROVED (Round 5, independent `WO-04-A.f1` API and UI review against the real kernel) | ✅ Closed |
 | `WO-05` (`T19` / `T19.f1`) | `.sw-factory/WO-05/` | APPROVED (Round 2 integration; Round 3 `T19.f1` sidecar-reply fix) | ✅ Closed |
 | `WO-06` | `.sw-factory/WO-06/` | APPROVED (Round 1, red-team audit + `.sw-factory` certification) | ✅ Closed |
-| `SF WO-12` | `.sw-factory/WO-12/` | APPROVED (Round 1, round-trip evidence for `FB-1`, `FB-2`, `THM-1`) | ✅ Closed |
+| `SF WO-12` | `.sw-factory/WO-12/` | APPROVED (Round 1, round-trip evidence for `FB-1`, `FB-2`, `THM-1`; Rounds 2–3 `T20`) | ✅ Closed |
+| `SF WO-13` | `.sw-factory/WO-13/` | APPROVED (Round 1, in-fence review of the white workbench against `REQ-P2P-012`..`020`) | 🔄 Awaiting Qualify Review |
 
 ## 7. Items Carried by the Previous Edition
 
@@ -155,7 +186,9 @@ Every listed build commit is a fast-forward on `main`. Each landed with its fenc
 | 3 | `WO-06`: red-team replay, tamper, spoof and negative-quantity regressions; final `.sw-factory` certification (closes SF WO-10) | `fca1c225`, `WO-06.q` **PASS** | ✅ Resolved |
 | 4 | Server-side OCR sourcing for Step 7 | `11a63009` + `cae71057`: with `OCR_URL` set, Step 7 reads `INV-25800.pdf` through the RapidOCR sidecar and holds a forged invoice at `409 MATCH_VARIANCE_HOLD` | ✅ Resolved |
 | 5 | Repository rename to `zerosaas-p2p-app` | `README.md`, this file, `package.json` `name`, and the kernel's COMEX `user-agent` and `/api/health` `service` strings now say `zerosaas-p2p-app` | ✅ Resolved |
+| 6 | `WO-08` R10: lineage contract `targetRepo` still said `8090-p2p-app` | `T20` (`c1d69467`) edited `targetRepo` and regenerated `seeds/coa_seed.journal` in one fence | ✅ Resolved |
+| 7 | Dark "Copper Command Desk" name and look rejected by the product owner (`FB-3`) | `SF WO-13` ➔ `HARA WO-13` white ZeroSaaS P2P workbench; root cause in Section 3 | 🔄 Awaiting `WO-13.q` |
 
-**Rename follow-up — resolved.** `contracts/p2p-lineage-contract.json` `provenance.targetRepo` now points to `https://github.com/loop-smith/zerosaas-p2p-app`. The journal was regenerated with the existing seed builder; its whole-contract `canonical-sha256` is now `57311e23ada34f45a8db4cbc71e1f3032f61b2c122b545edb531f2193410a5ac`. All 89 account declarations are unchanged.
+**Rename follow-up — resolved by `T20` (`c1d69467`), closing `WO-08` R10.** `contracts/p2p-lineage-contract.json` `provenance.targetRepo` now points to `https://github.com/loop-smith/zerosaas-p2p-app`. The journal was regenerated with the existing seed builder; its whole-contract `canonical-sha256` is now `57311e23ada34f45a8db4cbc71e1f3032f61b2c122b545edb531f2193410a5ac`. All 89 account declarations are unchanged.
 
 The earlier contract-only attempt (`WO-08.f1`) was refused `tests_failed` because the journal digest was stale. T20 updates both fenced files together. Use `python3 seeds/build_seeds.py --check` and `python3 -m pytest seeds -q -p no:cacheprovider` to verify drift and seed integrity.

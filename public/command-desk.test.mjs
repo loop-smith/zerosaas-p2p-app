@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { validateState, safeDocumentUrl, request, speak, refresh, runStep, REELS, REFUSALS, startRecording, stopRecording } from "./app.js";
+// ZeroSaaS P2P workbench client suite (SF WO-13). File name kept: the task card runs it by this path.
+import { validateState, safeDocumentUrl, request, speak, refresh, runStep, render, trialBalance, REELS, REFUSALS, startRecording, stopRecording } from "./app.js";
 
 const snapshot = {
   steps: Array.from({length: 8}, (_, index) => ({n: index + 1, status: index === 0 ? 'complete' : 'pending'})),
@@ -101,6 +102,13 @@ test("cancelling one voice request never aborts the next request", async () => {
   } finally { globalThis.fetch = originalFetch; globalThis.speechSynthesis = originalSpeech; globalThis.SpeechSynthesisUtterance = originalUtterance; }
 });
 
+test("trial balance flags an unbalanced server journal and render is inert without a DOM", () => {
+  const book = trialBalance({...snapshot, journal: {balanced: true, debitUsd: 1, creditUsd: 0, entries: [{memo: 'x', legs: [{account: 'Assets:121100-Raw-Copper', debitUsd: 1, creditUsd: 0}]}]}});
+  assert.equal(book.balanced, false);
+  assert.equal(book.codes.get('121100').debit, 100);
+  assert.equal(render(snapshot), undefined);
+});
+
 test("snapshot validation rejects malformed status, documents and out-of-image OCR", () => {
   for (const extra of [
     {sandbox: {sources: []}}, {item: {onHandFt: NaN}}, {po: {unitUsd: 2.7, totalUsd: -1}}, {payment: {stamp: 'PAID'}},
@@ -185,6 +193,15 @@ test("real server snapshots and client actions share the kernel contract", async
     assert.equal(paid.steps.filter(step => step.status === 'complete').length, 8);
     assert.equal(paid.journal.entries.length, 3);
     assert.deepEqual(writes.at(-1), ['/api/step/8', {actor: 'EMP-0007', bankAccount: '101100'}]);
+    // Right-rail trial balance: the six WO-13 accounts net from the real kernel journal, DR == CR.
+    const book = trialBalance(paid);
+    const net = code => { const sum = book.codes.get(code); return sum ? sum.debit - sum.credit : 0; };
+    assert.deepEqual(Object.fromEntries(['121100', '201200', '201100', '501900', '101100', '101200'].map(code => [code, net(code)])),
+      {121100: 2312000, 201200: 0, 201100: 0, 501900: -152000, 101100: -2160000, 101200: 0});
+    assert.deepEqual([...book.codes.keys()].sort(), ['101100', '121100', '201100', '201200', '501900']);
+    assert.equal(book.balanced, true);
+    assert.equal(book.debit, book.credit);
+    assert.equal(trialBalance(null), null);
     const reset = validateState(await request('/api/reset', {method: 'POST', body: {}}));
     assert.equal(reset.steps.filter(step => step.status === 'complete').length, 0);
     assert.deepEqual(reset.scans, []);

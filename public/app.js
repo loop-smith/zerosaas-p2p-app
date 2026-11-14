@@ -1,26 +1,33 @@
-// Copper projects server state. No browser-side approval or accounting engine.
+// ZeroSaaS P2P workbench. Projects server state only: no browser-side approval, stock or accounting engine.
 export const REELS = ['ENC-GS1-884192-R01', 'ENC-GS1-884192-R02', 'ENC-GS1-884192-R03', 'ENC-GS1-884192-R04'];
-const DOCUMENTS = [
-  ['PO-25800.pdf', 'Purchase order', '01 / Purchasing'],
-  ['ENC-OA-2026-884192.pdf', 'Vendor acknowledgement', '02 / Encore Wire'],
-  ['BOL-25800.pdf', 'Bill of lading', '03 / Dock receipt'],
-  ['PS-25800.pdf', 'Packing slip & mill cert', '04 / ASTM B8'],
-  ['INV-25800.pdf', 'Vendor invoice', '05 / Accounts payable'],
-];
+// Packet trail: the server step that produces each packet, and the trade PDFs that back it once served.
+const PACKETS = {signal: [1, []], po: [4, ['PO-25800.pdf']], oa: [5, ['ENC-OA-2026-884192.pdf']], bol: [6, ['BOL-25800.pdf', 'PS-25800.pdf']], inv: [7, ['INV-25800.pdf']], check: [8, []]};
 const OFFICERS = [
   ['Darius Mercer', 'Planner', '$20,000'], ['Devon Brooks', 'VP Supply Chain', '$100,000'],
   ['Nancy Rostova', 'Purchasing', '$50,000'], ['Marcus Vance', 'Dock Lead', 'Receipt only'],
   ['Duncan Vance', 'Controller', '$250,000'], ['Meredith Hale', 'CFO', '$500,000'],
-  ['KAL', 'Voice steward', '$0.00'],
+  ['KAL', 'P2P steward (AI)', '$0.00'],
 ];
-const SYSTEMS = [['wms', 'WM', 'InvenTree', 'Inventory & dock receipts'], ['crm', 'CR', 'Django-CRM', 'Vendor & customer records'], ['hrm', 'HR', 'Headless HRM', 'Authority & duty separation'], ['coa', 'GL', 'GAAP ledger', 'Double-entry journal']];
+const SYSTEMS = [['wms', 'WM', 'InvenTree WMS', 'Stock & dock receipts'], ['crm', 'CR', 'Django-CRM', 'Vendor records'], ['hrm', 'HR', 'Headless HRM', 'Signing limits & duties'], ['coa', 'GL', 'GAAP ledger', '89-account double entry']];
 const ACTORS = {1: 'SYSTEM', 2: 'EMP-0021', 3: 'EMP-0005', 4: 'EMP-0002', 5: 'EMP-0002', 6: 'EMP-0003', 7: 'EMP-0001', 8: 'EMP-0007'};
+const CHECKPOINTS = new Set([2, 3, 6, 8]);
+// [gate, title, actor, detail, action] for the active step card.
+const STEP_CARDS = [
+  ['Automated', 'Query InvenTree stock for ITM-CU-20-BARE', 'SYSTEM · WMS stock signal', 'Reads on-hand feet against the 8,000 FT minimum and opens REQ-25800.', 'Query stock'],
+  ['Human gate 1', 'Darius Mercer confirms the need', 'EMP-0021 · Planner · $20,000 limit', 'The $23,120 need is above his limit, so he confirms and escalates to the VP.', 'Confirm & escalate'],
+  ['Human gate 2', 'Devon Brooks approves REQ-25800', 'EMP-0005 · VP Supply Chain · $100,000 limit', 'Approval hands the request to Purchasing.', 'Approve request'],
+  ['Purchasing', 'Lock the live COMEX HG spot price', 'EMP-0002 · Nancy Rostova · Purchasing · $50,000 limit', '(HG + $0.32 mill adder) × 0.411 lb/FT, measured against the $2.89/FT standard.', 'Lock spot price'],
+  ['Purchasing', 'Issue PO-25800 and take the vendor acknowledgement', 'EMP-0002 · Nancy Rostova · Purchasing', 'PO-25800 goes to Encore Wire; ENC-OA-2026-884192 comes back.', 'Issue PO'],
+  ['Human gate 3', 'Marcus Vance scans four GS1 reels', 'EMP-0003 · Dock Lead · receipt only', 'Each reel receives 2,000 FT. The fourth reel posts 121100 / 201200 / 501900.', 'Scan reel'],
+  ['Controller', 'RapidOCR reads INV-25800 for the three-way match', 'EMP-0001 · Duncan Vance · Controller · $250,000 limit', 'PO = BOL = INV at $0.00 variance clears 201200 GRNI into 201100 Trade AP.', 'Run OCR match'],
+  ['Human gate 4', 'Meredith Hale signs Check #10045', 'EMP-0007 · CFO · $500,000 limit', 'Pays from Operating #8801 (101100), never Payroll/Petty #4409.', 'Approve check'],
+];
 export const REFUSALS = {
   AI_STEWARD_ZERO_AUTHORITY: {status: 403, text: 'KAL has $0.00 signing authority.'},
   DOA_LIMIT_EXCEEDED: {status: 403, text: 'Darius must escalate the $23,120 request to Devon.'},
   SOX_SOD_VIOLATION: {status: 403, text: 'The buyer cannot receive their own purchase.'},
   MATCH_VARIANCE_HOLD: {status: 409, text: 'Invoice variance held. No payment may advance.'},
-  BANK_POLICY_VIOLATION: {status: 403, text: 'Payroll #4409 cannot fund this payment.'},
+  BANK_POLICY_VIOLATION: {status: 403, text: 'Payroll/Petty #4409 cannot fund this payment.'},
 };
 const TRAPS = {
   kal: {step: 3, actor: 'EMP-AI-KAL', code: 'AI_STEWARD_ZERO_AUTHORITY'},
@@ -29,13 +36,19 @@ const TRAPS = {
   invoice: {step: 7, actor: 'EMP-0001', invoiceDeltaUsd: 500, code: 'MATCH_VARIANCE_HOLD'},
   bank: {step: 8, actor: 'EMP-0007', bankAccount: '101200', code: 'BANK_POLICY_VIOLATION'},
 };
-let state = null, connected = false, pending = false, epoch = 0;
+const PROBE_LABELS = {kal: 'KAL signs with a $0 limit', doa: 'Darius signs above $20k', sod: 'Buyer receives own PO at the dock', invoice: 'Invoice +$500 variance', bank: 'Check from Payroll/Petty #4409'};
+const TRIAL_BALANCE = ['121100', '201200', '201100', '501900', '101100', '101200'];
+const CREDIT_NORMAL = new Set(['201200', '201100']);
+const MAX_JOURNAL_ROWS = 40;
+let state = null, connected = false, pending = false, epoch = 0, muted = false;
 let recorder = null, recordingPending = false, recordingResources = [], audioContext = null, recordingTimer = null;
 let voiceController = null, voiceAudio = null, voiceUrl = null, voiceEpoch = 0;
 let listening = false, recognition = null, micRecorder = null, micStream = null, micPending = false;
 let refreshTimer = null, disposed = false, recordingEpoch = 0, transcriptionController = null;
+const probeLog = new Map();
 const $ = id => globalThis.document?.getElementById(id);
 const money = value => Number.isFinite(value) ? new Intl.NumberFormat('en-US', {style: 'currency', currency: 'USD'}).format(value) : '—';
+const cents = value => Math.round(value * 100);
 const setText = (id, value) => { const node = $(id); if (node) node.textContent = value; };
 function status(message, error = false) { setText('status', message); $('status')?.classList.toggle('error', error); }
 function node(tag, text, className) {
@@ -94,7 +107,7 @@ export async function request(path, options = {}) {
   });
   let data;
   try { data = await response.json(); }
-  catch { throw new Error(`HTTP ${response.status}: expected JSON from the command server.`); }
+  catch { throw new Error(`HTTP ${response.status}: expected JSON from the P2P server.`); }
   if (!response.ok || data?.ok === false) {
     const code = data?.code ?? data?.error?.code ?? (typeof data?.error === 'string' ? data.error : 'REQUEST_REFUSED');
     const message = data?.message ?? data?.error?.message ?? REFUSALS[code]?.text ?? 'Request refused by server.';
@@ -116,12 +129,12 @@ export async function refresh() {
     if (revision !== epoch) return;
     connected = false;
     render(state);
-    status(`Disconnected · ${error.message} Start the local command server and refresh.`, true);
+    status(`Disconnected · ${error.message} Start the local P2P server and refresh.`, true);
   }
 }
 
 export async function runStep(step, actor, extra = {}) {
-  if (!connected || !state) throw new Error('Connect to the command server before authorizing a step.');
+  if (!connected || !state) throw new Error('Connect to the P2P server before authorizing a step.');
   if (pending) throw new Error('A server action is already pending.');
   if (step !== state.steps.filter(step => step.status === 'complete').length + 1 || !ACTORS[step]) throw new Error('This checkpoint is not the next server step.');
   if (actor !== ACTORS[step]) throw new Error('The required human actor must authorize this step.');
@@ -148,55 +161,114 @@ export async function runStep(step, actor, extra = {}) {
 function buildStaticRows() {
   for (const [key, icon, name, detail] of SYSTEMS) {
     const row = node('div', undefined, 'system'); row.dataset.system = key;
-    row.append(node('span', icon, 'system-icon'));
-    const copy = node('div'); copy.append(node('strong', name), node('p', detail));
-    row.append(copy, node('span', 'UNKNOWN', 'system-status')); $('systems').append(row);
+    const copy = node('div'); copy.append(node('strong', name), node('small', detail));
+    row.append(node('span', icon, 'system-icon'), copy, node('span', 'UNKNOWN', 'system-status tag')); $('systems').append(row);
   }
   for (const [name, role, limit] of OFFICERS) {
     const row = node('tr'), copy = node('td', name); copy.append(node('small', role)); row.append(copy, node('td', limit)); $('authority').tBodies[0].append(row);
   }
-  for (const [name, label, detail] of DOCUMENTS) {
-    const link = node('a', undefined, 'document'); link.dataset.document = name; link.target = '_blank'; link.rel = 'noopener noreferrer'; link.setAttribute('aria-disabled', 'true');
-    const copy = node('span', undefined, 'doc-copy'); copy.append(node('strong', label), node('small', name));
-    link.append(node('span', 'PDF', 'pdf'), copy, node('span', 'PENDING', 'doc-state')); link.title = detail; $('documents').append(link);
+  for (const [name, {code}] of Object.entries(TRAPS)) {
+    const row = node('tr'); row.dataset.probe = name;
+    row.append(node('td', PROBE_LABELS[name]), node('td', `${REFUSALS[code].status} ${code}`), node('td', 'Not run', 'observed'));
+    $('guardrail-log').append(row);
   }
 }
 
-function renderJournal(snapshot) {
+// Sums server journal legs by full account and by 6-digit GL code, in integer cents. Null without a journal.
+export function trialBalance(snapshot) {
   const report = snapshot?.journal;
-  const rows = report?.entries.flatMap(entry => entry.legs.map(leg => ({account: leg.account, description: entry.memo, debit: leg.debitUsd, credit: leg.creditUsd})));
+  if (!report) return null;
+  const accounts = new Map(), codes = new Map(), legs = [];
+  let debit = 0, credit = 0;
+  for (const entry of report.entries) for (const leg of entry.legs) {
+    const d = cents(leg.debitUsd), c = cents(leg.creditUsd), code = leg.account.match(/\d{6}/)?.[0] ?? 'other';
+    legs.push({account: leg.account, memo: String(entry.memo ?? ''), debit: d, credit: c});
+    for (const [map, key] of [[accounts, leg.account], [codes, code]]) { const sum = map.get(key) ?? {debit: 0, credit: 0}; sum.debit += d; sum.credit += c; map.set(key, sum); }
+    debit += d; credit += c;
+  }
+  return {report, accounts, codes, legs, debit, credit, balanced: report.balanced && debit === credit};
+}
+
+function renderLedger(snapshot) {
+  const book = trialBalance(snapshot), usd = value => money(value / 100);
+  const pill = $('gaap-pill');
+  pill.textContent = !book || !connected ? 'GAAP · awaiting server' : book.balanced ? 'GAAP DR == CR' : 'GAAP DR ≠ CR · HOLD';
+  pill.classList.toggle('ok', Boolean(book && connected && book.balanced)); pill.classList.toggle('bad', Boolean(book && !book.balanced));
+  const label = !book ? 'AWAITING LEDGER' : !book.balanced ? 'UNBALANCED · HOLD' : book.legs.length ? 'DR = CR · BALANCED' : 'NO POSTINGS';
+  setText('ledger-balance', label); setText('lens-ledger', label);
+  $('ledger-balance').classList.toggle('ok', Boolean(book?.balanced)); $('ledger-balance').classList.toggle('bad', Boolean(book && !book.balanced));
+  // Trial balance: net balance per account on its debit or credit side.
+  let tbDebit = 0, tbCredit = 0, other = 0;
+  const net = sum => sum ? sum.debit - sum.credit : 0;
+  for (const [code, sum] of book?.codes ?? []) if (!TRIAL_BALANCE.includes(code)) other += net(sum);
+  const fill = (row, value) => {
+    // cells[0] is the account <th>; debit and credit follow.
+    row.cells[1].textContent = !book ? '—' : value > 0 ? usd(value) : '—';
+    row.cells[2].textContent = !book ? '—' : value < 0 ? usd(-value) : '—';
+    if (value > 0) tbDebit += value; else tbCredit -= value;
+  };
+  for (const row of document.querySelectorAll('#trial-balance [data-account]')) fill(row, net(book?.codes.get(row.dataset.account)));
+  $('tb-other').hidden = !other; fill($('tb-other'), other);
+  setText('tb-debit', book ? usd(tbDebit) : '—'); setText('tb-credit', book ? usd(tbCredit) : '—');
+  // Compact book view: assets debit-normal, liabilities credit-normal.
+  for (const cell of document.querySelectorAll('[data-book]')) {
+    const value = net(book?.codes.get(cell.dataset.book));
+    cell.textContent = book ? usd((CREDIT_NORMAL.has(cell.dataset.book) ? -value : value) || 0) : '—'; // || 0 avoids "-$0.00"
+  }
+  // GL account register (view 2) and posting journal (drawer).
+  const register = $('gl-register'); register.replaceChildren();
+  for (const [account, sum] of book?.accounts ?? []) {
+    const row = node('tr'), cell = node('td', account); cell.title = account;
+    row.append(cell, node('td', sum.debit ? usd(sum.debit) : '—'), node('td', sum.credit ? usd(sum.credit) : '—')); register.append(row);
+  }
   const journal = $('journal'); journal.replaceChildren();
-  if (!rows?.length) {
-    const row = node('tr'), cell = node('td', rows ? 'No journal entries posted.' : 'Connect the ledger to see real postings.', 'empty');
-    cell.colSpan = 3; row.append(cell); journal.append(row);
+  const empty = message => { const row = node('tr'), cell = node('td', message, 'empty'); cell.colSpan = 3; row.append(cell); return row; };
+  if (!book?.accounts.size) register.append(empty(book ? 'No journal entries posted.' : 'Connect the ledger to see real postings.'));
+  if (!book?.legs.length) journal.append(empty(book ? 'No journal entries posted.' : 'Connect the ledger to see real postings.'));
+  for (const leg of book?.legs.slice(0, MAX_JOURNAL_ROWS) ?? []) {
+    const row = node('tr'), cell = node('td'); cell.title = `${leg.account} · ${leg.memo}`; cell.append(node('strong', leg.account), node('small', leg.memo));
+    row.append(cell, node('td', leg.debit ? usd(leg.debit) : '—'), node('td', leg.credit ? usd(leg.credit) : '—')); journal.append(row);
   }
-  const accounts = new Map(); let debit = 0, credit = 0;
-  for (const row of rows ?? []) {
-    const key = String(row.account ?? 'Unspecified account');
-    const group = accounts.get(key) ?? {description: String(row.description ?? ''), debit: 0, credit: 0};
-    group.debit += Math.round(row.debit * 100); group.credit += Math.round(row.credit * 100);
-    debit += Math.round(row.debit * 100); credit += Math.round(row.credit * 100); accounts.set(key, group);
+  if (book?.legs.length > MAX_JOURNAL_ROWS) journal.append(empty(`${book.legs.length - MAX_JOURNAL_ROWS} more postings included in totals`));
+  setText('debit-total', book ? usd(book.debit) : '—'); setText('credit-total', book ? usd(book.credit) : '—');
+  const audit = snapshot?.audit;
+  setText('audit-status', audit?.valid === true ? `Audit chain: valid · ${Number(audit.length) || 0} hash-linked events` : audit?.valid === false ? 'Audit chain: BROKEN · server reports a tampered event' : 'Audit chain: not reported by server');
+}
+
+function renderCard(snapshot, completed, active) {
+  const run = $('run-step');
+  $('card-gate').classList.remove('gate');
+  if (!snapshot) {
+    setText('card-step', 'Step — / 8'); setText('card-gate', '—'); setText('card-title', 'Connect to the P2P server');
+    setText('card-actor', '—'); setText('card-detail', 'The server owns every approval, stock count and posting.');
+    run.textContent = 'Authorize step'; run.disabled = true; return;
   }
-  for (const [account, group] of [...accounts].slice(0, 6)) {
-    const row = node('tr'), cell = node('td'); cell.title = `${account} · ${group.description}`; cell.append(node('strong', account), node('small', group.description));
-    row.append(cell, node('td', group.debit ? money(group.debit / 100) : '—'), node('td', group.credit ? money(group.credit / 100) : '—')); journal.append(row);
+  if (completed === 8) {
+    setText('card-step', '8 / 8 complete'); setText('card-gate', 'Settled');
+    setText('card-title', `PO-25800 settled · ${snapshot.payment?.check ?? 'Check'} ${snapshot.payment?.stamp ?? ''}`.trim());
+    setText('card-actor', 'Server confirmed all eight steps'); setText('card-detail', 'Reset Queue starts a clean run with fresh human approvals.');
+    run.textContent = 'Complete'; run.disabled = true; return;
   }
-  if (accounts.size > 6) { const row = node('tr'), cell = node('td', `${accounts.size - 6} additional accounts included in totals`); cell.colSpan = 3; row.append(cell); journal.append(row); }
-  setText('debit-total', rows ? money(debit / 100) : '—'); setText('credit-total', rows ? money(credit / 100) : '—');
-  setText('ledger-balance', !rows ? 'AWAITING LEDGER' : !report.balanced || debit !== credit ? 'UNBALANCED · HOLD' : rows.length ? 'DR = CR · BALANCED' : 'NO POSTINGS');
+  const step = completed + 1, [gate, title, actor, detail, action] = STEP_CARDS[step - 1];
+  setText('card-step', `Step ${step} / 8`); setText('card-gate', gate); $('card-gate').classList.toggle('gate', CHECKPOINTS.has(step));
+  setText('card-title', title); setText('card-actor', actor); setText('card-detail', detail);
+  run.dataset.run = String(step); run.textContent = action; run.disabled = !active;
 }
 
 export function render(snapshot) {
   if (!globalThis.document) return;
   const active = connected && !pending;
-  const completed = snapshot?.steps.filter(step => step.status === 'complete').length;
+  const completed = snapshot ? snapshot.steps.filter(step => step.status === 'complete').length : null;
   const connection = $('connection'); connection.classList.toggle('online', connected); connection.replaceChildren(node('i'), document.createTextNode(connected ? 'SERVER CONNECTED' : 'DISCONNECTED'));
   setText('progress-label', snapshot ? `${completed} / 8 COMPLETE` : '— / 8 COMPLETE');
+  setText('nav-step', snapshot ? (completed === 8 ? 'Step 8/8 ✓' : `Step ${completed + 1}/8`) : 'Step —/8');
   setText('actual-total', money(snapshot?.po?.totalUsd));
   setText('spot-detail', snapshot?.po?.unitUsd !== undefined ? `${money(snapshot.po.unitUsd)} / FT · ${snapshot.po.comex?.live ? 'live COMEX' : 'offline reference'}` : 'Awaiting COMEX price lock');
-  const ppv = snapshot?.po?.totalUsd === undefined ? null : snapshot.po.totalUsd - snapshot.item.stdTotalUsd;
-  setText('ppv', ppv === null ? '—' : money(ppv)); setText('ppv-detail', ppv === null ? '501900 · awaiting actual cost' : `501900 · ${ppv <= 0 ? 'favorable' : 'unfavorable'} vs standard`);
-  $('ppv').style.color = ppv > 0 ? 'var(--red)' : 'var(--green)';
+  const ppv = snapshot?.po?.totalUsd === undefined || snapshot.item.stdTotalUsd === undefined ? null : snapshot.po.totalUsd - snapshot.item.stdTotalUsd;
+  setText('std-total', money(snapshot?.item?.stdTotalUsd));
+  const posted = Boolean(snapshot) && snapshot.steps[5].status === 'complete';
+  setText('ppv', ppv === null ? '—' : money(ppv)); setText('ppv-detail', ppv === null ? '501900 · awaiting actual cost' : `501900 · ${ppv <= 0 ? 'favorable' : 'unfavorable'} vs standard · ${posted ? 'posted at dock receipt' : 'projected until dock receipt'}`);
+  $('ppv').classList.toggle('bad', ppv > 0); $('ppv').classList.toggle('good', ppv !== null && ppv <= 0);
   setText('stock', snapshot?.item?.onHandFt === undefined ? '—' : new Intl.NumberFormat('en-US').format(snapshot.item.onHandFt));
   let live = 0;
   for (const [key] of SYSTEMS) {
@@ -209,23 +281,33 @@ export function render(snapshot) {
     if (available) live++;
   }
   setText('system-count', `${live} / 4 LOCAL`);
-  for (const row of document.querySelectorAll('[data-step]')) {
-    const step = Number(row.dataset.step), done = snapshot && step <= completed, current = snapshot && step === completed + 1;
-    row.classList.toggle('done', Boolean(done)); row.classList.toggle('current', Boolean(current));
-    row.querySelector('button').disabled = !active || !current;
-    row.querySelector('.step-state').textContent = done ? '✓ CONFIRMED' : snapshot?.steps[step - 1].status === 'in_progress' ? 'IN PROGRESS' : row.hasAttribute('data-checkpoint') ? 'HUMAN REQUIRED' : 'WAITING';
+  for (const item of document.querySelectorAll('[data-step]')) {
+    const step = Number(item.dataset.step), done = snapshot && step <= completed, current = snapshot && step === completed + 1;
+    item.classList.toggle('done', Boolean(done)); item.classList.toggle('current', Boolean(current));
+    item.querySelector('.step-state').textContent = done ? '✓ DONE' : snapshot?.steps[step - 1].status === 'in_progress' ? 'IN PROGRESS' : CHECKPOINTS.has(step) ? 'HUMAN GATE' : 'WAITING';
   }
-  const scans = snapshot?.scans ?? [];
-  setText('scan-count', `${scans.length} / 4 reels`); setText('reels', REELS.map(code => scans.some(scan => scan.barcode === code) ? '●' : '○').join(' '));
-  $('barcode').disabled = !active || completed !== 5;
+  renderCard(snapshot, completed, active);
+  const scans = snapshot?.scans ?? [], scanning = active && completed === 5;
+  setText('scan-count', `${scans.length} / 4 reels`);
+  $('barcode').disabled = !scanning;
+  for (const button of document.querySelectorAll('[data-reel]')) {
+    const scanned = scans.some(scan => scan.barcode === button.dataset.reel);
+    button.classList.toggle('scanned', scanned); button.disabled = !scanning || scanned;
+  }
   for (const button of document.querySelectorAll('[data-trap]')) button.disabled = !active;
   $('reset').disabled = !active || Boolean(recorder) || recordingPending; $('refresh').disabled = pending;
   setText('settlement', snapshot?.payment?.stamp === 'PAID' ? `PAID · ${snapshot.payment.check}` : 'Awaiting CFO approval');
-  renderJournal(snapshot);
+  renderLedger(snapshot);
   for (const link of document.querySelectorAll('[data-document]')) {
     const doc = snapshot?.documents?.find(doc => doc.name === link.dataset.document), url = safeDocumentUrl(doc?.url);
     if (url) { link.href = url; link.removeAttribute('aria-disabled'); } else { link.removeAttribute('href'); link.setAttribute('aria-disabled', 'true'); }
-    link.querySelector('.doc-state').textContent = url ? '↗' : 'PENDING';
+  }
+  // A packet is ready when its server step is complete; served PDFs only add the link marker.
+  for (const item of document.querySelectorAll('[data-packet]')) {
+    const [step, names] = PACKETS[item.dataset.packet], done = Boolean(snapshot) && snapshot.steps[step - 1].status === 'complete';
+    const served = names.length && names.every(name => document.querySelector(`[data-document="${name}"][href]`));
+    const value = !done ? 'PENDING' : item.dataset.packet === 'check' ? (snapshot.payment?.stamp === 'PAID' ? 'PAID' : 'POSTED') : served ? 'PDF ↗' : 'POSTED';
+    item.classList.toggle('ready', done); item.querySelector('.packet-state').textContent = value;
   }
   const ocr = snapshot?.ocr, available = Boolean(ocr?.boxes?.length && safeDocumentUrl(ocr.imageUrl));
   $('open-ocr').disabled = !available; setText('ocr-count', ocr ? `${ocr.boxes.length} server field boxes${ocr.boxes.length < 28 ? ' · incomplete evidence' : ''}` : 'Awaiting pixel OCR evidence');
@@ -243,8 +325,21 @@ function renderOcr(ocr) {
   }
 }
 
+function renderProbes() {
+  for (const [name, {tone, text}] of probeLog) {
+    const cell = document.querySelector(`[data-probe="${name}"] .observed`), lens = document.querySelector(`[data-lens="${name}"] .lens-state`);
+    for (const target of [cell, lens]) { if (!target) continue; target.textContent = text; target.classList.toggle('ok', tone === 'ok'); target.classList.toggle('bad', tone === 'bad'); target.classList.toggle('warn', tone === 'warn'); }
+  }
+}
+
+function setView(name) {
+  document.body.dataset.view = name;
+  for (const panel of document.querySelectorAll('[data-view-panel]')) panel.hidden = panel.dataset.viewPanel !== name;
+  for (const button of document.querySelectorAll('.views [data-view]')) button.setAttribute('aria-pressed', String(button.dataset.view === name));
+}
+
 function briefing() {
-  if (!connected || !state) return 'I am KAL, your zero-authority voice steward. The command server is disconnected. I cannot confirm stock, ledger balances, or approvals.';
+  if (!connected || !state) return 'I am KAL, your zero-authority P2P steward. The P2P server is disconnected. I cannot confirm stock, ledger balances, or approvals.';
   const completed = state.steps.filter(step => step.status === 'complete').length;
   const next = ['Query stock', 'Darius must confirm and escalate the need', 'VP Devon must approve the request', 'Purchasing may lock the COMEX spot rate', 'Purchasing may issue the purchase order', 'Marcus must scan four unique GS1 reels', 'Run invoice OCR and the three-way match', 'CFO Meredith must authorize Check number 10045', 'The server reports all eight steps complete'][completed];
   return `${completed} of 8 steps confirmed. ${next}. My signing limit is zero dollars. Human officers authorize every checkpoint.`;
@@ -257,6 +352,7 @@ export async function speak(text) {
   if (disposed) return 'cancelled';
   stopVoice(); const token = voiceEpoch;
   text = String(text).slice(0, 1500); setText('kal-line', text);
+  if (muted) return 'muted';
   const controller = new AbortController(); voiceController = controller;
   const timer = setTimeout(() => controller.abort(), 700);
   try {
@@ -278,7 +374,7 @@ export async function speak(text) {
 function transcript(text) {
   if (disposed) return;
   const heard = String(text).trim().slice(0, 500);
-  if (!heard) { status('No speech detected. Hold MIC and try again.'); return; }
+  if (!heard) { status('No speech detected. Hold Ask KAL and try again.'); return; }
   setText('kal-line', `Heard: “${heard}”`);
   status(`Heard: “${heard}” · voice cannot approve, reset or move funds.`);
   void speak(`I heard your request. ${briefing()}`);
@@ -313,10 +409,10 @@ async function startListening() {
         const response = await fetch('/api/kal/transcribe', {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'audio/webm'}, body: new Blob(chunks, {type: 'audio/webm'}), signal: controller.signal});
         if (!response.ok) throw new Error(`Scribe proxy returned HTTP ${response.status}`);
         const data = await response.json(); if (typeof data.text !== 'string') throw new Error('Scribe returned no transcript'); if (!disposed) transcript(data.text);
-      } catch (error) { if (!disposed) status(`${error.message}. Speak directly or use the checkpoint buttons.`, true); }
+      } catch (error) { if (!disposed) status(`${error.message}. Speak directly or use the step card.`, true); }
       finally { clearTimeout(timer); if (transcriptionController === controller) transcriptionController = null; }
     };
-    micRecorder.start(); status('Listening · release MIC to send audio to the local Scribe proxy.');
+    micRecorder.start(); status('Listening · release Ask KAL to send audio to the local Scribe proxy.');
   } catch (error) { stopListening(); status(`Microphone permission: ${error.message}`, true); }
   finally { micPending = false; }
 }
@@ -330,7 +426,7 @@ function cleanupRecording() {
   clearInterval(recordingTimer); recordingTimer = null;
   for (const stream of recordingResources) stream.getTracks().forEach(track => track.stop()); recordingResources = [];
   if (audioContext) { void audioContext.close().catch(() => {}); audioContext = null; }
-  recorder = null; $('record')?.classList.remove('recording'); setText('record-label', 'Record demo');
+  recorder = null; $('record')?.classList.remove('recording'); setText('record-label', 'Record');
   if ($('record')) $('record').disabled = false;
   if (state) render(state);
 }
@@ -372,7 +468,7 @@ export async function startRecording() {
     recorder.onstop = () => {
       if (!disposed && chunks.length && globalThis.document) {
         const link = $('record-download'); if (link.href) URL.revokeObjectURL(link.href);
-        link.href = URL.createObjectURL(new Blob(chunks, {type: mimeType})); link.download = `copper-demo-${Date.now()}.webm`; link.hidden = false; link.click();
+        link.href = URL.createObjectURL(new Blob(chunks, {type: mimeType})); link.download = `zerosaas-p2p-demo-${Date.now()}.webm`; link.hidden = false; link.click();
         status('WebM ready · use Save WebM if the download did not start.');
       }
       cleanupRecording();
@@ -403,10 +499,14 @@ async function probe(name) {
   pending = true; ++epoch; render(state);
   try {
     await request(`/api/step/${step}`, {method: 'POST', body});
+    probeLog.set(name, {tone: 'bad', text: 'ACCEPTED · guardrail failure'});
     status(`GUARDRAIL FAILURE: ${code} was expected but the server accepted the probe. Inspect the server ledger.`, true);
   } catch (error) {
-    status(error.code === code && error.status === REFUSALS[code].status ? `PROBE BLOCKED · HTTP ${error.status} ${error.message}` : `Probe inconclusive · expected ${code}; received ${error.message}`, error.code !== code);
+    const blocked = error.code === code && error.status === REFUSALS[code].status;
+    probeLog.set(name, blocked ? {tone: 'ok', text: `BLOCKED · HTTP ${error.status}`} : {tone: 'warn', text: `Inconclusive · ${error.code ?? 'network'}`});
+    status(blocked ? `PROBE BLOCKED · HTTP ${error.status} ${error.message}` : `Probe inconclusive · expected ${code}; received ${error.message}`, error.code !== code);
   } finally {
+    renderProbes();
     // Preserve probe outcome in the status bar while reconciling authoritative state.
     try { accept(await request('/api/state')); } catch { connected = false; }
     pending = false; render(state);
@@ -421,30 +521,35 @@ async function resetWorkflow() {
 }
 function boot() {
   buildStaticRows(); render(null);
+  const authorize = (step, barcode) => void runStep(step, ACTORS[step], {barcode}).catch(error => status(error.message, true));
   $('refresh').addEventListener('click', () => void refresh());
-  for (const button of document.querySelectorAll('[data-run]')) button.addEventListener('click', () => {
-    const step = Number(button.dataset.run);
-    void runStep(step, ACTORS[step], {barcode: $('barcode').value.trim()}).catch(error => status(error.message, true));
-  });
-  $('barcode').addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); document.querySelector('[data-run="6"]').click(); } });
+  $('run-step').addEventListener('click', () => authorize(Number($('run-step').dataset.run), $('barcode').value.trim()));
+  for (const button of document.querySelectorAll('[data-reel]')) button.addEventListener('click', () => authorize(6, button.dataset.reel));
+  $('barcode').addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); authorize(6, $('barcode').value.trim()); } });
   for (const button of document.querySelectorAll('[data-trap]')) button.addEventListener('click', () => void probe(button.dataset.trap));
-  $('reset').addEventListener('click', () => $('reset-dialog').showModal());
-  $('cancel-reset').addEventListener('click', () => $('reset-dialog').close()); $('confirm-reset').addEventListener('click', () => void resetWorkflow());
-  $('open-ocr').addEventListener('click', () => { renderOcr(state?.ocr); $('ocr-dialog').showModal(); }); $('close-ocr').addEventListener('click', () => $('ocr-dialog').close());
+  for (const button of document.querySelectorAll('.views [data-view]')) button.addEventListener('click', () => setView(button.dataset.view));
+  const dialogs = [['reset', 'reset-dialog'], ['open-guardrails', 'guardrail-dialog'], ['open-ledger', 'ledger-dialog']];
+  for (const [opener, dialog] of dialogs) $(opener).addEventListener('click', () => $(dialog).showModal());
+  for (const [closer, dialog] of [['cancel-reset', 'reset-dialog'], ['close-guardrails', 'guardrail-dialog'], ['close-ledger', 'ledger-dialog'], ['cancel-record', 'record-dialog'], ['close-ocr', 'ocr-dialog']]) $(closer).addEventListener('click', () => $(dialog).close());
+  $('confirm-reset').addEventListener('click', () => void resetWorkflow());
+  $('open-ocr').addEventListener('click', () => { renderOcr(state?.ocr); $('ocr-dialog').showModal(); });
   $('ocr-image').addEventListener('error', () => { $('ocr-dialog').close(); status('Invoice image could not be loaded. Check the server OCR artifact.', true); });
   $('kal-speak').addEventListener('click', () => void speak(briefing()));
+  $('kal-mute').addEventListener('click', () => {
+    muted = !muted; if (muted) stopVoice();
+    $('kal-mute').setAttribute('aria-pressed', String(muted)); setText('kal-mute', `KAL Voice: ${muted ? 'Off' : 'On'}`);
+  });
   const mic = $('kal-mic');
   mic.addEventListener('pointerdown', event => { event.preventDefault(); mic.setPointerCapture(event.pointerId); void startListening(); });
   mic.addEventListener('pointerup', stopListening); mic.addEventListener('pointercancel', stopListening); mic.addEventListener('lostpointercapture', stopListening);
   mic.addEventListener('keydown', event => { if ([' ', 'Enter'].includes(event.key) && !event.repeat) { event.preventDefault(); void startListening(); } });
   mic.addEventListener('keyup', event => { if ([' ', 'Enter'].includes(event.key)) { event.preventDefault(); stopListening(); } });
   globalThis.addEventListener('blur', stopListening);
-  $('record').addEventListener('click', () => { if (recorder) stopRecording(); else void startRecording(); });
-  for (const tab of document.querySelectorAll('.mobile-tabs button')) tab.addEventListener('click', () => {
-    document.body.dataset.panel = tab.dataset.panel;
-    for (const button of document.querySelectorAll('.mobile-tabs button')) button.setAttribute('aria-pressed', String(button === tab));
-  });
+  // Recording is consent-gated: the first click explains capture; only the confirm button starts it.
+  $('record').addEventListener('click', () => { if (recorder) stopRecording(); else $('record-dialog').showModal(); });
+  $('confirm-record').addEventListener('click', () => { $('record-dialog').close(); void startRecording(); });
   globalThis.addEventListener('pagehide', () => { disposed = true; ++epoch; transcriptionController?.abort(); clearInterval(refreshTimer); stopVoice(); stopListening(); stopRecording(); for (const stream of recordingResources) stream.getTracks().forEach(track => track.stop()); const link = $('record-download'); if (link.href) URL.revokeObjectURL(link.href); });
-  void refresh(); refreshTimer = setInterval(() => { if (!document.hidden && !$('reset-dialog').open) void refresh(); }, 15000);
+  // Poll pauses only while a destructive or capture confirmation is open; drawers and the OCR viewer stay live.
+  void refresh(); refreshTimer = setInterval(() => { if (!document.hidden && !$('reset-dialog').open && !$('record-dialog').open) void refresh(); }, 15000);
 }
 if (globalThis.document) boot();
