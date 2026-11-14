@@ -113,4 +113,12 @@ Each fix was made in `seeds/build_seeds.py` and is covered by a test in `seeds/t
 
 ---
 
+## Round 2 — WO-06 certification
+
+This seat did not reopen WO-01 design. It re-ran the seed suite and confirmed the prior verdict.
+
+- `python3 -m pytest seeds -q -p no:cacheprovider` → 23 passed in 0.61s.
+- Two open checklist boxes are now `[SKIP]` with the original MCP reasons. Every WO-01 box is `[x]` or `[SKIP]`.
+- **Verdict:** APPROVED
+
 <!-- Subsequent rounds: copy the structure above and increment the round number. -->

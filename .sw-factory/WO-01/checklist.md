@@ -14,7 +14,7 @@
 
 - [x] Review work order description. Source: the staged `implementation-plan.md` acceptance criteria and the task card, not live MCP output.
 - [x] Identify linked requirements and blueprints: `REQ-01` and no blueprints (see `context.md`)
-- [ ] Review every connected requirements document. Not done: there was no MCP access to read the `REQ-01` body live. The staged acceptance criteria were used instead.
+- [SKIP] Review every connected requirements document. Not done: there was no MCP access to read the `REQ-01` body live. The staged acceptance criteria were used instead.
 - [x] Review every connected blueprint document. None are linked. The contract `semanticBindings` were reviewed in full.
 - [x] Follow `@…` mentions **and links** to other blueprints. There are none to follow.
 - [x] Review every referenced blueprint discovered that way. There are none.
@@ -60,4 +60,4 @@
 - [x] Review log is complete (`review-log.md`)
 - [x] Implementation plan was followed (`implementation-plan.md`)
 - [x] All intended files are present in the working tree
-- [ ] Work order status updated to `in_review`. `context.md` says `in_review`, but the Foundry status was not updated because there is no MCP access in this lane.
+- [SKIP] Work order status updated to `in_review`. `context.md` says `in_review`, but the Foundry status was not updated because there is no MCP access in this lane.

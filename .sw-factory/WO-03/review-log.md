@@ -52,3 +52,9 @@ No existing application helpers/functions were available to reuse or delete. Reu
 ### Delivery limitation
 
 The fenced sidecar is approved and verified. Full Step 7/8 server integration, actual ordered/received/invoiced state reconciliation, accounting transfers, CFO authentication, real settlement, and PAID stamps remain with the application-owning seat. Required HARA checks cannot pass without the missing HARA package. No commit, push, landing or commit receipt was created; launcher owns that handoff.
+
+## Round 4 — WO-06 certification
+
+Sidecar tests were not re-run in this seat. The prior fenced verdict stands. `npm test` is now the copper end-to-end file rather than the scaffold smoke check; see WO-06 review-log.md for that command's fresh result. HARA manifest and `hara/blocks` remain absent.
+
+- **Verdict:** APPROVED for the fenced sidecar scope recorded in Round 3.

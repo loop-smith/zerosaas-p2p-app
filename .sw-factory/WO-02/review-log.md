@@ -88,4 +88,10 @@ Delegate extras: ASTM B8 rounding vs exact integer math over 140,000 spot values
 
 ---
 
+## Round 2 — WO-06 certification
+
+`npm test` now imports `tests/test-copper-e2e.mjs`, which runs `src/selfcheck.mjs` and then the red-team walk on real seeds. Fresh result in this seat: self-check 26/26 and red-team 10/10, exit 0. Same-lifecycle replay of Check #10045 stays a single PAID posting. SYSTEM reset still reseeds the sandbox; that deletes the prior journal rather than posting a second check beside it, which is the WO-02 demo contract.
+
+- **Verdict:** APPROVED
+
 <!-- Subsequent rounds: copy the structure above and increment the round number. -->

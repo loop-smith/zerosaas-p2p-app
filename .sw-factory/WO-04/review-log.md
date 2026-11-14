@@ -61,3 +61,9 @@ Independent reviewer: **APPROVED for the in-fence client**, zero remaining clien
 Reused the existing lineage contract, ESM convention and native browser APIs. No parallel stock/ledger engine, pass-through service layer, dead wrapper, production dependency, or external asset dependency was introduced. Source additions reflect an empty application baseline.
 Lean line delta: +1204 / -108 (net +1096); production client +592, tests +488, remaining delta is execution documentation. No pre-existing application code was available to delete.
 Final Python fence audit and git diff --check passed. public/index.html exists. All checklist items are checked or explicitly skipped with reasons. No receipt.json was written.
+
+## Round 4 — WO-06 certification
+
+The command-desk pytest and Chromium runs were not repeated. The red-team suite fetched `GET /` and received the Copper Command Desk document with HTTP 200, plus `GET /api/health` with `audit.valid` true. Hash routes `/#/helm`, `/#/living-plan`, and `/#/riff-room`, and `app_server.py`, are not part of this application. Client checklist boxes were already `[x]` or `[SKIP]`.
+
+- **Verdict:** APPROVED for the in-fence client recorded in Round 3. Kernel steps and guardrails are exercised by `tests/test-copper-e2e.mjs`. The ElevenLabs proxy and the sidecar OCR process are still separate from this client.
