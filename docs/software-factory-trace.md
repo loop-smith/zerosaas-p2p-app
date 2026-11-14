@@ -166,3 +166,5 @@ Changing `targetRepo` without regenerating the seed turns that test red. The cha
 1. Edit `targetRepo`.
 2. Run `python3 seeds/build_seeds.py` to rebuild the seeds, which rewrites the `coa_seed.journal` digest.
 3. Run `python3 seeds/build_seeds.py --check` and `python3 -m pytest seeds -q`.
+
+A contract-only attempt (`WO-08.f1`) was refused `tests_failed` for this reason. A seed build from the edited contract succeeds and changes only the journal stamp, from `canonical-sha256=f8af589e…` to `canonical-sha256=57311e23…`.

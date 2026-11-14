@@ -63,6 +63,8 @@ R10 was applied, tested and reverted in this seat:
 
 The edit was reverted so `main` stays green. The trace doc's Section 7 records the fix: one work order fenced to both files edits `targetRepo`, then runs `python3 seeds/build_seeds.py` and `python3 -m pytest seeds -q`.
 
+`WO-08.f1` landed the contract edit alone and was refused `tests_failed` for this reason (seeds suite `1 failed, 22 passed`). `WO-08.f2` had the same fence and kept R10 open rather than land red. It confirmed that a seed build from the edited contract succeeds and changes only the `coa_seed.journal` stamp: `canonical-sha256` goes from `f8af589e…` to `57311e23…`. The follow-up work order is fenced to `contracts/p2p-lineage-contract.json` and `seeds/coa_seed.journal`, and its acceptance check is that new stamp plus a green seeds suite.
+
 ## Testing
 
 - `npm test` (through a `python3` subprocess)
