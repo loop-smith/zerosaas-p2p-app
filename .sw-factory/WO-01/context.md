@@ -3,7 +3,7 @@
 # Work Order Entity Index: WO-01
 
 **Initialized At (UTC):** 2026-11-14T02:48:07Z
-**Current Status:** in_progress
+**Current Status:** in_review
 
 
 ## Work Order
@@ -13,10 +13,12 @@
 
 ## Requirements
 
-
+- `REQ-01` (Foundry `c2bd88dc-6cf0-41d2-8a20-6eb60e9b3dbc`). The acceptance criteria are copied into `implementation-plan.md` under "Concrete Acceptance Criteria". This lane had no MCP access, so the requirement body was not re-read live.
+- Governing data contract: `contracts/p2p-lineage-contract.json` (`p2p.stocked-item.lineage-contract.v3`).
 
 ## Blueprints
 
+- None linked to WO-01. The contract's `semanticBindings` (table, key and value column names) serve as the architecture anchor.
 
 
 ## Referenced Blueprints
