@@ -1099,7 +1099,7 @@ export function createWorkbenchEngine({
       return;
     }
 
-    if (action === 'wf0_approve_req' && st.wf0_req_status === 'pending_manager_doa') {
+    if (action === 'wf0_approve_req' && (st.wf0_req_status === 'pending_manager_doa' || (opts.redTeamDemo && opts.actingEmpId))) {
       const actingSeat = queryDoaSeatByCodeOrId(opts.actingEmpId || deal.reqSigner.empId);
       if (actingSeat.limitUsd < deal.catalogEstimateUsd || actingSeat.empId === deal.scPlanner.empId) {
         const errHash = sha256Text(`${dealId}:WF00:DOA_BLOCK:${actingSeat.empId}:${Date.now()}`);
@@ -1447,12 +1447,14 @@ export function createWorkbenchEngine({
       return;
     }
 
-    if (action === 'wf2_dock_receipt' && st.wf1_po_committed === 'done' && st.wf2_dock_received === 'pending') {
-      if (st.wf1_vendor_ack === 'pending') {
-        await executeWorkflowAction(dealId, 'wf1_vendor_ack');
-        deal = enrichDealFromLiveDatabases(sc, st);
+    if (action === 'wf2_dock_receipt' && ((st.wf1_po_committed === 'done' && st.wf2_dock_received === 'pending') || (opts.redTeamDemo && opts.actingEmpId))) {
+      if (!opts.redTeamDemo) {
+        if (st.wf1_vendor_ack === 'pending') {
+          await executeWorkflowAction(dealId, 'wf1_vendor_ack');
+          deal = enrichDealFromLiveDatabases(sc, st);
+        }
+        st.wf1_ack_verified = true;
       }
-      st.wf1_ack_verified = true;
 
       const actingSeat = queryDoaSeatByCodeOrId(opts.actingEmpId || deal.dockSigner.empId);
       const priorHumans = lineageCore.getTransactionLineage(dealId)
@@ -1643,19 +1645,22 @@ export function createWorkbenchEngine({
     }
 
     if (action === 'wf3_test_variance_hold') {
-      if (st.wf2_dock_received !== 'done') {
+      if (st.wf2_dock_received !== 'done' && !opts.redTeamDemo) {
         throw new Error('Complete Warehouse Dock Scan-In (Step 6) first before testing 3-Way Match variance hold.');
       }
+      const basePoAmount = deal.poAmount || deal.catalogEstimateUsd;
+      const baseRecvQty = deal.receivedQty || deal.orderedQty;
+      const baseRecvAmount = deal.receiptAmount || basePoAmount;
       const overbillDeltaUsd = Number(opts.overbillDeltaUsd || 500);
-      const simulatedInvTotal = Number((deal.poAmount + overbillDeltaUsd).toFixed(2));
+      const simulatedInvTotal = Number((basePoAmount + overbillDeltaUsd).toFixed(2));
       const errHash = sha256Text(`${dealId}:WF03:MATCH_HOLD:${simulatedInvTotal}:${Date.now()}`);
-      const msg = `3-WAY MATCH VARIANCE HOLD (HTTP 409): Disputed invoice bills ${fmtUsd(simulatedInvTotal)} vs. PO ${deal.id} (${fmtUsd(deal.poAmount)}) and Dock ${deal.grnId} (${fmtInt(deal.receivedQty)} FT = ${fmtUsd(deal.receiptAmount)}) — +${fmtUsd(overbillDeltaUsd)} over-bill blocked ($0.00 AP / Cash leakage).`;
+      const msg = `3-WAY MATCH VARIANCE HOLD (HTTP 409): Disputed invoice bills ${fmtUsd(simulatedInvTotal)} vs. PO ${deal.id} (${fmtUsd(basePoAmount)}) and Dock ${deal.grnId} (${fmtInt(baseRecvQty)} FT = ${fmtUsd(baseRecvAmount)}) — +${fmtUsd(overbillDeltaUsd)} over-bill blocked ($0.00 AP / Cash leakage).`;
       lineageCore.recordHop({
         txId: dealId,
         stepNum: 3,
         stepName: 'Step 7 · 3-Way Match Variance Hold Blocked',
         sourceElement: `DisputedInvoice.OVERBILL_TEST (+${fmtUsd(overbillDeltaUsd)})`,
-        sourceValue: `Billed ${fmtUsd(simulatedInvTotal)} != Ordered ${fmtUsd(deal.poAmount)} / Received ${fmtUsd(deal.receiptAmount)}`,
+        sourceValue: `Billed ${fmtUsd(simulatedInvTotal)} != Ordered ${fmtUsd(basePoAmount)} / Received ${fmtUsd(baseRecvAmount)}`,
         targetSystem: 'LEDGER',
         targetTable: 'company.journal',
         targetPk: `${deal.id}-MATCH-HOLD`,
@@ -1677,7 +1682,7 @@ export function createWorkbenchEngine({
         layer: '3-Way Match Variance Control (PO == Receiver == Invoice)',
         step: 'WF-03',
         attemptedActor: `Over-Billed Invoice (${fmtUsd(simulatedInvTotal)})`,
-        requiredActor: `Exact 3-Way Match (${fmtUsd(deal.poAmount)})`,
+        requiredActor: `Exact 3-Way Match (${fmtUsd(basePoAmount)})`,
         sha256: errHash,
         message: msg,
       };
@@ -1884,16 +1889,21 @@ export function createWorkbenchEngine({
       return;
     }
 
-    if (action === 'wf4_release_ach' && st.wf4_match_status === 'voucher_posted' && !st.wf4_ach_released) {
-      st.wf3_match_confirmed = true;
+    if (action === 'wf4_release_ach' && ((st.wf4_match_status === 'voucher_posted' && !st.wf4_ach_released) || (opts.redTeamDemo && (opts.actingEmpId || opts.bankAccount)))) {
+      if (!opts.redTeamDemo) st.wf3_match_confirmed = true;
       const t0 = performance.now();
       deal = enrichDealFromLiveDatabases(sc, st);
+      const checkAmt = deal.receiptAmount || deal.poAmount || deal.catalogEstimateUsd;
+      const vchLabel = st.voucherRef || 'VCH-25800';
 
       const actingSeat = queryDoaSeatByCodeOrId(opts.actingEmpId || deal.achSigner.empId);
       const priorHumans = lineageCore.getTransactionLineage(dealId)
         .filter(h => h.actor_type === 'HUMAN' || h.actor_type === 'FLOW_OWNER')
         .map(h => h.actor_id);
-      if (priorHumans.includes(actingSeat.empId) || actingSeat.empId !== deal.achSigner.empId) {
+      const sodPriorHit = opts.actingEmpId
+        ? priorHumans.includes(actingSeat.empId)
+        : (!opts.redTeamDemo && priorHumans.includes(actingSeat.empId));
+      if (sodPriorHit || actingSeat.empId !== deal.achSigner.empId) {
         const errHash = sha256Text(`${dealId}:WF04:SOD_BLOCK:${actingSeat.empId}:${Date.now()}`);
         const msg = `SEGREGATION OF DUTIES BLOCKED (HTTP 403): ${actingSeat.empId} (${actingSeat.name}) acted upstream on ${deal.id} and is prohibited from releasing bank funds. CFO ${deal.achSigner.empId} (${deal.achSigner.name}) required.`;
         lineageCore.recordHop({
@@ -1901,7 +1911,7 @@ export function createWorkbenchEngine({
           stepNum: 4,
           stepName: 'Step 8 · Payment Segregation of Duties Blocked',
           sourceElement: `AttemptedSigner.${actingSeat.empId} (${actingSeat.name})`,
-          sourceValue: `Blocked payment release on ${st.voucherRef} (${fmtUsd(deal.receiptAmount)})`,
+          sourceValue: `Blocked payment release on ${vchLabel} (${fmtUsd(checkAmt)})`,
           targetSystem: 'HRM',
           targetTable: 'hrm_doa_authority_seat',
           targetPk: actingSeat.empId,
@@ -1934,15 +1944,15 @@ export function createWorkbenchEngine({
       }
 
       const settlementAccount = opts.bankAccount || 'Assets:101100-Operating-Checking';
-      if (settlementAccount.includes('101200') && deal.receiptAmount > 5000) {
+      if (settlementAccount.includes('101200') && checkAmt > 5000) {
         const errHash = sha256Text(`${dealId}:WF04:BANK_BLOCK:${settlementAccount}:${Date.now()}`);
-        const msg = `BANK ACCOUNT GUARDRAIL BLOCKED (HTTP 403): Payroll Checking (101200) is ring-fenced and prohibited for vendor payments above $5,000.00 (${fmtUsd(deal.receiptAmount)}). Must disburse from Operating Checking (101100).`;
+        const msg = `BANK ACCOUNT GUARDRAIL BLOCKED (HTTP 403): Payroll Checking (101200) is ring-fenced and prohibited for vendor payments above $5,000.00 (${fmtUsd(checkAmt)}). Must disburse from Operating Checking (101100).`;
         lineageCore.recordHop({
           txId: dealId,
           stepNum: 4,
           stepName: 'Step 8 · Payroll Bank Ring-Fence Blocked',
           sourceElement: `AttemptedAccount.${settlementAccount}`,
-          sourceValue: `Blocked ${fmtUsd(deal.receiptAmount)} vendor check against 101200 Payroll`,
+          sourceValue: `Blocked ${fmtUsd(checkAmt)} vendor check against 101200 Payroll`,
           targetSystem: 'LEDGER',
           targetTable: 'company.journal',
           targetPk: '101200-Payroll-Checking',
@@ -2044,7 +2054,7 @@ export function createWorkbenchEngine({
       st.activeVoiceRole = 'treasury_steward';
       const absFinalPpv = Math.abs(deal.ppvTotalUsd || (deal.catalogEstimateUsd - deal.poAmount));
       const isFavFinal = (deal.ppvTotalUsd ?? -1) <= 0.005;
-      st.lastVoiceBrief = `Check #10045 signed by CFO Meredith Hale for ${fmtUsd(deal.receiptAmount)}, settling 8,000 feet of 2/0 AWG bare copper across 4 barcoded 2,000-foot reels—3,288 pounds net copper stocked at ${fmtUsd(deal.catalogEstimateUsd)} standard cost with a ${fmtUsd(absFinalPpv)} ${isFavFinal ? 'favorable' : 'unfavorable'} purchase price variance. Four headless databases were hit on local disk: InvenTree WMS SQLite, HRM and Django CRM SQLite, our 89-account hledger GAAP journal, and the SHA-256 lineage SQLite ledger.`;
+      st.lastVoiceBrief = `Check #10045 signed by CFO Meredith Hale for ${fmtUsd(deal.receiptAmount)}, settling 8,000 feet of 2/0 AWG bare copper across 4 barcoded 2,000-foot reels—3,288 pounds net copper stocked at ${fmtUsd(deal.catalogEstimateUsd)} standard cost with a ${fmtUsd(absFinalPpv)} ${isFavFinal ? 'favorable' : 'unfavorable'} purchase price variance. Four headless databases were hit on local disk: warehouse management SQLite, HRM and Django CRM SQLite, our 89-account hledger GAAP journal, and the SHA-256 lineage SQLite ledger.`;
       recordAuditEvent(
         dealId,
         'STEP-8-CHECK-PAID',
@@ -2627,15 +2637,70 @@ export function createWorkbenchEngine({
     const d = full.deals[dealId];
     const mf = full.moneyFlow.perDeal[dealId];
     const lens = full.lineage.controlLenses[dealId];
+    const bs = full.financialStatements.balanceSheet;
+    const pnl = full.financialStatements.profitAndLoss;
 
     if (preset === 'sox_db_tour') {
-      const reply = "Welcome to our headless System of Record vault and Super Intelligence control plane. Unlike thin workflow wrappers, this app ships three real MIT open-source databases: InvenTree Warehouse, Django Supplier CRM, and Human-Resources Signing Limits, plus an 89-account GAAP general ledger, mutating live on local disk with zero SaaS seat tax. Our four runtime control layers directly enforce SOX 404, 8090's Know Your Superintelligence framework, and all four layers of the White House Accord on Super Intelligence: I hold a $0.00 signing limit with zero write credentials, five deterministic workflow blocks run every calculation, every hop is SHA-256 hashed for external audit, and four segregated human officers sign every dollar.";
+      const reply = "Welcome to our headless System of Record vault and Super Intelligence control plane. Unlike thin workflow wrappers, this app ships three real MIT open-source databases: Warehouse Management, Django Supplier CRM, and Human-Resources Signing Limits, plus an 89-account GAAP general ledger, mutating live on local disk with zero SaaS seat tax. Our four runtime control layers directly enforce SOX 404, 8090's Know Your Superintelligence framework, and all four layers of the White House Accord on Super Intelligence: I hold a $0.00 signing limit with zero write credentials, five deterministic workflow blocks run every calculation, every hop is SHA-256 hashed for external audit, and four segregated human officers sign every dollar.";
       return { ok: true, transcript: 'SOX, Headless DBs & White House Super Intelligence Tour', reply, spokenText: normalizeKalSpeech(reply), voiceRole: 'treasury_steward', actionExecuted, state: full };
     }
 
     if (preset === 'white_house_si' || q.includes('white house') || q.includes('super intelligence') || q.includes('superintelligence') || q.includes('president')) {
       const reply = "Here is how our architecture enforces the four layers of the White House Accord on Super Intelligence alongside 8090's Know Your Superintelligence framework. Layer one locks Super Intelligence at a $0.00 signing limit with zero database or bank credentials, returning HTTP 403 on any rogue move. Layer two runs internal oversight through deterministic SQL and hledger blocks, never model math. Layer three records a SHA-256 cryptographic lineage across every prompt, OCR scan, and ledger entry for external auditors. And Layer four keeps four segregated human corporate officers and an instant kill-switch in absolute command.";
       return { ok: true, transcript: 'White House Super Intelligence Accord & KYSI 4-Layer Brief', reply, spokenText: normalizeKalSpeech(reply), voiceRole: 'treasury_steward', actionExecuted, state: full };
+    }
+
+    if (!preset) {
+      if (/\b(approve|sign|release|wire|disburse|pay|cut\s+check|issue\s+po)\b/.test(q) && !/\b(who|was|did|is|has|how|what|which|when|limit)\b/.test(q)) {
+        const reply = 'Refused by guardrail. KAL holds a $0.00 Signing Limit and zero database or bank write credentials. Only verified human corporate officers can sign approvals, scan dock receipts, or release cash.';
+        return { ok: true, transcript: cleanPrompt, reply, spokenText: normalizeKalSpeech(reply), voiceRole: 'treasury_steward', actionExecuted, state: full };
+      }
+
+      if (/\b(save|saving|savings|variance|ppv|profit|p&l|income|cheaper|standard\s+cost)\b/.test(q)) {
+        const absPpv = Math.abs(pnl.favorableVarianceGainUsd || (d.catalogEstimateUsd - d.poAmount));
+        const reply = st.wf1_po_committed === 'done'
+          ? `Our annual standard cost for 8,000 feet is ${fmtUsd(d.catalogEstimateUsd)} at $2.89 per foot, while live COMEX spot locked PO-25800 at ${fmtUsd(d.poAmount)} ($${d.unitPrice.toFixed(2)} per foot)—capturing a ${fmtUsd(absPpv)} favorable purchase price variance in GAAP account 501900.`
+          : `Supply Chain's annual standard cost ceiling for 8,000 feet is ${fmtUsd(d.catalogEstimateUsd)} at $2.89 per foot. Once Centralized Purchasing runs the live COMEX spot check at Step 4, any favorable savings book to Purchase Price Variance account 501900.`;
+        return { ok: true, transcript: cleanPrompt, reply, spokenText: normalizeKalSpeech(reply), voiceRole: 'treasury_steward', actionExecuted, state: full };
+      }
+
+      if (/\b(bank|cash|money|checking|funds|treasury|payroll|liquid|account\s+balance)\b/.test(q)) {
+        const totalCashUsd = Number((bs.operatingCashEndingUsd + bs.payrollCashBalanceUsd).toFixed(2));
+        const reply = st.wf4_ach_released
+          ? `Querying our live hledger general ledger right now: Operating Checking 101100 holds ${fmtUsd(bs.operatingCashEndingUsd)} after ${st.checkNumber} paid ${fmtUsd(d.receiptAmount)} from our ${fmtUsd(bs.operatingCashOpeningUsd)} opening balance, and ring-fenced Payroll Checking 101200 holds ${fmtUsd(bs.payrollCashBalanceUsd)} untouched—for ${fmtUsd(totalCashUsd)} total cash in the bank.`
+          : `Querying our live hledger general ledger right now: Operating Checking 101100 holds ${fmtUsd(bs.operatingCashEndingUsd)} and ring-fenced Payroll Checking 101200 holds ${fmtUsd(bs.payrollCashBalanceUsd)}—for ${fmtUsd(totalCashUsd)} total cash in the bank, with $0.00 disbursed so far.`;
+        return { ok: true, transcript: cleanPrompt, reply, spokenText: normalizeKalSpeech(reply), voiceRole: 'treasury_steward', actionExecuted, state: full };
+      }
+
+      if (/\b(inventory|stock|on\s+hand|copper|reel|reels|feet|foot|pound|pounds|weight|warehouse|dock)\b/.test(q)) {
+        const reply = st.wf2_dock_received === 'done'
+          ? `Live warehouse SQLite shows 8,000 feet of 2/0 AWG bare copper on hand across 4 barcoded 2,000-foot master reels—3,288 pounds net copper—valued in GAAP account 121100 at ${fmtUsd(bs.inventoryStdUsd)} annual standard cost.`
+          : `Live warehouse SQLite currently shows 0 feet of 2/0 AWG bare copper on hand against an 8,000-foot minimum—4 barcoded 2,000-foot reels weighing 3,288 pounds are queued to arrive at Receiving Bay 4.`;
+        return { ok: true, transcript: cleanPrompt, reply, spokenText: normalizeKalSpeech(reply), voiceRole: 'ops_steward', actionExecuted, state: full };
+      }
+
+      if (/\b(invoice|ocr|bounding|three-way|3-way|match|payable|payables|grni|bill)\b/.test(q)) {
+        const boxCnt = st.wf3_ocr_result?.boxCount || 28;
+        const reply = st.wf3_mailbox_polled
+          ? `RapidOCR extracted ${boxCnt} bounding boxes from Encore Invoice INV-25800 and verified a $0.00 three-way match across PO-25800, BOL-25800, and INV-25800 for 8,000 feet at ${fmtUsd(d.receiptAmount)}. Trade Accounts Payable 201100 is currently ${fmtUsd(bs.tradeApLiabilityUsd)} and GRNI 201200 is ${fmtUsd(bs.grniLiabilityUsd)}.`
+          : `Encore Invoice INV-25800 has not been matched yet. Trade Accounts Payable 201100 is ${fmtUsd(bs.tradeApLiabilityUsd)} and GRNI Clearing 201200 is ${fmtUsd(bs.grniLiabilityUsd)}.`;
+        return { ok: true, transcript: cleanPrompt, reply, spokenText: normalizeKalSpeech(reply), voiceRole: 'treasury_steward', actionExecuted, state: full };
+      }
+
+      if (/\b(vendor|supplier|encore|mill|payee|who\s+did\s+we\s+buy)\b/.test(q)) {
+        const reply = `Our approved mill supplier in Django CRM SQLite is Encore Wire Corporation in McKinney, Texas, supplying 8,000 feet of 2/0 AWG bare copper across 4 master reels on PO-25800.`;
+        return { ok: true, transcript: cleanPrompt, reply, spokenText: normalizeKalSpeech(reply), voiceRole: 'ops_steward', actionExecuted, state: full };
+      }
+
+      if (/\b(database|databases|sqlite|table|tables|journal|hledger|ledger|balanced|trial\s+balance)\b/.test(q)) {
+        const reply = `All four local databases are live on disk with zero SaaS dependencies: ${full.catalogs.wmsTableCount} tables in Warehouse SQLite, ${full.catalogs.crmTableCount + full.catalogs.hrmTableCount} tables across Django CRM and HRM SQLite, ${full.hledger.accountCount} GAAP accounts in our hledger journal with debits equal credits and ${fmtUsd(bs.totalEndingAssetsUsd)} in total assets, plus ${lens.hopCount} SHA-256 ${lens.hopCount === 1 ? 'hop' : 'hops'} in Lineage SQLite.`;
+        return { ok: true, transcript: cleanPrompt, reply, spokenText: normalizeKalSpeech(reply), voiceRole: 'treasury_steward', actionExecuted, state: full };
+      }
+
+      if (/\b(who\s+signed|who\s+approved|officer|officers|approver|darius|devon|nancy|marcus|duncan|meredith)\b/.test(q)) {
+        const reply = `HRM SQLite enforces segregated signing limits across every seat: KAL holds $0.00, Supply Chain Planner Darius Mercer holds $20,000, Buyer Nancy Rostova holds $50,000, VP Devon Brooks holds $100,000, Marcus Vance scans physical reels at Bay 4, Controller Duncan Vance gates 3-Way Match, and CFO Meredith Hale holds $500,000 on Operating Checking 101100.`;
+        return { ok: true, transcript: cleanPrompt, reply, spokenText: normalizeKalSpeech(reply), voiceRole: 'treasury_steward', actionExecuted, state: full };
+      }
     }
 
     if (preset === 'governance' || q.includes('sox') || q.includes('kysi') || q.includes('governance') || q.includes('signing') || q.includes('security') || q.includes('cfo')) {
@@ -2650,12 +2715,12 @@ export function createWorkbenchEngine({
     if (st.wf4_ach_released) {
       role = 'treasury_steward';
       const absSaved = Math.abs(st.spotSavingsLockedUsd || d.spotSavingsPotentialUsd);
-      reply = `PO-25800 and INV-25800 are stamped PAID via ${st.checkNumber} (${st.achTrace}) for ${fmtUsd(d.receiptAmount)}. Physically, 8,000 feet of 2/0 AWG bare copper—4 barcoded 2,000-foot reels weighing 3,288 pounds—moved from 0 feet into stock at ${fmtUsd(d.catalogEstimateUsd)} standard cost, saving ${fmtUsd(absSaved)}. Four local databases were hit: InvenTree WMS SQLite for the PO and 4 reel stock rows, HRM and Django CRM SQLite for supplier and signing limits, our 89-account hledger GAAP journal for 3 balanced entries, and SHA-256 lineage SQLite across ${lens.hopCount} audit hops.`;
+      reply = `PO-25800 and INV-25800 are stamped PAID via ${st.checkNumber} (${st.achTrace}) for ${fmtUsd(d.receiptAmount)}. Physically, 8,000 feet of 2/0 AWG bare copper—4 barcoded 2,000-foot reels weighing 3,288 pounds—moved from 0 feet into stock at ${fmtUsd(d.catalogEstimateUsd)} standard cost, saving ${fmtUsd(absSaved)}. Four local databases were hit: warehouse management SQLite for the PO and 4 reel stock rows, HRM and Django CRM SQLite for supplier and signing limits, our 89-account hledger GAAP journal for 3 balanced entries, and SHA-256 lineage SQLite across ${lens.hopCount} audit hops.`;
     } else if (st.wf4_match_status === 'voucher_posted') {
       role = 'treasury_steward';
       reply = `RapidOCR tagged Encore Invoice INV-25800 and verified a $0.00 3-Way Match at ${fmtUsd(d.receiptAmount)}. Waiting at Human Checkpoint 4 for CFO Meredith Hale to approve payment.`;
     } else if (st.wf2_dock_received === 'done') {
-      reply = `Marcus Vance scanned all 4 barcoded reels—8,000 feet—into InvenTree stock on BOL-25800 and booked ${fmtUsd(d.receiptAmount)} to GRNI. Ready for RapidOCR invoice tagging and 3-Way Match.`;
+      reply = `Marcus Vance scanned all 4 barcoded reels—8,000 feet—into warehouse stock on BOL-25800 and booked ${fmtUsd(d.receiptAmount)} to GRNI. Ready for RapidOCR invoice tagging and 3-Way Match.`;
     } else if (st.wf1_po_committed === 'done') {
       reply = `Centralized Purchasing placed PO-25800 at $${d.unitPrice.toFixed(2)} per foot (${fmtUsd(d.poAmount)}), saving ${fmtUsd(st.spotSavingsLockedUsd || d.spotSavingsPotentialUsd)}, and Encore acknowledged delivery on ENC-OA-2026-884192. Waiting at Human Checkpoint 3 for Marcus at the dock.`;
     } else if (st.wf0_req_status === 'approved') {
@@ -2663,7 +2728,7 @@ export function createWorkbenchEngine({
     } else if (st.wf0_req_status === 'pending_manager_doa') {
       reply = `Planner Darius Mercer confirmed the 8,000-foot buy (${fmtUsd(d.catalogEstimateUsd)} standard). Because that exceeds his $20,000 Signing Limit, we are paused at Human Checkpoint 2 for VP Devon Brooks ($100,000 Signing Limit).`;
     } else {
-      reply = `WMS stock-out active: InvenTree shows 0 feet of 2/0 AWG bare copper on hand against an 8,000-foot minimum (${fmtUsd(d.catalogEstimateUsd)} standard). Paused at Human Checkpoint 1 for Supply Chain Planner Darius Mercer.`;
+      reply = `WMS stock-out active: our warehouse database shows 0 feet of 2/0 AWG bare copper on hand against an 8,000-foot minimum (${fmtUsd(d.catalogEstimateUsd)} standard). Paused at Human Checkpoint 1 for Supply Chain Planner Darius Mercer.`;
     }
 
     return {
@@ -2701,6 +2766,8 @@ export function createWorkbenchEngine({
         actingEmpId,
         attemptDetail,
         scannedBarcodes,
+        redTeamDemo,
+        overbillDeltaUsd,
       } = body;
       await executeWorkflowAction(dealId, action, {
         forceLive,
@@ -2708,6 +2775,8 @@ export function createWorkbenchEngine({
         actingEmpId,
         attemptDetail,
         scannedBarcodes,
+        redTeamDemo,
+        overbillDeltaUsd,
       });
       return getFullState();
     },

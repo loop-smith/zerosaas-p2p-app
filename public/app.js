@@ -545,7 +545,11 @@
       }
 
       const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRec) { await askKalPreset('status'); return; }
+      if (!SpeechRec) {
+        const typed = window.prompt('Ask KAL a live bank, inventory, invoice, or ledger question:');
+        if (typed && typed.trim()) await askKalPrompt(typed.trim());
+        return;
+      }
       if (isListening && recognition) { recognition.stop(); return; }
       recognition = new SpeechRec();
       recognition.lang = 'en-US';
@@ -929,7 +933,7 @@
     async function runGuardrailTest(action, extra = {}) {
       closeModal();
       setView('workflow');
-      await executeStewardSequence([{ action, extra, label: 'Testing deterministic kernel guardrail…' }]);
+      await executeStewardSequence([{ action, extra: { ...extra, redTeamDemo: true }, label: 'Testing deterministic kernel guardrail…' }]);
     }
 
     function clearGuardrailBanner() {
@@ -3087,28 +3091,28 @@
             </div>
             <div style="border:1px solid var(--border-strong);background:var(--bg-subtle);border-radius:8px;padding:11px;">
               <div style="font-weight:800;font-size:12px;">2. Planner Darius Exceeds $20k Signing Limit</div>
-              <div style="font-size:11px;color:var(--text-sec);margin:4px 0 9px;">Requires Step 2 completed. Darius ($20k limit) attempts to self-approve ${fmtUsd(d.catalogEstimateUsd)} requisition (➔ HTTP 403).</div>
-              <button class="btn-top" ${st.wf0_req_status !== 'pending_manager_doa' ? 'disabled' : ''} onclick="runGuardrailTest('wf0_approve_req', { actingEmpId: 'EMP-0021' })">🚫 Test Darius Self-Approve (403)</button>
+              <div style="font-size:11px;color:var(--text-sec);margin:4px 0 9px;">Darius ($20k limit) attempts to self-approve ${fmtUsd(d.catalogEstimateUsd)} requisition against HRM SQLite (➔ HTTP 403).</div>
+              <button class="btn-top" onclick="runGuardrailTest('wf0_approve_req', { actingEmpId: 'EMP-0021' })">🚫 Test Darius Self-Approve (403)</button>
             </div>
             <div style="border:1px solid var(--border-strong);background:var(--bg-subtle);border-radius:8px;padding:11px;">
               <div style="font-weight:800;font-size:12px;">3. Buyer Nancy Tries to Scan Own PO at Dock</div>
-              <div style="font-size:11px;color:var(--text-sec);margin:4px 0 9px;">Requires PO issued (Step 5). Purchasing cannot fake physical warehouse receiving (➔ HTTP 403 SoD).</div>
-              <button class="btn-top" ${st.wf1_po_committed !== 'done' || st.wf2_dock_received === 'done' ? 'disabled' : ''} onclick="runGuardrailTest('wf2_dock_receipt', { actingEmpId: 'EMP-0002' })">🚫 Test Buyer Dock Scan (403)</button>
+              <div style="font-size:11px;color:var(--text-sec);margin:4px 0 9px;">Purchasing cannot fake physical warehouse receiving at Bay 4 (➔ HTTP 403 SoD).</div>
+              <button class="btn-top" onclick="runGuardrailTest('wf2_dock_receipt', { actingEmpId: 'EMP-0002' })">🚫 Test Buyer Dock Scan (403)</button>
             </div>
             <div style="border:1px solid var(--border-strong);background:var(--bg-subtle);border-radius:8px;padding:11px;">
               <div style="font-weight:800;font-size:12px;">4. Disputed Vendor Invoice Over-Bills +$500</div>
-              <div style="font-size:11px;color:var(--text-sec);margin:4px 0 9px;">Requires Dock Scan completed (Step 6). Simulates +$500 invoice variance (➔ HTTP 409 Match Hold, $0 AP).</div>
-              <button class="btn-top" ${st.wf2_dock_received !== 'done' ? 'disabled' : ''} onclick="runGuardrailTest('wf3_test_variance_hold')">🚫 Test +$500 Over-Bill Hold (409)</button>
+              <div style="font-size:11px;color:var(--text-sec);margin:4px 0 9px;">Simulates +$500 supplier invoice variance against PO &amp; Receiver (➔ HTTP 409 Match Hold, $0 AP).</div>
+              <button class="btn-top" onclick="runGuardrailTest('wf3_test_variance_hold')">🚫 Test +$500 Over-Bill Hold (409)</button>
             </div>
             <div style="border:1px solid var(--border-strong);background:var(--bg-subtle);border-radius:8px;padding:11px;">
               <div style="font-weight:800;font-size:12px;">5. Buyer Nancy Tries to Cut the Bank Check</div>
-              <div style="font-size:11px;color:var(--text-sec);margin:4px 0 9px;">Requires Step 7 matched. Purchasing is locked out of cash disbursement (➔ HTTP 403 SoD; CFO required).</div>
-              <button class="btn-top" ${st.wf4_match_status !== 'voucher_posted' || st.wf4_ach_released ? 'disabled' : ''} onclick="runGuardrailTest('wf4_release_ach', { actingEmpId: 'EMP-0002' })">🚫 Test Buyer Cash Release (403)</button>
+              <div style="font-size:11px;color:var(--text-sec);margin:4px 0 9px;">Purchasing is locked out of cash disbursement (➔ HTTP 403 SoD; CFO required).</div>
+              <button class="btn-top" onclick="runGuardrailTest('wf4_release_ach', { actingEmpId: 'EMP-0002' })">🚫 Test Buyer Cash Release (403)</button>
             </div>
             <div style="border:1px solid var(--border-strong);background:var(--bg-subtle);border-radius:8px;padding:11px;">
               <div style="font-weight:800;font-size:12px;">6. Attempt Vendor Check from 101200 Payroll Bank</div>
-              <div style="font-size:11px;color:var(--text-sec);margin:4px 0 9px;">Requires Step 7 matched. Protects ring-fenced Payroll Checking 101200 from supplier spend (➔ HTTP 403).</div>
-              <button class="btn-top" ${st.wf4_match_status !== 'voucher_posted' || st.wf4_ach_released ? 'disabled' : ''} onclick="runGuardrailTest('wf4_release_ach', { bankAccount: 'Assets:101200-Payroll-Checking' })">🚫 Test Payroll Bank Block (403)</button>
+              <div style="font-size:11px;color:var(--text-sec);margin:4px 0 9px;">Protects ring-fenced Payroll Checking 101200 from supplier spend (➔ HTTP 403).</div>
+              <button class="btn-top" onclick="runGuardrailTest('wf4_release_ach', { bankAccount: 'Assets:101200-Payroll-Checking' })">🚫 Test Payroll Bank Block (403)</button>
             </div>
           </div>
         `;
