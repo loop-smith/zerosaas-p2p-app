@@ -784,14 +784,14 @@
           if (!okStep1 || myAuto !== kalAutopilotEpoch) return;
           await waitPauseAware(700);
           if (myAuto !== kalAutopilotEpoch) return;
-        } else if (skipBrief && stepCur === 0 && (!stInit || !stInit.kal_started)) {
+        } else if (skipBrief && stepCur === 0) {
           deskSubView = 'auto';
           const okStep1 = await executeStewardSequence(
             [{ action: 'wf0_detect_stockout', label: 'Opening Step 1 — live WMS copper stock-out signal (0 FT < 8,000 FT)…' }],
             { stripLeadingGoodDay: true }
           );
           if (!okStep1 || myAuto !== kalAutopilotEpoch) return;
-          await waitPauseAware(700);
+          await waitPauseAware(1500);
           if (myAuto !== kalAutopilotEpoch) return;
         } else {
           deskSubView = 'auto';
@@ -3650,7 +3650,12 @@
         if (cmd === 'start') {
           if (typeof ev.data.stopAtHumanGates === 'boolean') stopAtHumanGates = ev.data.stopAtHumanGates;
           deskSubView = 'auto';
-          void startKalFullDemo(true);
+          (async () => {
+            if (ev.data.fresh && STATE && computeStepIndex(STATE.runtimeState?.[selectedDeal]) > 0) {
+              await resetDemo(true);
+            }
+            await startKalFullDemo(true);
+          })();
         } else if (cmd === 'setStopAtHumanGates') {
           stopAtHumanGates = Boolean(ev.data.stop);
         } else if (cmd === 'pause') {

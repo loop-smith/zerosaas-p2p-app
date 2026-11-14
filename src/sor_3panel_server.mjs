@@ -19,7 +19,7 @@ import { createWorkbenchEngine, SoxGuardrailError } from './workbench_engine.mjs
 const MAX_BODY_BYTES = 64 * 1024;
 const LOOPBACK_HOST = /^(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/i;
 const LOOPBACK_ORIGIN = /^http:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/i;
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.pdf': 'application/pdf', '.webm': 'video/webm' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.png': 'image/png', '.pdf': 'application/pdf', '.webm': 'video/webm' };
 
 const PLACEHOLDER = `<!doctype html><meta charset="utf-8"><title>ZeroSaaS P2P · PO-25800</title>
 <body style="font:14px system-ui;margin:2rem"><h1>ZeroSaaS P2P kernel online</h1>
