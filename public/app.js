@@ -991,7 +991,7 @@
     }
 
     function renderLiveHeadlessSorSpine(d, st, stepIdx) {
-      const cat = STATE.catalogs || { wmsTableCount: 115, hrmTableCount: 8, crmTableCount: 150, fkMap: { poCount: 0 } };
+      const cat = STATE.catalogs || { wmsTableCount: 119, hrmTableCount: 5, crmTableCount: 151, fkMap: { poCount: 0 } };
       const fsData = STATE.financialStatements || {};
       const bs = fsData.balanceSheet || { operatingCashEndingUsd: 250000, inventoryStdUsd: 0 };
       const lens = STATE.lineage?.controlLenses?.[selectedDeal] || { hopCount: 1 };
@@ -1340,7 +1340,7 @@
                 <div>
                   <div class="sheet-top">
                     <div>
-                      <div class="sheet-kicker">Headless WMS DB · wms_inventree.sqlite3 (115 Tables)</div>
+                      <div class="sheet-kicker">Headless WMS DB · wms_inventree.sqlite3 (119 Tables)</div>
                       <div class="sheet-title">Live SQLite Stock Trigger · part_part JOIN stock_stockitem</div>
                     </div>
                     <span class="badge b-hold">0 FT &lt; 8,000 MIN</span>
