@@ -62,7 +62,7 @@ function serveStatic(res, publicDir, pathname) {
   const root = path.resolve(publicDir);
   let decoded;
   try {
-    decoded = decodeURIComponent(pathname === '/' ? '/index.html' : pathname);
+    decoded = decodeURIComponent(pathname === '/' ? '/index.html' : (pathname === '/favicon.ico' ? '/favicon.svg' : pathname));
   } catch {
     return send(res, 400, { ok: false, code: 'BAD_PATH' });
   }
