@@ -52,7 +52,7 @@ A self-contained, **`100%` MIT-licensed industrial P2P workflow application** on
 | `GET /api/state` | Unified workbench + deterministic kernel snapshot (`state`, `deals`, `runtimeState`, `sorVault`, `hledger`, `financialStatements`) |
 | `POST /api/step` & `POST /api/step/:n` | Execute workflow steps `1..8` and red-team guardrail probes (`403` / `409` / `200`) |
 | `POST /api/reset` | Reset sandbox SQLite DBs, journal, artifacts, and lineage hops (`SYSTEM` / human only; `403` for `KAL`) |
-| `GET /api/table?db=wms\|crm\|hrm&table=...` | Live read-only SQLite table & row explorer across all `275` brownfield tables |
+| `GET /api/table?system=wms\|crm\|hrm&table=...` (or `db=`) | Live read-only SQLite table & row explorer across all `275` brownfield tables |
 | `GET /api/copper-spot` & `GET /api/comex` | Live COMEX Copper (`HG`) spot quote + ASTM B8 `$2.70/FT` conversion |
 | `GET /api/invoice-image` | Rendered `INV-25800` scan PNG for the inline 28-box RapidOCR overlay |
 | `GET /api/invoice-pdf` & `GET /api/trade-pdf` & `GET /docs/:file` | Path-traversal-guarded PDF artifact streaming (`PO`, `OA`, `BOL`, `PS`, `INV`) |
@@ -83,7 +83,7 @@ The application was built and refined across **4 closed-loop rounds** in **8090 
     - `SF WO-15` (`3988d7f2-c356-487d-9ed2-9a1c045d3ee1`) ➔ `000bf83`
     - `SF WO-16` (`bd3f7822-1571-4b81-80ca-6a32215a25aa`) ➔ `116b75b`
     - `SF WO-17` (`78e025ce-ac9b-4714-a769-4b38767baa9d`) ➔ `f0e0f5c`
-    - `SF WO-18` (`346dd5b4-37e7-45ed-bca0-6d36528bd0c6`) ➔ Round 4 documentation, governance & hygiene seal
+    - `SF WO-18` (`346dd5b4-37e7-45ed-bca0-6d36528bd0c6`) ➔ `adfec36d`
 
 See **[`docs/software-factory-trace.md`](./docs/software-factory-trace.md)** for the full forward and backward traceability matrix.
 
@@ -97,10 +97,10 @@ See **[`docs/software-factory-trace.md`](./docs/software-factory-trace.md)** for
 | Rename follow-up (`targetRepo` & seed journal digest) | `WO-08` ➔ `T20` | `8721678d` ➔ `c1d69467` | ✅ Closed |
 | SF WO-13 White Enterprise Workbench & brand (`THM-2`) | `WO-13` | `c5026200` | ✅ Built |
 | SF WO-14 Interactive parity + zero-secret voice proxy | `WO-14` + `T21` | `44cad6d1`, `465c3cd9` | ✅ Built |
-| SF WO-15 Streaming female KAL voice, phonetic lexicon & RapidOCR `/mint`+`/scan` (`THM-4`) | `WO-15` | `000bf83` | 🔄 In Qualify Review |
-| SF WO-16 1:1 3-panel workbench glass, RF laser scan, inline OCR & Check `#10045` (`THM-4`) | `WO-16` | `116b75b` | 🔄 In Qualify Review |
-| SF WO-17 275-table SQLite explorer, COMEX spot subview, cross-platform `hledger` & 13 routes (`THM-4`) | `WO-17` | `f0e0f5c` | 🔄 In Qualify Review |
-| SF WO-18 Internal prefix scrub, `EO 14434` × `KYSI` governance & Round 4 trace (`THM-4`) | `WO-18` | `HEAD` | 🔄 In Qualify Review |
+| SF WO-15 Streaming female KAL voice, phonetic lexicon & RapidOCR `/mint`+`/scan` (`THM-4`) | `WO-15` | `000bf83e` | ✅ PASS |
+| SF WO-16 1:1 3-panel workbench glass, RF laser scan, inline OCR & Check `#10045` (`THM-4`) | `WO-16` | `116b75b5` | ✅ PASS |
+| SF WO-17 275-table SQLite explorer, COMEX spot subview, cross-platform `hledger` & 13 routes (`THM-4`) | `WO-17` | `f0e0f5cd` | ✅ PASS |
+| SF WO-18 Internal prefix scrub, `EO 14434` × `KYSI` governance & Round 4 trace (`THM-4`) | `WO-18` | `adfec36d` | ✅ PASS |
 
 ## Verification Suite
 

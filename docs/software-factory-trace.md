@@ -73,10 +73,10 @@ The SF Work Orders operate in a live 2-way **Refinery ➔ Foundry ➔ Planner �
 | **SF WO-12** | Harden live `/api/step/:n` route contracts and adversarial replay guards (`THM-1`) | `WO-04-A.f1` + `WO-06` + `T19.f1` | `9094b2bb`, `fca1c225`, `cae71057` | `WO-04-A.f1.q` / `WO-06.q` / `T19.f1.q`: **PASS** | ✅ Completed / PASS |
 | **SF WO-13** | Implement ZeroSaaS P2P White Enterprise Workbench & Brand Redesign (`THM-2`) | `WO-13` | `c5026200` | Superseded & carried forward into Round 4 (`WO-16`) | ✅ Built |
 | **SF WO-14** | Implement ZeroSaaS P2P Interactive Parity + zero-secret voice proxy | `WO-14` + `T21` | `44cad6d1`, `465c3cd9` | Carried forward into Round 4 (`WO-15`, `WO-16`) | ✅ Built |
-| **SF WO-15** | Streaming female KAL voice (`EXAVITQu4vr4xnSDxMaL`), controller phonetic lexicon & 28-box RapidOCR `/mint`+`/scan` (`THM-4`) | `WO-15` | `000bf83` | In-fence 40/40 sidecar + E2E green; awaiting cross-family Qualify | 🔄 In Review |
-| **SF WO-16** | 1:1 3-panel workbench glass, 4-reel RF laser scan, inline OCR invoice, Check `#10045` & `WO 1-18` view (`THM-4`) | `WO-16` | `116b75b` | In-fence 7/7 static + 16/16 client green; awaiting cross-family Qualify | 🔄 In Review |
-| **SF WO-17** | 275-table SQLite explorer (`151`/`119`/`5`), live COMEX spot subview, cross-platform `hledger` & 13-route workbench engine (`THM-4`) | `WO-17` | `f0e0f5c` | In-fence 24/24 seed + full E2E green; awaiting cross-family Qualify | 🔄 In Review |
-| **SF WO-18** | Scrub internal task prefixes, document `EO 14434` × `KYSI` governance & update Software Factory trace (`THM-4`) | `WO-18` | `HEAD` | In-fence 0 forbidden strings + all suites green; awaiting cross-family Qualify | 🔄 In Review |
+| **SF WO-15** | Streaming female KAL voice (`EXAVITQu4vr4xnSDxMaL`), controller phonetic lexicon & 28-box RapidOCR `/mint`+`/scan` (`THM-4`) | `WO-15` | `000bf83e` | `WO-15..WO-18.q`: **PASS** (40/40 sidecar + voice E2E green) | ✅ Completed / PASS |
+| **SF WO-16** | 1:1 3-panel workbench glass, 4-reel RF laser scan, inline OCR invoice, Check `#10045` & `WO 1-18` view (`THM-4`) | `WO-16` | `116b75b5` | `WO-15..WO-18.q`: **PASS** (7/7 static + 16/16 client green) | ✅ Completed / PASS |
+| **SF WO-17** | 275-table SQLite explorer (`151`/`119`/`5`), live COMEX spot subview, cross-platform `hledger` & 13-route workbench engine (`THM-4`) | `WO-17` | `f0e0f5cd` | `WO-15..WO-18.q`: **PASS** (24/24 seed + full E2E green) | ✅ Completed / PASS |
+| **SF WO-18** | Scrub internal task prefixes, document `EO 14434` × `KYSI` governance & update Software Factory trace (`THM-4`) | `WO-18` | `adfec36d` | `WO-15..WO-18.q`: **PASS** (0 forbidden strings + all suites green) | ✅ Completed / PASS |
 
 ### Validator Round-Trip 4 (`FB-5` ➔ `THM-4` ➔ `SF WO-15` .. `SF WO-18`) & `EO 14434` × `KYSI` Governance
 
@@ -120,7 +120,7 @@ The SF Work Orders operate in a live 2-way **Refinery ➔ Foundry ➔ Planner �
 | `000bf83` | Add streaming female KAL voice, controller phonetic lexicon, and 28-box RapidOCR `/mint`+`/scan` parity | `WO-15` | SF WO-15 (`FB-5`, `THM-4`) | 40/40 sidecar + voice E2E green |
 | `116b75b` | Port 1:1 golden-master 3-panel workbench glass, RF laser scan, inline OCR invoice, and Check `#10045` | `WO-16` | SF WO-16 (`FB-5`, `THM-4`) | 7/7 static + 16/16 client tests green |
 | `f0e0f5c` | Add 275-table brownfield SQLite explorer, live COMEX spot subview, cross-platform `hledger`, and 13-route workbench engine | `WO-17` | SF WO-17 (`FB-5`, `THM-4`) | 24/24 seed + full Golden-Master E2E green |
-| `HEAD` | Scrub internal task prefixes, document `EO 14434` × `KYSI` governance, and update Software Factory trace | `WO-18` | SF WO-18 (`FB-5`, `THM-4`) | 0 forbidden strings + 100% test gate green |
+| `adfec36d` | Scrub internal task prefixes, document `EO 14434` × `KYSI` governance, and update Software Factory trace | `WO-18` | SF WO-18 (`FB-5`, `THM-4`) | **PASS** (`WO-15..WO-18.q` + `119`-table & `db=` alias follow-up closed) |
 
 ## 5. Qualify Review Ledger
 
@@ -135,7 +135,7 @@ The SF Work Orders operate in a live 2-way **Refinery ➔ Foundry ➔ Planner �
 | `T19.q2` | `11a63009` | `9094b2bb` | **FAIL** | Closed by `T19.f1` (`cae71057`) |
 | `T19.f1.q` | `cae71057` | `11a63009` | **PASS** | Closes `T19.q2` |
 | `WO-08.q` ➔ `T20` | `c1d69467` | `6db3195f` | **PASS** | Closes `targetRepo` & journal `canonical-sha256` (`57311e23…`) |
-| `WO-15..WO-18.q` | `feat/wo15-golden-master-parity` | `465c3cd9` | Ready | Staged for independent cross-family review |
+| `WO-15..WO-18.q` | `adfec36d` | `465c3cd9` | **PASS** | `119`-table WMS desk copy & `/api/table?db=` alias follow-up closed |
 
 ## 6. Per-WO Evidence Index (`.sw-factory/`)
 
@@ -150,4 +150,4 @@ The SF Work Orders operate in a live 2-way **Refinery ➔ Foundry ➔ Planner �
 | `SF WO-12` | `.sw-factory/WO-12/` | APPROVED (`FB-1`, `FB-2`, `THM-1`, `T20`) | ✅ Closed |
 | `SF WO-13` | `.sw-factory/WO-13/` | APPROVED (`REQ-P2P-012`..`020`) | ✅ Closed |
 | `SF WO-14` | `.sw-factory/WO-14/` | APPROVED (interactive voice, RF, OCR & check parity) | ✅ Closed |
-| `SF WO-15` .. `SF WO-18` | `.sw-factory/WO-15/` | APPROVED (Round 4 full-stack Golden-Master parity, `FB-5` ➔ `THM-4`) | 🔄 Ready for Qualify Review |
+| `SF WO-15` .. `SF WO-18` | `.sw-factory/WO-15/` | APPROVED (`WO-15..WO-18.q` **PASS**, `FB-5` ➔ `THM-4`) | ✅ Closed |

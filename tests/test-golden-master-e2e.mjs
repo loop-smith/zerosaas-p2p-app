@@ -108,6 +108,8 @@ try {
   assert.equal(vStatus.sttModel, 'scribe_v1');
 
   const crmTbl = await (await fetch(`${BASE}/api/table?system=crm&table=crm_company`)).json();
+  const crmDbAlias = await (await fetch(`${BASE}/api/table?db=crm&table=accounts_account`)).json();
+  assert.equal(crmDbAlias.system, 'crm', '/api/table?db=crm alias must route to CRM SQLite');
   assert.equal(crmTbl.totalRows, 1);
   const hrmTbl = await (await fetch(`${BASE}/api/table?system=hrm&table=hrm_doa_authority_seat`)).json();
   assert.equal(hrmTbl.totalRows, 7);

@@ -1323,7 +1323,7 @@
                 <div class="cp-eyebrow">📡 STEP 1 OF 8 · HEADLESS WMS SQLITE DEMAND SIGNAL (<code>WO-01 · WFB-P2M-1A</code>)</div>
                 <div class="cp-title">Live SQLite Stock-Out: 0 FT Bare Copper On Hand (&lt; 8,000 FT Min) — Start KAL Steward</div>
                 <div class="cp-desc">
-                  Live query against headless <code>wms_inventree.sqlite3</code> (115 tables) detected <code>quantity=0 &lt; minimum_stock=8000</code>. Click <strong>Start KAL</strong> — she greets with <em>"Good day…"</em> and routes <strong>REQ-25800</strong> into Darius Mercer's queue.
+                  Live query against headless <code>wms_inventree.sqlite3</code> (119 tables) detected <code>quantity=0 &lt; minimum_stock=8000</code>. Click <strong>Start KAL</strong> — she greets with <em>"Good day…"</em> and routes <strong>REQ-25800</strong> into Darius Mercer's queue.
                 </div>
               </div>
               <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">

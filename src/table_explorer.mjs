@@ -44,7 +44,7 @@ export function queryTableRows(dbPathsBySystem, system, tableName, limit = 30) {
 
 export function handleTableRoute(parsedUrl, res, dbPathsBySystem) {
   try {
-    const sys = parsedUrl.searchParams.get('system') || 'wms';
+    const sys = parsedUrl.searchParams.get('system') || parsedUrl.searchParams.get('db') || 'wms';
     const tbl = parsedUrl.searchParams.get('table') || 'part_part';
     const limit = parsedUrl.searchParams.get('limit') || '30';
     const data = queryTableRows(dbPathsBySystem, sys, tbl, limit);
