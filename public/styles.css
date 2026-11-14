@@ -86,6 +86,23 @@ body {
   transition: all 0.12s;
 }
 .btn-top:hover { background: var(--bg-subtle); color: var(--text-main); }
+.presenter-pause-btn {
+  border-color: #93c5fd;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 800;
+}
+.presenter-pause-btn:hover { background: #dbeafe; color: #1e40af; }
+.presenter-pause-btn.paused {
+  background: #fef3c7;
+  border-color: #f59e0b;
+  color: #92400e;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.22);
+}
+body.presenter-paused .ocr-laser-bar,
+body.presenter-paused .rf-laser-beam {
+  animation-play-state: paused !important;
+}
 
 .voice-btn {
   padding: 5px 12px; border-radius: 999px; font-size: 11.5px; font-weight: 700;
@@ -212,7 +229,10 @@ body {
 }
 .steps-head {
   display: flex; justify-content: space-between; align-items: center; margin-bottom: 7px;
-  font-size: 11px;
+  font-size: 11px; gap: 8px; min-width: 0;
+}
+.steps-head > div:first-child {
+  min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .steps-grid {
   display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 5px;
@@ -285,6 +305,11 @@ body {
 .btn-approve.blue { background: #1d4ed8; box-shadow: 0 3px 8px rgba(29, 78, 216, 0.25); }
 .btn-approve.blue:hover:not(:disabled) { background: #1e40af; }
 
+.desk-banner > div:first-child {
+  flex: 1;
+  min-width: 0;
+}
+
 .desk-stage {
   flex: 1;
   min-height: 0;
@@ -297,14 +322,6 @@ body {
   overflow-x: hidden;
 }
 .desk-stage.equal { grid-template-columns: 1fr 1fr; }
-
-@media (max-width: 1360px), (max-height: 830px) {
-  .desk-banner { padding: 8px 12px; gap: 10px; flex-wrap: wrap; }
-  .cp-title { font-size: 13px; }
-  .cp-desc { font-size: 10.8px; line-height: 1.3; }
-  .desk-stage { padding: 8px 11px; gap: 9px; }
-  .doc-sheet { padding: 9px 11px; overflow: visible; }
-}
 
 /* CRISP OFFICER DOCUMENT SHEET */
 .doc-sheet {
@@ -608,6 +625,17 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--text-sec);
+  min-width: 0;
+}
+.sor-db-top > span:first-child {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sor-db-top > span:last-child {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 .sor-db-val {
   font-family: var(--mono);
@@ -906,4 +934,92 @@ pre.ledger-pre {
   position: absolute; left: 0; right: 0; top: 50%; height: 2.5px; margin-top: -1px;
   background: #ef4444; box-shadow: 0 0 8px 2px rgba(239, 68, 68, 0.95);
   animation: rfLaserFlash 0.38s ease-out forwards; pointer-events: none;
+}
+
+/* LAPTOP & SMALLER-MONITOR COMPACT FIT (PLACED AT END OF CASCADE TO WIN SPECIFICITY) */
+@media (max-width: 1460px) {
+  .shell { grid-template-columns: 196px minmax(0, 1fr) 324px; }
+  .steps-head > div:last-child { display: none; }
+  .left-rail { padding: 8px 8px; gap: 6px; }
+  .nav-btn { padding: 6px 8px; font-size: 11px; }
+  .btn-kal-start { padding: 8px 9px; font-size: 11px; }
+  .order-summary-box { padding: 6px 8px; gap: 3px; }
+  .os-row { font-size: 10.2px; }
+  .rail-drawer-btn { padding: 5px 8px; font-size: 10.8px; }
+  .right-rail { padding: 7px 9px; gap: 6px; }
+  .gl-card { padding: 6px 8px; }
+  .doc-viewer-card { padding: 6px 8px; gap: 4px; }
+}
+
+@media (max-width: 1520px), (max-height: 880px) {
+  .topbar { height: 36px; padding: 0 11px; gap: 7px; }
+  .brand-title { font-size: 13px; }
+  .brand-sub { font-size: 10.4px; }
+  .btn-top, .voice-btn { padding: 3.5px 8px; font-size: 10.5px; }
+  .pill { padding: 3px 8px; font-size: 10px; }
+
+  .center-stage { padding: 5px 10px; gap: 5px; }
+  .kal-bar { height: 30px; padding: 0 9px; gap: 7px; }
+  .kal-badge { font-size: 9.2px; padding: 2px 7px; }
+  .kal-msg { font-size: 10.4px; }
+
+  .steps-card { padding: 4px 8px; }
+  .steps-head { margin-bottom: 3px; font-size: 10.2px; }
+  .steps-grid { gap: 4px; }
+  .step-cell { padding: 3px 5px; gap: 1px; }
+  .step-num { font-size: 9.1px; }
+  .step-kind { font-size: 7.6px; padding: 0.5px 3px; }
+  .step-name { font-size: 9.6px; }
+  .step-who { font-size: 8.6px; }
+
+  .sor-live-spine { gap: 5px; }
+  .sor-db-card { padding: 3px 7px; }
+  .sor-db-top { font-size: 8.3px; }
+  .sor-db-val { font-size: 9.3px; margin-top: 1px; }
+  .sor-db-sub { display: none; }
+
+  /* Keep the active step banner compact on ONE slim row so the bottom desk-stage gets maximum vertical space! */
+  .desk-banner { padding: 5px 10px !important; gap: 9px; flex-wrap: nowrap; }
+  .cp-eyebrow { font-size: 8.6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cp-title {
+    font-size: 11.8px;
+    margin-top: 1px;
+    line-height: 1.2;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .cp-desc {
+    font-size: 10px;
+    line-height: 1.22;
+    margin-top: 1px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .btn-approve { padding: 6.5px 10px !important; font-size: 11px; gap: 5px; }
+  .btn-guard-inline { padding: 4.5px 7.5px; font-size: 9.5px; }
+
+  .desk-stage { padding: 6px 9px; gap: 8px; }
+  .doc-sheet { padding: 6px 9px; overflow: visible; }
+  .sheet-top { padding-bottom: 3.5px; }
+  .sheet-kicker { font-size: 8.6px; }
+  .sheet-title { font-size: 11.2px; }
+  .kv-list { gap: 2.5px; margin: 3.5px 0; }
+  .kv-row { font-size: 10.3px; padding: 2px 0; }
+  .sig-strip { padding: 4px 8px !important; font-size: 9.8px; }
+  .api-terminal { padding: 4.5px 8px !important; font-size: 9.5px; line-height: 1.28; }
+  .api-url-pill { font-size: 9.3px; padding: 1.5px 6px; }
+  .live-ocr-stage { min-height: 195px; padding: 3px; }
+  .live-ocr-inner { max-width: 286px; }
+  .corp-check-paper { padding: 6px 12px 4px; }
+  .corp-check-stub { padding: 4.5px 11px; gap: 8px; }
+}
+
+@media (max-height: 750px) {
+  .cp-desc { -webkit-line-clamp: 1; }
+  .live-ocr-stage { min-height: 170px; }
+  .live-ocr-inner { max-width: 248px; }
 }

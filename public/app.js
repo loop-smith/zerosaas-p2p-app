@@ -95,21 +95,26 @@
       renderCenter();
       try {
         for (let i = 0; i < pending.length; i++) {
+          await holdIfPresenterPaused();
           if (!STATE || computeStepIndex(STATE.runtimeState[selectedDeal]) !== 5) break;
           scanSingleDockReel(pending[i].seq);
           if (i < pending.length - 1) {
-            await new Promise(res => setTimeout(res, 460));
+            await waitPauseAware(460);
           }
         }
       } finally {
-        await new Promise(res => setTimeout(res, 240));
+        await waitPauseAware(240);
         autoScanningReels = false;
         lastFlashedReelSeq = 0;
         renderCenter();
       }
     }
 
-    // Mic & Recorder State
+    // Mic, Presenter Pause/Play & Recorder State
+    let presenterPaused = false;
+    let pauseResumeResolvers = [];
+    let demoPausedAccumMs = 0;
+    let demoPauseStartedEpoch = 0;
     let recognition = null;
     let isListening = false;
     let micMediaRecorder = null;
@@ -203,17 +208,102 @@
 
     function setDeskSubView(mode) {
       if (showcaseTimer) { clearTimeout(showcaseTimer); showcaseTimer = null; }
+      presenterPaused = false;
+      while (pauseResumeResolvers.length) {
+        const res = pauseResumeResolvers.shift();
+        try { res(); } catch {}
+      }
+      syncPresenterPauseButtons();
       liveShowcasePhase = null;
       if (activeView !== 'workflow') setView('workflow');
       deskSubView = mode;
       renderCenter();
     }
 
-    /* ================= VOICE ENGINE (KAL · ~450ms TURBO STREAMING) ================= */
+    /* ================= VOICE ENGINE & PRESENTER PAUSE / PLAY ================= */
+    function holdIfPresenterPaused() {
+      if (!presenterPaused) return Promise.resolve();
+      return new Promise(resolve => pauseResumeResolvers.push(resolve));
+    }
+
+    async function waitPauseAware(totalMs) {
+      let remaining = Math.max(0, Number(totalMs) || 0);
+      const step = 60;
+      while (remaining > 0) {
+        if (presenterPaused) {
+          await holdIfPresenterPaused();
+        }
+        const slice = Math.min(step, remaining);
+        await new Promise(r => setTimeout(r, slice));
+        if (!presenterPaused) remaining -= slice;
+      }
+    }
+
+    function syncPresenterPauseButtons() {
+      if (typeof document === 'undefined') return;
+      document.body?.classList.toggle('presenter-paused', presenterPaused);
+      const pBtn = document.getElementById('presenterPauseBtn');
+      if (pBtn) {
+        pBtn.classList.toggle('paused', presenterPaused);
+        pBtn.textContent = presenterPaused ? '▶ Play' : '⏸ Pause';
+      }
+    }
+
+    function togglePresenterPause() {
+      presenterPaused = !presenterPaused;
+      if (presenterPaused) {
+        const audio = typeof document !== 'undefined' ? document.getElementById('ttsAudio') : null;
+        if (audio && audio.src && !audio.paused) {
+          try { audio.pause(); } catch {}
+        }
+        if (typeof window !== 'undefined' && 'speechSynthesis' in window && window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
+          try { window.speechSynthesis.pause(); } catch {}
+        }
+        if (demoRecorder && demoRecorder.state === 'recording') {
+          try { demoRecorder.pause(); demoPauseStartedEpoch = Date.now(); } catch {}
+        }
+      } else {
+        while (pauseResumeResolvers.length) {
+          const res = pauseResumeResolvers.shift();
+          try { res(); } catch {}
+        }
+        if (demoRecorder && demoRecorder.state === 'paused') {
+          try {
+            demoRecorder.resume();
+            if (demoPauseStartedEpoch) {
+              demoPausedAccumMs += Math.max(0, Date.now() - demoPauseStartedEpoch);
+              demoPauseStartedEpoch = 0;
+            }
+          } catch {}
+        }
+        const audio = typeof document !== 'undefined' ? document.getElementById('ttsAudio') : null;
+        let resumedAudio = false;
+        if (audio && audio.src && audio.paused && !audio.ended && audio.currentTime > 0) {
+          kalSpeaking = true;
+          resumedAudio = true;
+          audio.play().catch(() => {});
+        } else if (typeof window !== 'undefined' && 'speechSynthesis' in window && window.speechSynthesis.paused) {
+          resumedAudio = true;
+          try { window.speechSynthesis.resume(); } catch {}
+        }
+        if (!resumedAudio && !kalSpeaking && !liveShowcasePhase && !autoScanningReels && !busyAction && STATE) {
+          const st = STATE.runtimeState?.[selectedDeal];
+          if (st?.lastVoiceBrief) {
+            void speakText(st.lastVoiceBrief, st.activeVoiceRole || 'ops_steward');
+          } else {
+            void askKalPreset('status');
+          }
+        }
+      }
+      syncPresenterPauseButtons();
+      syncKalButtons();
+      renderCenter();
+    }
+
     function syncKalButtons() {
       const b = document.getElementById('kalMuteBtn');
       if (!b) return;
-      if (kalSpeaking) {
+      if (kalSpeaking && !presenterPaused) {
         b.textContent = '⏹ Stop KAL';
         b.style.background = '#fef2f2';
         b.style.borderColor = '#ef4444';
@@ -272,6 +362,12 @@
         if (ev.key === 'Escape') {
           if (activeModal) closeModal();
           else if (kalSpeaking) stopKalAudio();
+        } else if (ev.code === 'Space' && !activeModal) {
+          const tag = (ev.target && ev.target.tagName) ? ev.target.tagName.toUpperCase() : '';
+          if (tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT' && tag !== 'BUTTON' && tag !== 'A') {
+            ev.preventDefault();
+            togglePresenterPause();
+          }
         }
       });
     }
@@ -312,12 +408,16 @@
           currentTtsBlobUrl = URL.createObjectURL(blob);
           audio.src = currentTtsBlobUrl;
           audio.onended = () => {
-            if (mySeq === speakSeq) { kalSpeaking = false; syncKalButtons(); }
+            if (mySeq === speakSeq) { kalSpeaking = false; syncKalButtons(); renderCenter(); }
           };
           audio.onerror = () => {
-            if (mySeq === speakSeq) { kalSpeaking = false; syncKalButtons(); }
+            if (mySeq === speakSeq) { kalSpeaking = false; syncKalButtons(); renderCenter(); }
           };
           renderCenter();
+          if (presenterPaused) {
+            await holdIfPresenterPaused();
+            if (mySeq !== speakSeq || kalMuted) return;
+          }
           await audio.play();
           return;
         } else {
@@ -333,6 +433,10 @@
       }
 
       if (useWebSpeechFallback && mySeq === speakSeq && !kalMuted && 'speechSynthesis' in window) {
+        if (presenterPaused) {
+          await holdIfPresenterPaused();
+          if (mySeq !== speakSeq || kalMuted) return;
+        }
         window.speechSynthesis.cancel();
         const u = new SpeechSynthesisUtterance(normalizedFallback);
         u.rate = 1.04;
@@ -505,10 +609,19 @@
         };
         demoRecorder.start(500);
         demoStartEpoch = Date.now();
+        demoPausedAccumMs = 0;
+        demoPauseStartedEpoch = presenterPaused ? Date.now() : 0;
+        if (presenterPaused && demoRecorder.state === 'recording') {
+          try { demoRecorder.pause(); } catch {}
+        }
         btn.style.background = '#fef2f2'; btn.style.color = '#b91c1c'; btn.style.borderColor = '#ef4444';
         const tick = () => {
-          const sec = Math.floor((Date.now() - demoStartEpoch) / 1000);
-          btn.textContent = `🔴 ${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')} Stop`;
+          const activePauseMs = (demoRecorder && demoRecorder.state === 'paused' && demoPauseStartedEpoch)
+            ? (Date.now() - demoPauseStartedEpoch)
+            : 0;
+          const sec = Math.max(0, Math.floor((Date.now() - demoStartEpoch - demoPausedAccumMs - activePauseMs) / 1000));
+          const prefix = (demoRecorder && demoRecorder.state === 'paused') ? '⏸' : '🔴';
+          btn.textContent = `${prefix} ${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')} Stop`;
         };
         tick();
         demoTimerInterval = setInterval(tick, 500);
@@ -557,7 +670,8 @@
           const s = steps[i];
           busyBannerText = s.label || 'Running deterministic workflow block…';
           renderAll();
-          if (i > 0) await new Promise(r => setTimeout(r, 320));
+          if (i > 0) await waitPauseAware(320);
+          await holdIfPresenterPaused();
           const { ok, data } = await postStepRaw(s.action, s.extra || {});
           if (!ok) {
             if (data?.state) {
@@ -618,7 +732,7 @@
         kalBadgeText = 'CENTRAL PURCHASING · NANCY ROSTOVA';
         kalSubtitle = 'VP Devon signed REQ-25800 ($23,120 ceiling) ➔ Central Purchasing received the requisition and is launching a live COMEX copper spot check…';
         renderAll();
-        await new Promise(r => setTimeout(r, 850));
+        await waitPauseAware(850);
 
         // Beat 2 (~1,450ms min): Outbound TLS handshake pulls real-time COMEX Copper price live on screen
         liveShowcasePhase = 'spot_calling';
@@ -628,7 +742,8 @@
         const tSpotStart = Date.now();
         const r2 = await postStepRaw('wf1_check_spot');
         const spotElapsed = Date.now() - tSpotStart;
-        if (spotElapsed < 1450) await new Promise(r => setTimeout(r, 1450 - spotElapsed));
+        if (spotElapsed < 1450) await waitPauseAware(1450 - spotElapsed);
+        await holdIfPresenterPaused();
 
         // Beat 3: PAUSE cleanly on Step 4 so presenter can explain the live spot quote before approving!
         liveShowcasePhase = null;
@@ -660,7 +775,8 @@
       const tSpotStart = Date.now();
       const r = await postStepRaw('wf1_check_spot');
       const spotElapsed = Date.now() - tSpotStart;
-      if (spotElapsed < 1100) await new Promise(res => setTimeout(res, 1100 - spotElapsed));
+      if (spotElapsed < 1100) await waitPauseAware(1100 - spotElapsed);
+      await holdIfPresenterPaused();
       liveShowcasePhase = null;
       if (r.ok) {
         STATE = r.data;
@@ -726,7 +842,7 @@
           return;
         }
         STATE = r1.data;
-        await new Promise(r => setTimeout(r, 480));
+        await waitPauseAware(480);
 
         // Sweep the blue laser 2 clean passes (~2,300ms) across INV-25800.png while calling real RapidOCR ONNX (:3591/scan), STOP laser, lock 28 boxes, and PAUSE on Step 7!
         liveShowcasePhase = 'ocr_scanning';
@@ -737,7 +853,8 @@
         const tScanStart = Date.now();
         const r2 = await postStepRaw('wf3_poll_and_ocr');
         const elapsed = Date.now() - tScanStart;
-        if (elapsed < 2300) await new Promise(r => setTimeout(r, 2300 - elapsed));
+        if (elapsed < 2300) await waitPauseAware(2300 - elapsed);
+        await holdIfPresenterPaused();
 
         liveShowcasePhase = null;
         ocrGateUnlockedAt = Date.now() + 550;
@@ -770,7 +887,8 @@
         const tScanStart = Date.now();
         const r = await postStepRaw('wf3_rescan_ocr');
         const elapsed = Date.now() - tScanStart;
-        if (elapsed < 2300) await new Promise(res => setTimeout(res, 2300 - elapsed));
+        if (elapsed < 2300) await waitPauseAware(2300 - elapsed);
+        await holdIfPresenterPaused();
         liveShowcasePhase = null;
         if (r.ok) {
           STATE = r.data;
@@ -796,6 +914,12 @@
 
     function approveCheckpoint4MeredithCfo() {
       if (showcaseTimer) { clearTimeout(showcaseTimer); showcaseTimer = null; }
+      presenterPaused = false;
+      while (pauseResumeResolvers.length) {
+        const res = pauseResumeResolvers.shift();
+        try { res(); } catch {}
+      }
+      syncPresenterPauseButtons();
       liveShowcasePhase = null;
       executeStewardSequence([
         { action: 'wf4_release_ach', label: 'Releasing Check #10045 / ACH-000582 from 101100 Operating Bank…' },
@@ -825,6 +949,12 @@
         }
       }
       if (showcaseTimer) { clearTimeout(showcaseTimer); showcaseTimer = null; }
+      presenterPaused = false;
+      while (pauseResumeResolvers.length) {
+        const res = pauseResumeResolvers.shift();
+        try { res(); } catch {}
+      }
+      syncPresenterPauseButtons();
       liveShowcasePhase = null;
       dockScannedReels.clear();
       lastFlashedReelSeq = 0;
@@ -975,6 +1105,7 @@
           <span class="kal-badge">${esc(kalBadgeText)}</span>
           <div class="kal-msg" title="${esc(kalSubtitle)}">${esc(kalSubtitle)}</div>
           <div style="display:flex;gap:5px;flex-shrink:0;">
+            <button class="btn-top presenter-pause-btn ${presenterPaused ? 'paused' : ''}" style="padding:3px 8px;font-size:10.5px;" onclick="togglePresenterPause()" title="Pause or Resume KAL voice, live showcase &amp; recording (Shortcut: Spacebar)">${presenterPaused ? '▶ Play' : '⏸ Pause'}</button>
             <button class="btn-top" style="padding:3px 8px;font-size:10.5px;${deskSubView === 'sox_db' ? 'background:#1d4ed8;color:#fff;border-color:#1d4ed8;' : 'border-color:#93c5fd;color:#1d4ed8;'}" onclick="startSoxAndDbTour()" title="1-click KAL guided run-through of SOX, Live Headless Databases &amp; White House Super Intelligence Accord">🛡️ SOX, Live DBs &amp; White House SI</button>
             <button class="btn-top" style="padding:3px 8px;font-size:10.5px;" onclick="askKalPreset('status')">📊 Brief</button>
             <button class="btn-top" style="padding:3px 8px;font-size:10.5px;" onclick="askKalPreset('spot')">📈 Copper Spot</button>
@@ -1440,10 +1571,10 @@
               </div>
               <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
                 <button class="btn-guard-inline" onclick="runGuardrailTest('kal_rogue_attempt')" title="Red-Team KYSI L1: Force KAL to attempt a rogue PO/check write">
-                  🤖 Test Rogue KAL (403)
+                  🤖 Rogue KAL (403)
                 </button>
                 <button class="btn-approve" onclick="approveCheckpoint1Darius()">
-                  ✓ Approve REQ-25800 (Darius · $20k Limit)
+                  ✓ Approve REQ-25800 (Darius)
                 </button>
               </div>
             </div>
@@ -1510,10 +1641,10 @@
               </div>
               <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
                 <button class="btn-guard-inline" onclick="runGuardrailTest('wf0_approve_req', { actingEmpId: 'EMP-0021' })" title="Optional Red-Team Demo: Force Darius ($20k limit) to attempt Gate 2 sign-off">
-                  🛡️ Demo Block: Darius &gt;$20k (403)
+                  🛡️ Darius &gt;$20k (403)
                 </button>
                 <button class="btn-approve" onclick="approveCheckpoint2Devon()">
-                  ✓ Approve ${fmtUsdShort(d.catalogEstimateUsd)} Ceiling (VP Devon · $100k)
+                  ✓ Approve ${fmtUsdShort(d.catalogEstimateUsd)} (VP Devon)
                 </button>
               </div>
             </div>
@@ -1593,22 +1724,22 @@
               </div>
               <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
                 <button class="btn-guard-inline" onclick="runGuardrailTest('wf2_dock_receipt', { actingEmpId: 'EMP-0002' })" title="Optional Red-Team Demo: Buyer Nancy attempts to scan her own PO at Dock (Blocked HTTP 403)">
-                  🛡️ Demo Block: Nancy SoD (403)
+                  🛡️ Nancy SoD (403)
                 </button>
-                <button class="btn-top" style="padding:8px 9px;" onclick="setDeskSubView('oa')" title="Re-inspect Step 5 Vendor Order Acknowledgement ${esc(d.oaId)}">
-                  📅 OA Dates
+                <button class="btn-top" style="padding:6px 8px;" onclick="setDeskSubView('oa')" title="Re-inspect Step 5 Vendor Order Acknowledgement ${esc(d.oaId)}">
+                  📅 OA
                 </button>
                 ${allReelsScanned ? `
                   <button class="btn-approve" onclick="approveCheckpoint3MarcusDock()">
-                    ✓ Submit Dock Scan — 4/4 Reels · 8,000 FT (Marcus)
+                    ✓ Submit 4/4 Reels (8,000 FT)
                   </button>
                 ` : (autoScanningReels ? `
                   <button class="btn-approve rf-scan-trigger" disabled>
-                    🔫 Marcus Scanning ${scannedCount} / ${reelSpecs.length} Reels…
+                    🔫 Scanning ${scannedCount}/${reelSpecs.length}…
                   </button>
                 ` : `
                   <button class="btn-approve rf-scan-trigger" onclick="scanAllDockReelsSequentially()">
-                    🔫 Scan All 4 Reels (Marcus RF Gun · +8,000 FT)
+                    🔫 Scan All 4 Reels (+8,000 FT)
                   </button>
                 `)}
               </div>
@@ -1712,17 +1843,17 @@
             <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
               ${!isPaid ? `
                 <button class="btn-guard-inline" onclick="runGuardrailTest('wf4_release_ach', { bankAccount: 'Assets:101200-Payroll-Checking' })" title="Optional Red-Team Demo: Attempt supplier payment from ring-fenced 101200 Payroll Checking">
-                  🛡️ Demo Block: 101200 Payroll (403)
+                  🛡️ Payroll (403)
                 </button>
               ` : ''}
-              <button class="btn-top" style="border-color:#93c5fd;color:#1d4ed8;padding:7px 10px;" onclick="setDeskSubView('ocr')" title="Inspect 3-Way Match Matrix &amp; 28 RapidOCR Boxes">
-                🔍 3-Way Match &amp; OCR
+              <button class="btn-top" style="border-color:#93c5fd;color:#1d4ed8;padding:6px 9px;" onclick="setDeskSubView('ocr')" title="Inspect 3-Way Match Matrix &amp; 28 RapidOCR Boxes">
+                🔍 3WM &amp; OCR
               </button>
               ${isPaid ? `
                 <button class="btn-approve blue" style="padding:8px 13px;" onclick="setDeskSubView('books')">📗 Balance Sheet &amp; P&amp;L</button>
               ` : `
                 <button class="btn-approve" onclick="approveCheckpoint4MeredithCfo()">
-                  ✓ Approve — Stamp &amp; Sign Check #10045 (${fmtUsdShort(d.receiptAmount)})
+                  ✓ Stamp &amp; Sign Check #10045
                 </button>
               `}
             </div>
@@ -2037,20 +2168,20 @@
             </div>
             <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
               ${!isInFlight ? `
-                <button class="btn-top" style="border-color:#0284c7;color:#0369a1;padding:8px 10px;" onclick="repollLiveComexSpot()" title="Fire another live outbound HTTPS request right now">
-                  🔄 Re-Call Live API
+                <button class="btn-top" style="border-color:#0284c7;color:#0369a1;padding:6px 9px;" onclick="repollLiveComexSpot()" title="Fire another live outbound HTTPS request right now">
+                  🔄 Re-Call
                 </button>
               ` : ''}
               ${isReviewing ? `
-                <button class="btn-approve blue" disabled>📋 Reviewing REQ-25800…</button>
+                <button class="btn-approve blue" disabled>📋 Reviewing…</button>
               ` : (isCalling ? `
                 <button class="btn-approve blue" disabled>📡 Pulling Live Spot…</button>
               ` : (isActiveStep4 ? `
                 <button class="btn-approve" onclick="proceedStep4CutPo()">
-                  ✓ Approve ${isFavSpot ? 'Better Spot ' : 'Spot '}Quote &amp; Cut ${esc(d.id)}
+                  ✓ Approve Spot &amp; Cut ${esc(d.id)}
                 </button>
               ` : `
-                <button class="btn-approve blue" onclick="setDeskSubView('auto')">↩ Back to Active Step</button>
+                <button class="btn-approve blue" onclick="setDeskSubView('auto')">↩ Back</button>
               `))}
             </div>
           </div>
@@ -2062,17 +2193,17 @@
                 <div class="sheet-top" style="border-bottom-color:#334155;">
                   <div>
                     <div class="sheet-kicker" style="color:#38bdf8;">Live Outbound Market Services (Zero Mock · Real Prices)</div>
-                    <div class="sheet-title" style="color:#f8fafc;">1. gold-api.com/price/HG &nbsp;+&nbsp; 2. COMEX Ticker HG=F</div>
+                    <div class="sheet-title" style="color:#f8fafc;">gold-api.com/price/HG &nbsp;+&nbsp; COMEX HG=F</div>
                   </div>
                   <span class="badge ${isInFlight ? 'b-amber' : 'b-done'}">${isReviewing ? 'INTAKE · REQ-25800' : (isCalling ? 'DIALING TLS…' : `HTTP ${sq.httpStatus || 200} · ${sq.latencyMs || 180}ms`)}</span>
                 </div>
 
-                <div style="margin:5px 0;display:flex;justify-content:space-between;align-items:center;gap:6px;">
+                <div style="margin:4px 0;display:flex;justify-content:space-between;align-items:center;gap:6px;">
                   <span class="api-url-pill">${esc(sq.httpMethod || 'GET')} ${esc(endpointUrl)}</span>
                   <span style="font-family:var(--mono);font-size:9.5px;color:${isInFlight ? '#fbbf24' : '#4ade80'};white-space:nowrap;">${isReviewing ? 'Staging Outbound Call…' : (isCalling ? 'Fetching Live Quote…' : esc(sq.calledAtLocal || 'Live'))}</span>
                 </div>
 
-                <div class="api-terminal" style="background:#020617;border-color:#1e293b;padding:6px 9px;">
+                <div class="api-terminal" style="background:#020617;border-color:#1e293b;padding:5px 8px;">
                   ${isReviewing ? `
                     <div style="color:#38bdf8;">&gt; Central Purchasing (EMP-0002 Nancy Rostova) received VP-approved REQ-25800…</div>
                     <div style="color:#fbbf24;margin-top:2px;">&gt; Initializing outbound HTTPS client for COMEX Copper (HG / HG=F)…</div>
@@ -2080,8 +2211,8 @@
                     <div style="color:#38bdf8;">&gt; TLS 1.3 handshake ➔ GET https://api.gold-api.com/price/HG + Yahoo Finance (HG=F)…</div>
                     <div style="color:#fbbf24;margin-top:2px;">&gt; Pulling real-time COMEX High-Grade Copper ($/lb) &amp; computing mill draw…</div>
                   ` : `
-                    <div style="color:#94a3b8;">// Feed UTC: <span style="color:#38bdf8;">${esc(sq.feedTimestamp || sq.calledAtIso || 'Live')}</span></div>
-                    <div style="color:#4ade80;margin-top:2px;word-break:break-all;">${esc(rawJson)}</div>
+                    <div style="color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">// Feed UTC: <span style="color:#38bdf8;">${esc(sq.feedTimestamp || sq.calledAtIso || 'Live')}</span></div>
+                    <div style="color:#4ade80;margin-top:2px;word-break:break-all;max-height:28px;overflow:hidden;">${esc(rawJson)}</div>
                   `)}
                 </div>
 
@@ -2142,15 +2273,15 @@
               </div>
             </div>
             <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
-              <button class="btn-top" style="padding:8px 10px;" onclick="setDeskSubView('spot')" title="Re-inspect Step 4 Live COMEX Spot Call">
-                📡 View Spot Call
+              <button class="btn-top" style="padding:6px 9px;" onclick="setDeskSubView('spot')" title="Re-inspect Step 4 Live COMEX Spot Call">
+                📡 Spot Call
               </button>
               ${isActiveStep5 ? `
                 <button class="btn-approve" onclick="proceedStep5VerifyAck()">
-                  ✓ OK to Proceed — Dates Copacetic (Stage Dock)
+                  ✓ OK to Proceed (Stage Dock)
                 </button>
               ` : `
-                <button class="btn-approve blue" onclick="setDeskSubView('auto')">↩ Back to Active Step</button>
+                <button class="btn-approve blue" onclick="setDeskSubView('auto')">↩ Back</button>
               `}
             </div>
           </div>
@@ -2241,20 +2372,20 @@
             </div>
             <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
               ${!isScanning && st.wf3_mailbox_polled ? `
-                <button class="btn-top" style="border-color:#2563eb;color:#1d4ed8;padding:7px 9px;" onclick="rerunLiveRapidOcr()" title="Trigger a fresh live POST http://127.0.0.1:3591/scan ONNX inference right now">
-                  🔄 Re-Scan Live OCR (:3591)
+                <button class="btn-top" style="border-color:#2563eb;color:#1d4ed8;padding:6px 8px;" onclick="rerunLiveRapidOcr()" title="Trigger a fresh live POST http://127.0.0.1:3591/scan ONNX inference right now">
+                  🔄 Re-Scan OCR
                 </button>
               ` : ''}
               ${!isScanning && st.wf2_dock_received === 'done' && !st.wf4_ach_released ? `
                 <button class="btn-guard-inline" onclick="runGuardrailTest('wf3_test_variance_hold')" title="Optional Red-Team Demo: Simulate +$500 over-billed vendor invoice -> HTTP 409 Match Hold">
-                  🛡️ Demo Block: +$500 Bill (409)
+                  🛡️ +$500 Bill (409)
                 </button>
               ` : ''}
               ${isScanning ? `
-                <button class="btn-approve blue" disabled>🔍 RapidOCR Scanning…</button>
+                <button class="btn-approve blue" disabled>🔍 Scanning…</button>
               ` : (isActiveStep7 ? `
                 <button class="btn-approve" onclick="proceedStep7ConfirmMatch()">
-                  ✓ OK to Proceed — 3-Way Match Verified (To CFO)
+                  ✓ OK to Proceed (To CFO)
                 </button>
               ` : `
                 <button class="btn-approve blue" onclick="setDeskSubView(stepIdx >= 8 ? 'voucher' : 'auto')">↩ Back to Check #10045</button>
@@ -3048,6 +3179,7 @@
       window.startSoxAndDbTour = startSoxAndDbTour;
       window.stopKalAudio = stopKalAudio;
       window.toggleDemoRecorder = toggleDemoRecorder;
+      window.togglePresenterPause = togglePresenterPause;
       window.toggleVoiceListen = toggleVoiceListen;
       void loadState();
     }
