@@ -385,7 +385,7 @@ try {
     const ocrHealth = await fetch(`${sidecar.url}/health`);
     assert.equal(ocrHealth.status, 200);
     assert.equal((await ocrHealth.json()).engine, 'rapidocr-onnxruntime');
-    assert.equal(sidecar.docsDir, kernel.docsDir);
+    assert.equal(fs.realpathSync.native(sidecar.docsDir), fs.realpathSync.native(kernel.docsDir));
   });
 
   await must('KAL voice proxy: key only in runtime env, never echoed; unset is 503; voice never touches the book', async () => {
