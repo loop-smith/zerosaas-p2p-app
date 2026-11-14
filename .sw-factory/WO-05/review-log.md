@@ -86,7 +86,7 @@ One ESM file. It boots the real server twice (self-check process, then `startSer
 
 ## Round 2
 
-HARA-06.T19 (cc2) integration seat. No nested review subagent. The fence now includes `src/`, `sidecar/`, `public/`, `seeds/`, `tests/` and `package.json`, so the Round 1 gaps were closed in code:
+T19 integration seat. No nested review subagent. The fence now includes `src/`, `sidecar/`, `public/`, `seeds/`, `tests/` and `package.json`, so the Round 1 gaps were closed in code:
 
 - RapidOCR was outside the suite.
 - `package.json` was a presence check.
@@ -165,7 +165,7 @@ The sidecar stays a proposal engine. It renders, OCRs and returns fields. The ke
 
 ## Round 3
 
-HARA-06.T19.f1 (cc2) fix seat for the qualify finding on candidate `11a6300`. Round 2 claimed "a malformed sidecar reply is 503 `OCR_UNAVAILABLE`, not a 500". That was false for a reply that is valid JSON but not an object. A `null` body from `/generate` was destructured in `receiveDocuments()` (`src/lineage_core.mjs:537`). That threw a `TypeError`, so Step 5 returned 500 `INTERNAL_ERROR` and the refusal was never audited.
+T19.f1 fix seat for the qualify finding on candidate `11a6300`. Round 2 claimed "a malformed sidecar reply is 503 `OCR_UNAVAILABLE`, not a 500". That was false for a reply that is valid JSON but not an object. A `null` body from `/generate` was destructured in `receiveDocuments()` (`src/lineage_core.mjs:537`). That threw a `TypeError`, so Step 5 returned 500 `INTERNAL_ERROR` and the refusal was never audited.
 
 ### Fix
 

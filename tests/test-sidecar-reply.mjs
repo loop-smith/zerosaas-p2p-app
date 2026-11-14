@@ -1,4 +1,4 @@
-// Regression (HARA-06.T19.f1): a sidecar reply that is valid JSON but not an object (null, array, scalar)
+// Regression (T19.f1): a sidecar reply that is valid JSON but not an object (null, array, scalar)
 // must refuse Step 5 with an audited 503 OCR_UNAVAILABLE and zero book impact, never a 500.
 // Real kernel + HTTP server; only the OCR sidecar is a stub, since its misbehavior is the input under test.
 import assert from 'node:assert/strict';

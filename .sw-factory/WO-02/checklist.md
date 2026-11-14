@@ -11,7 +11,7 @@
 ### Required Steps
 
 - [x] Review work order description provided by MCP tool output
-  Evidence: WO-02 title + Concrete Acceptance Criteria staged in `implementation-plan.md` (HARA task card HARA-06.WO-02).
+  Evidence: WO-02 title + Concrete Acceptance Criteria staged in `implementation-plan.md` (HARA task card WO-02).
 - [SKIP] Identify linked requirements and blueprints
   Skip reason: Software Factory MCP is not available in this headless HARA lane; the staged acceptance criteria and `contracts/p2p-lineage-contract.json` are the requirement source (Foundry REQ-01 id recorded in `context.md`).
 - [SKIP] Review every connected requirements document

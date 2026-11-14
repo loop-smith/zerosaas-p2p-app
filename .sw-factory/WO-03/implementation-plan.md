@@ -1,4 +1,4 @@
-# Implementation Plan: WO-03 / HARA-06.WO-03-A
+# Implementation Plan: WO-03 / WO-03-A
 
 ## Summary
 Build a local, warm RapidOCR document sidecar with five contract-derived trade PDFs, pixel bounding boxes, and exact decimal validation. All implementation and tests stay under sidecar/. Application-server integration and actual journal/bank writes require a separate seat because src/ is absent and outside this fence.

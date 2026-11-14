@@ -60,7 +60,7 @@
 - [x] Intended client and execution files present; user forbids commit/push/own commit receipt
 - [SKIP] Remote status update — Software Factory connector unavailable; local status is client ready for integration
 
-## Follow-up HARA-06.WO-04-A.f1
+## Follow-up WO-04-A.f1
 
 - [x] Inspect existing target modules and real kernel callers/callees; list reuse, signatures, refusal codes and F1–F5 in plan before production edits
 - [x] Reproduce hard schema/route failure against startServer in a temporary root; new real-server client regression fails RED before production edits

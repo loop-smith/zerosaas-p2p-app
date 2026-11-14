@@ -29,7 +29,7 @@ Blueprints reached through `@…` mentions and links while reading linked bluepr
 
 ## Delivery
 
-- Branch: HARA lane `cc2-HARA-06.WO-02-20261114T024915Z` (launcher commits and pushes)
+- Branch: HARA lane `wo02-build-20261114T024915Z` (launcher commits and pushes)
 - Pull Request URL: none
 
 ## Live 8090 Software Factory Traceability

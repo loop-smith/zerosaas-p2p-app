@@ -1,4 +1,4 @@
-# Review Log: WO-03 / HARA-06.WO-03-A
+# Review Log: WO-03 / WO-03-A
 
 Review scope: only new sidecar/ files and authorized WO-03 execution artifacts. No src/ or HARA tree exists in this checkout. Full WO-03 accounting/server acceptance is not claimed.
 

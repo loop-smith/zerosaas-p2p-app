@@ -38,14 +38,14 @@ Blueprints reached through `@…` mentions and links while reading linked bluepr
 - **Foundry Agent Session:** `6efbe532-dc88-467d-89fd-db361b5d1f75`
 
 ## Local Execution Context
-- Scope authority: user task HARA-06.WO-04-A and local WO-04 acceptance criteria.
+- Scope authority: user task WO-04-A and local WO-04 acceptance criteria.
 - Reuse authority: contracts/p2p-lineage-contract.json (four reels overrides older README eight-reel description).
 - No connected Software Factory MCP or linked blueprint content is available; remote traceability and status updates cannot be performed.
 - This checkout contains src/, seeds/, sidecar/, tests/ and public/. src/sor_3panel_server.mjs provides the HTTP API over src/lineage_core.mjs; both are read-only dependencies outside this fence. hara/ is absent.
 - Native server contracts and follow-up requirements F1–F5 are tracked in implementation-plan.md. Regression tests boot startServer with temporary sandbox and missing-seed roots.
 - No commit, push, landing, compression, or commit receipt is authorized.
 
-## Follow-up HARA-06.WO-04-A.f1
+## Follow-up WO-04-A.f1
 - Qualify finding: the previous client rejected real snapshots and posted to /api/step (405). Reproduced with a temporary kernel root; added a real-server regression that failed before app changes.
 - Reuse: validateState/request/accept/refresh/runStep/render/renderJournal/probe plus real startServer. No second state adapter, server changes or production dependencies.
 - Contracts: GET /api/state returns steps[], scans:{barcode,ft}[], item, po, payment, journal report and sandbox source provenance. Writes use POST /api/step/:n; Step 1 uses SYSTEM; invoice variance uses invoice.totalUsd. Step/reset {state} wrappers remain supported.

@@ -4,7 +4,7 @@
 
 **Work Order:** WO-05 — Wire 16-Assertion End-to-End Deterministic & Guardrail Verification Suite (tests/test-copper-e2e.mjs)
 **Created At (UTC):** 2026-11-14T02:48:08Z
-**Landed:** the suite was first committed in the WO-06 seat. HARA-06.T19 (cc2) integrated `src/` (:3590), `sidecar/` (:3591), `public/`, and `seeds/` into it and changed `package.json` `test` to `node tests/test-copper-e2e.mjs`.
+**Landed:** the suite was first committed in the WO-06 seat. T19 integrated `src/` (:3590), `sidecar/` (:3591), `public/`, and `seeds/` into it and changed `package.json` `test` to `node tests/test-copper-e2e.mjs`.
 
 ## Summary
 

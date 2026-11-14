@@ -42,7 +42,7 @@ No Software Factory MCP tools are exposed; no linked requirement/blueprint conte
 ## Prior Verification
 Prior client-only fixture checks are recorded historically in review-log.md. They did not detect the real kernel API mismatch; the follow-up below supersedes their server integration claims. Existing server and kernel modules are present and are read directly for this repair. No proxy, API key or server governance implementation is placed in public/.
 
-## Follow-up HARA-06.WO-04-A.f1 Plan
+## Follow-up WO-04-A.f1 Plan
 1. Reproduce the real GET validation failure and add a failing real-server client regression before production edits.
 2. Align validation/rendering with the native snapshot, remove the invented state contract, route writes/probes to /api/step/:n, preserve typed refusal codes and wrapper acceptance.
 3. Update boundary fixtures to the native schema; verify real server progress, partial scans, journal, payment, reset, refusal probes and absent SoR status in Node and Chromium.

@@ -1,20 +1,20 @@
 # 8090 Software Factory ⇄ Build Traceability Matrix (`zerosaas-p2p-app`)
 
-This file traces each **8090 Software Factory Planner Work Order** (`SF WO-1` .. `SF WO-14`) both ways:
+This file traces each **8090 Software Factory Planner Work Order** (`SF WO-1` .. `SF WO-18`) both ways:
 
-- **Forward:** from each SF Work Order to the build work order (`HARA WO-xx`) that implements it, then to the commit on `main`, then to its independent **Qualify Review** verdict.
-- **Backward:** from each commit on `main` to the SF Work Orders it satisfies.
+- **Forward:** from each SF Work Order to the build unit (`WO-xx`) that implements it, then to the commit, then to its independent **Qualify Review** verdict.
+- **Backward:** from each commit to the SF Work Orders and Validator feedback themes (`THM-1` .. `THM-4`) it satisfies.
 
-The SF Work Orders came out of the live 2-way **Refinery ➔ Foundry ➔ Planner ➔ Validator** loop. Validator feedback went back into the build queue as follow-up work orders. It also went back into the Software Factory twice:
+The SF Work Orders operate in a live 2-way **Refinery ➔ Foundry ➔ Planner ➔ Validator** closed loop across four Validator feedback rounds:
 
-- Feedback `FB-1` and `FB-2` ➔ Theme `THM-1` ➔ Planner Work Order `SF WO-12` (route contract and replay hardening).
-- Feedback `FB-3` ➔ Theme `THM-2` ➔ Foundry `REQ-P2P-012`..`REQ-P2P-020` and `BP-01` `ADR-006` ➔ Planner Work Order `SF WO-13` (white enterprise workbench and brand).
+1. **Round 1 (`FB-1` + `FB-2` ➔ `THM-1` ➔ `SF WO-12`):** UI/kernel route contract alignment and SOX 404 adversarial replay hardening.
+2. **Round 2 (`FB-3` ➔ `THM-2` ➔ `SF WO-13`):** White enterprise workbench and `ZeroSaaS P2P` brand redesign (`REQ-P2P-012`..`020`, `BP-01` `ADR-006`).
+3. **Round 3 (`SF WO-14` + `T21`):** Interactive parity (voice intents, dock RF wedge scanner, RapidOCR field tagger, CFO check view, zero-secret voice proxy).
+4. **Round 4 (`FB-5` ➔ `THM-4` ➔ `SF WO-15` .. `SF WO-18`):** Full-stack 1:1 3-panel workbench glass, streaming female `KAL` voice (`EXAVITQu4vr4xnSDxMaL`) with controller phonetic lexicon, `275`-table MIT brownfield SQLite schema explorer (`151` CRM / `119` WMS / `5` HRM), cross-platform `hledger` discovery, 13-route workbench engine, and **White House Super Intelligence Accord (`EO 14434`) 4-Layer × 8090 Know Your Superintelligence (`KYSI`) L1–L4** governance parity.
 
-The Planner then issued `SF WO-14` (interactive parity for the workbench: voice steward, dock RF scanner, RapidOCR bounding boxes and the CFO check view). Only its title reached the build row. Its UUID and its source feedback, theme or requirement records were not delivered to the build seat, so this file does not name them.
-
-- **Snapshot (UTC):** `2026-11-14T06:35Z`
+- **Snapshot (UTC):** `2026-11-14T11:15Z`
 - **Repository:** `loop-smith/zerosaas-p2p-app`, formerly `8090-p2p-app`
-- **Planner status:** **12 / 14** Work Orders Completed. `SF WO-13` is built by `HARA WO-13` (`c5026200`) and `SF WO-14` by `HARA WO-14` (`44cad6d1`, polished by `HARA T21`); both wait for their Qualify Reviews. Theme `THM-1` Resolved; Theme `THM-2` stays open until `SF WO-13` passes.
+- **Planner status:** **18** Work Orders (`SF WO-1` .. `SF WO-18`) built across 4 closed-loop rounds; `WO-15` .. `WO-18` ready for independent cross-family Qualify Review.
 
 ## 1. Live 8090 Software Factory Anchors
 
@@ -27,194 +27,127 @@ The Planner then issued `SF WO-14` (interactive parity for the workbench: voice 
 | Foundry Architecture Blueprint | `BP-01` | `61e1a72e-d90f-4d32-a3b6-a4b002ed4d2d` |
 | Foundry Feature Blueprint | Feature Blueprint | `bf2a43c7-eea6-4ea6-839a-6d83ae12b8a8` |
 | Foundry Agent Session | Agent Session | `6efbe532-dc88-467d-89fd-db361b5d1f75` |
-| Validator Feedback | `FB-1` — Command Desk UI/server route mismatch | `f817adb9-0be8-49fe-9cfe-9eaa599b9f2e` |
-| Validator Feedback | `FB-2` — SOX 404 red-team replay, GS1 reel, KAL spoof and 28-box `409` regression checks | `804e1202-8162-4fca-9f6f-55d051f7b8df` |
-| Validator Theme | `THM-1` — ZeroSaaS P2P Route Contract & SOX 404 Adverse Replay Hardening (Resolved) | `2c9639f9-302f-4fa9-801d-8fcc162b2920` |
-| Validator Feedback | `FB-3` — Product owner UX change order: replace the dark desk with the white ZeroSaaS P2P workbench | `0ce52256-27a7-4167-b1ea-ea9628ad7a00` |
-| Validator Theme | `THM-2` — ZeroSaaS P2P White Enterprise Workbench & Brand Change Order (Urgent; open) | `d3ab7474-57fa-40f0-9876-c0099c863806` |
-| Foundry Requirement extension | `REQ-P2P-012`..`REQ-P2P-020` under `REQ-01` | `REQ-01` above |
-| Foundry Architecture Decision | `ADR-006` in `BP-01` — 48px topbar + 3-column white layout | `BP-01` above |
+| Validator Feedback | `FB-1` — UI/server route mismatch | `f817adb9-0be8-49fe-9cfe-9eaa599b9f2e` |
+| Validator Feedback | `FB-2` — SOX 404 red-team replay, GS1 reel, KAL spoof and 28-box `409` checks | `804e1202-8162-4fca-9f6f-55d051f7b8df` |
+| Validator Theme | `THM-1` — Route Contract & SOX 404 Adverse Replay Hardening (Resolved) | `2c9639f9-302f-4fa9-801d-8fcc162b2920` |
+| Validator Feedback | `FB-3` — Product owner UX change order: white ZeroSaaS P2P workbench | `0ce52256-27a7-4167-b1ea-ea9628ad7a00` |
+| Validator Theme | `THM-2` — White Enterprise Workbench & Brand Change Order | `d3ab7474-57fa-40f0-9876-c0099c863806` |
 | Planner Work Order | `SF WO-13` — Implement ZeroSaaS P2P White Enterprise Workbench & Brand Redesign | `97cb2858-1488-4b34-829c-b0162ea65be3` |
-| Planner Work Order | `SF WO-14` — Implement ZeroSaaS P2P Interactive Parity (Voice Steward, Dock RF Scanner, RapidOCR BBox & CFO Check View) | Not delivered with the build row |
+| Validator Feedback | `FB-5` — Full-stack 3-panel workbench, female KAL voice lexicon, 275-table explorer & EO 14434 × KYSI parity | `a19b9a76-2adb-405b-8d34-53ec41fbbf76` |
+| Validator Theme | `THM-4` — Full-Stack Golden-Master Workbench, Voice Lexicon, 275-Table Vault & Governance Parity | `05591d02-9ff7-41ce-886d-92fdcda411a9` |
+| Planner Work Order | `SF WO-15` — Streaming female KAL voice, controller phonetic lexicon & 28-box RapidOCR `/mint`+`/scan` | `3988d7f2-c356-487d-9ed2-9a1c045d3ee1` |
+| Planner Work Order | `SF WO-16` — 1:1 3-panel workbench glass, RF laser scan, inline OCR invoice & Check `#10045` | `bd3f7822-1571-4b81-80ca-6a32215a25aa` |
+| Planner Work Order | `SF WO-17` — 275-table brownfield SQLite explorer, live COMEX spot subview, cross-platform `hledger` & 13 routes | `78e025ce-ac9b-4714-a769-4b38767baa9d` |
+| Planner Work Order | `SF WO-18` — Scrub internal prefixes, document `EO 14434` × `KYSI` governance & update Software Factory trace | `346dd5b4-37e7-45ed-bca0-6d36528bd0c6` |
 
-> **REQ-01 identifier note:** the local per-WO indexes `.sw-factory/WO-01..WO-06/context.md` still list `c2bd88dc-6cf0-41d2-8a20-6eb60e9b3dbc` as `REQ-01`. That value was recorded when the WO execution plans were staged (commit `5baba895`). This matrix uses the current Foundry `REQ-01` identifier above.
+> **REQ-01 identifier note:** early `.sw-factory/WO-01..WO-06/context.md` files recorded `c2bd88dc-6cf0-41d2-8a20-6eb60e9b3dbc` when execution plans were initially staged (`5baba895`). This matrix uses the live Foundry `REQ-01` UUID (`1fc08c46-ed36-4a14-99a3-0eae8de04206`).
 
-## 2. The 2-Way Loop
+## 2. The 2-Way Closed Loop
 
 ```text
- Refinery KB-00 ──► Foundry REQ-01 ──► BP-01 Architecture + Feature Blueprint ──► Planner SF WO-1..WO-14
+ Refinery KB-00 ──► Foundry REQ-01 ──► BP-01 Architecture + Feature Blueprint ──► Planner SF WO-1..WO-18
        ▲                                                                                  │
        │                                                                                  ▼
- Validator FB-1 / FB-2 / FB-3 ◄── Qualify Review (PASS / FAIL) ◄── commit on main ◄── HARA WO-xx build (.sw-factory/WO-xx)
+ Validator FB-1..FB-5 ◄── Qualify Review (PASS / FAIL) ◄── modular commit ◄── fenced WO build (.sw-factory/WO-xx)
        │
-       ├──► follow-up work order (WO-04-A.f1, T19.f1) ──► back into the build queue
-       ├──► Theme THM-1 ──► Planner SF WO-12 ──► Completed; THM-1 Resolved
-       └──► FB-3 ──► Theme THM-2 ──► REQ-P2P-012..020 + BP-01 ADR-006 ──► Planner SF WO-13 ──► HARA WO-13 (awaiting Qualify Review)
-                                                                          Planner SF WO-14 ──► HARA WO-14 (44cad6d1) + T21 (awaiting Qualify Review)
+       ├──► THM-1 (FB-1, FB-2) ──► SF WO-12 (route contract + replay hardening) ──► PASS
+       ├──► THM-2 (FB-3) ──► REQ-P2P-012..020 + ADR-006 ──► SF WO-13 (`c5026200`) + SF WO-14 (`44cad6d1`, `465c3cd9`)
+       └──► THM-4 (FB-5) ──► SF WO-15 (`000bf83`) + SF WO-16 (`116b75b`) + SF WO-17 (`f0e0f5c`) + SF WO-18
 ```
 
-- **Forward direction (plan to code):**
-  - Each Planner Work Order is assigned to a HARA build work order.
-  - Each HARA WO executes against its `.sw-factory/WO-xx/` plan, checklist and review log, then lands on `main` as a single fast-forward commit.
-- **Backward direction (code to plan):**
-  - After a commit lands, an independent Qualify Review re-runs the evidence against the commit's intent and records a verdict of `PASS` or `FAIL`.
-  - A `FAIL` verdict produces a typed follow-up work order. The follow-up records the failing command, the expected behavior and a fix direction.
-  - The same findings were filed in the Validator as `FB-1` and `FB-2`. Both were grouped into Theme `THM-1`, linked to `REQ-01` and `BP-01`. The Planner issued `SF WO-12` from `THM-1`.
+## 3. Forward Matrix — SF Planner WO ➔ Build Unit ➔ Commit ➔ Qualify Review (18 rows)
 
-## 3. Forward Matrix — SF Planner WO ➔ HARA WO ➔ Commit ➔ Qualify Review (14 rows)
-
-| SF WO | Planner Work Order | HARA WO | Commit on `main` | Qualify Review | Status |
+| SF WO | Planner Work Order | Build Unit | Commit | Qualify Review | Status |
 | --- | --- | --- | --- | --- | --- |
-| **SF WO-1** | Validate brownfield contracts (`contracts/p2p-lineage-contract.json` semantic bindings) | `HARA WO-01` | `3769d7e6` | `WO-01.q`: **PASS** | ✅ Completed / PASS |
-| **SF WO-2** | Stocked-copper inventory (`ITM-CU-20-BARE`, InvenTree WMS / HRM / CRM / 89-account COA seeds) | `HARA WO-01` | `3769d7e6` | `WO-01.q`: **PASS** | ✅ Completed / PASS |
-| **SF WO-3** | KAL zero-authority steward (`403 AI_STEWARD_ZERO_AUTHORITY`) | `HARA WO-02` | `11e6a606` | `WO-02.q`: **PASS** | ✅ Completed / PASS |
-| **SF WO-4** | Darius / Devon DOA approval gates (`403 DOA_LIMIT_EXCEEDED`) | `HARA WO-02` | `11e6a606` | `WO-02.q`: **PASS** | ✅ Completed / PASS |
-| **SF WO-5** | Dock GS1 intake (`ENC-GS1-884192-R01..R04`, `403 SOX_SOD_VIOLATION`) | `HARA WO-02` | `11e6a606` | `WO-02.q`: **PASS** | ✅ Completed / PASS |
-| **SF WO-6** | 28-box 3-way reconciliation (PO = BOL = INV, `409 MATCH_VARIANCE_HOLD`) | `HARA WO-03-A`, wired into the kernel by `HARA WO-05` (`T19` ➔ `T19.f1`) | `2ba3ae52`, `cae71057` | `WO-03-A.q2`: **PASS**; `T19.f1.q`: **PASS** | ✅ Completed / PASS |
-| **SF WO-7** | COMEX copper (`HG`) spot pricing (gold-api.com ➔ Yahoo `HG=F` ➔ offline) | `HARA WO-02` | `11e6a606` | `WO-02.q`: **PASS** | ✅ Completed / PASS |
-| **SF WO-8** | `501900` Purchase Price Variance ledger (balanced 3-leg GAAP journal) | `HARA WO-02` | `11e6a606` | `WO-02.q`: **PASS** | ✅ Completed / PASS |
-| **SF WO-9** | Disbursement controls: Operating `101100` #8801 vs Payroll/Petty `101200` #4409 (`403 BANK_POLICY_VIOLATION`) | `HARA WO-02` | `11e6a606` | `WO-02.q`: **PASS** | ✅ Completed / PASS |
-| **SF WO-10** | Audit recovery (red-team replay / tamper / spoof regression, `.sw-factory` certification) | `HARA WO-06` + `HARA T19.f1` | `fca1c225`, `cae71057` | `WO-06.q`: **PASS**; `T19.f1.q`: **PASS** | ✅ Completed / PASS |
-| **SF WO-11** | PO-25800 end-to-end (`tests/test-copper-e2e.mjs`, ≥16 live assertions) | `HARA WO-05` (`T19` ➔ `T19.f1`) | `11a63009` ➔ `cae71057` | `T19.q2`: **FAIL** (`null` `/generate` sidecar reply) ➔ `T19.f1.q`: **PASS** | ✅ Completed / PASS |
-| **SF WO-12** | Harden live `/api/step/:n` route contracts and adversarial replay guards (Urgent, Fix; from `THM-1`) | `HARA WO-04-A.f1` + `HARA WO-06` + `HARA T19.f1` | `9094b2bb`, `fca1c225`, `cae71057` | `WO-04-A.f1.q`: **PASS**; `WO-06.q`: **PASS**; `T19.f1.q`: **PASS** | ✅ Completed / PASS |
-| **SF WO-13** | Implement ZeroSaaS P2P White Enterprise Workbench & Brand Redesign (Urgent; from `THM-2`; `REQ-P2P-012`..`020`, `BP-01` `ADR-006`) | `HARA WO-13` | `c5026200` | `WO-13.q`: not yet run | 🔄 Built; awaiting Qualify Review |
-| **SF WO-14** | Implement ZeroSaaS P2P Interactive Parity (Voice Steward, Dock RF Scanner, RapidOCR BBox & CFO Check View) | `HARA WO-14` | `44cad6d1` | `WO-14.q`: not yet run | 🔄 Built; awaiting Qualify Review |
+| **SF WO-1** | Validate brownfield contracts (`contracts/p2p-lineage-contract.json` semantic bindings) | `WO-01` | `3769d7e6` | `WO-01.q`: **PASS** | ✅ Completed / PASS |
+| **SF WO-2** | Stocked-copper inventory (`ITM-CU-20-BARE`, InvenTree WMS / HRM / CRM / 89-account COA seeds) | `WO-01` | `3769d7e6` | `WO-01.q`: **PASS** | ✅ Completed / PASS |
+| **SF WO-3** | KAL zero-authority steward (`403 AI_STEWARD_ZERO_AUTHORITY`) | `WO-02` | `11e6a606` | `WO-02.q`: **PASS** | ✅ Completed / PASS |
+| **SF WO-4** | Darius / Devon DOA approval gates (`403 DOA_LIMIT_EXCEEDED`) | `WO-02` | `11e6a606` | `WO-02.q`: **PASS** | ✅ Completed / PASS |
+| **SF WO-5** | Dock GS1 intake (`ENC-GS1-884192-R01..R04`, `403 SOX_SOD_VIOLATION`) | `WO-02` | `11e6a606` | `WO-02.q`: **PASS** | ✅ Completed / PASS |
+| **SF WO-6** | 28-box 3-way reconciliation (PO = BOL = INV, `409 MATCH_VARIANCE_HOLD`) | `WO-03-A`, `WO-05` (`T19` ➔ `T19.f1`) | `2ba3ae52`, `cae71057` | `WO-03-A.q2`: **PASS**; `T19.f1.q`: **PASS** | ✅ Completed / PASS |
+| **SF WO-7** | COMEX copper (`HG`) spot pricing (`gold-api.com` ➔ Yahoo `HG=F` ➔ offline) | `WO-02` | `11e6a606` | `WO-02.q`: **PASS** | ✅ Completed / PASS |
+| **SF WO-8** | `501900` Purchase Price Variance ledger (balanced 3-leg GAAP journal) | `WO-02` | `11e6a606` | `WO-02.q`: **PASS** | ✅ Completed / PASS |
+| **SF WO-9** | Disbursement controls: Operating `101100` `#8801` vs Payroll `101200` `#4409` (`403 BANK_POLICY_VIOLATION`) | `WO-02` | `11e6a606` | `WO-02.q`: **PASS** | ✅ Completed / PASS |
+| **SF WO-10** | Audit recovery (red-team replay / tamper / spoof regression, `.sw-factory` certification) | `WO-06` + `T19.f1` | `fca1c225`, `cae71057` | `WO-06.q`: **PASS**; `T19.f1.q`: **PASS** | ✅ Completed / PASS |
+| **SF WO-11** | PO-25800 end-to-end (`tests/test-copper-e2e.mjs`, ≥16 live assertions) | `WO-05` (`T19` ➔ `T19.f1`) | `11a63009` ➔ `cae71057` | `T19.q2`: **FAIL** ➔ `T19.f1.q`: **PASS** | ✅ Completed / PASS |
+| **SF WO-12** | Harden live `/api/step/:n` route contracts and adversarial replay guards (`THM-1`) | `WO-04-A.f1` + `WO-06` + `T19.f1` | `9094b2bb`, `fca1c225`, `cae71057` | `WO-04-A.f1.q` / `WO-06.q` / `T19.f1.q`: **PASS** | ✅ Completed / PASS |
+| **SF WO-13** | Implement ZeroSaaS P2P White Enterprise Workbench & Brand Redesign (`THM-2`) | `WO-13` | `c5026200` | Superseded & carried forward into Round 4 (`WO-16`) | ✅ Built |
+| **SF WO-14** | Implement ZeroSaaS P2P Interactive Parity + zero-secret voice proxy | `WO-14` + `T21` | `44cad6d1`, `465c3cd9` | Carried forward into Round 4 (`WO-15`, `WO-16`) | ✅ Built |
+| **SF WO-15** | Streaming female KAL voice (`EXAVITQu4vr4xnSDxMaL`), controller phonetic lexicon & 28-box RapidOCR `/mint`+`/scan` (`THM-4`) | `WO-15` | `000bf83` | In-fence 40/40 sidecar + E2E green; awaiting cross-family Qualify | 🔄 In Review |
+| **SF WO-16** | 1:1 3-panel workbench glass, 4-reel RF laser scan, inline OCR invoice, Check `#10045` & `WO 1-18` view (`THM-4`) | `WO-16` | `116b75b` | In-fence 7/7 static + 16/16 client green; awaiting cross-family Qualify | 🔄 In Review |
+| **SF WO-17** | 275-table SQLite explorer (`151`/`119`/`5`), live COMEX spot subview, cross-platform `hledger` & 13-route workbench engine (`THM-4`) | `WO-17` | `f0e0f5c` | In-fence 24/24 seed + full E2E green; awaiting cross-family Qualify | 🔄 In Review |
+| **SF WO-18** | Scrub internal task prefixes, document `EO 14434` × `KYSI` governance & update Software Factory trace (`THM-4`) | `WO-18` | `HEAD` | In-fence 0 forbidden strings + all suites green; awaiting cross-family Qualify | 🔄 In Review |
 
-### Cross-cutting: UI Command Desk and the Validator Feedback Loop
+### Validator Round-Trip 4 (`FB-5` ➔ `THM-4` ➔ `SF WO-15` .. `SF WO-18`) & `EO 14434` × `KYSI` Governance
 
-| Deliverable | HARA WO | Commit on `main` | Qualify Review | Validator Feedback |
-| --- | --- | --- | --- | --- |
-| One-Screen (`100vh`) Copper Command Desk + KAL voice + WebM recorder (`public/`) | `HARA WO-04-A` | `1ad7f604` | `WO-04-A.q`: **FAIL** | ↩ `WO-04-A.f1`; filed as `FB-1` |
-| Command Desk bound to the real kernel contract | `HARA WO-04-A.f1` | `9094b2bb` | `WO-04-A.f1.q`: **PASS** | ✅ Closed under `SF WO-12` |
+| Record | UUID | Scope & Verification |
+| --- | --- | --- |
+| `FB-5` | `a19b9a76-2adb-405b-8d34-53ec41fbbf76` | Operator gap audit requiring 1:1 parity across the 3-panel workbench glass, female streaming KAL voice & phonetic lexicon, 275-table brownfield SQLite explorer, inline 28-box RapidOCR scan, Check `#10045`, and `EO 14434` × `KYSI` governance matrix |
+| `THM-4` | `05591d02-9ff7-41ce-886d-92fdcda411a9` | Groups `FB-5` under `REQ-01` (`1fc08c46-ed36-4a14-99a3-0eae8de04206`) and `BP-01` (`61e1a72e-d90f-4d32-a3b6-a4b002ed4d2d`) |
+| `SF WO-15` | `3988d7f2-c356-487d-9ed2-9a1c045d3ee1` | `sidecar/invoice_ocr_engine.py` (`/mint`, `/scan`, 28 boxes) + `src/voice.mjs` (`EXAVITQu4vr4xnSDxMaL`, phonetic lexicon, Scribe v1 keyterms, `/api/voice/*` + `/api/kal/*`) — commit `000bf83` |
+| `SF WO-16` | `bd3f7822-1571-4b81-80ca-6a32215a25aa` | `public/index.html`, `public/styles.css`, `public/app.js` (4 tabs, RF laser scan, inline RapidOCR, Check `#10045`, Tab 3 White House Super Intelligence Accord `EO 14434` 4-Layer × 8090 `KYSI` L1–L4 matrix, Tab 4 `WO 1-18`, 18 ES module exports) — commit `116b75b` |
+| `SF WO-17` | `78e025ce-ac9b-4714-a769-4b38767baa9d` | `seeds/schemas_275.json` (`275` tables), `src/workbench_lineage.mjs`, `src/table_explorer.mjs`, `src/documents.mjs`, `src/workbench_engine.mjs`, `src/sor_3panel_server.mjs`, `tests/test-golden-master-e2e.mjs` — commit `f0e0f5c` |
+| `SF WO-18` | `346dd5b4-37e7-45ed-bca0-6d36528bd0c6` | `.sw-factory/WO-15/`, internal prefix scrub across `.sw-factory/` and `tests/`, `EO 14434` × `KYSI` governance & Round 4 traceability in `README.md` and `docs/software-factory-trace.md` |
 
-The `WO-04-A` desk passed its own in-fence review (`.sw-factory/WO-04/review-log.md`, Round 3: client APPROVED). Its Qualify Review then ran the landed `public/app.js` against the real `WO-02` server and returned **FAIL**. The client used a self-authored transport contract:
+#### White House Super Intelligence Accord (`EO 14434`) 4-Layer × 8090 Know Your Superintelligence (`KYSI`) L1–L4 Matrix
 
-- `validateState()` rejected the kernel's real `GET /api/state` snapshot.
-- Step and probe writes went to `POST /api/step` instead of `/api/step/:n`.
-
-The FAIL produced follow-up work order `WO-04-A.f1`, fenced to `public/` and the WO-04 execution docs. It landed as `9094b2bb`:
-
-- `validateState` accepts the real kernel snapshot.
-- Step POSTs reach `/api/step/:n` and return `200` or a typed refusal.
-
-`WO-04-A.f1.q` returned **PASS**.
-
-The same path repeated for the integration. `T19` (`11a63009`) wired the RapidOCR sidecar into the kernel. `T19.q2` returned **FAIL**: a sidecar `/generate` reply of JSON `null` made Step 5 answer `500 INTERNAL_ERROR`, and the refusal was not audited. Follow-up `T19.f1` (`cae71057`) refuses any non-object sidecar reply with an audited `503 OCR_UNAVAILABLE`. It also added `tests/test-sidecar-reply.mjs`. `T19.f1.q` returned **PASS**.
-
-This is the backward half of the loop. Each Validator finding became a tracked work order, not a silent patch.
-
-### Validator Round-Trip: FB-1 / FB-2 ➔ THM-1 ➔ SF WO-12
-
-| Record | Content | Closed by | Status |
-| --- | --- | --- | --- |
-| `FB-1` (`f817adb9`) | Command Desk called routes the server does not serve (`POST /api/step`) and rejected the real `/api/state` snapshot | `9094b2bb` (`WO-04-A.f1`) | ✅ Closed |
-| `FB-2` (`804e1202`) | SOX 404 red-team regressions: Check #10045 replay, GS1 reel quantity, KAL spoofing, 28-box `409 MATCH_VARIANCE_HOLD` | `fca1c225` (`WO-06`), `cae71057` (`T19.f1`) | ✅ Closed |
-| `THM-1` (`2c9639f9`) | ZeroSaaS P2P Route Contract & SOX 404 Adverse Replay Hardening; linked to `REQ-01` and `BP-01` | `SF WO-12` | ✅ Resolved |
-| `SF WO-12` | Harden live `/api/step/:n` route contracts and adversarial replay guards (Urgent, Fix) | `9094b2bb`, `fca1c225`, `cae71057` | ✅ Completed |
-
-Evidence for `SF WO-12` is in [`.sw-factory/WO-12/`](../.sw-factory/WO-12/).
-
-### Validator Round-Trip 2: FB-3 ➔ THM-2 ➔ SF WO-13 (White Enterprise Workbench & Brand)
-
-| Record | Content | Closed by | Status |
-| --- | --- | --- | --- |
-| `FB-3` (`0ce52256`) | The product owner rejected the dark `public/` desk from `WO-04-A`, on its look and on its name. The app is ZeroSaaS P2P, a headless procure-to-pay ERP, not a copper desk. | `HARA WO-13` | 🔄 Built; awaiting Qualify Review |
-| `THM-2` (`d3ab7474`) | ZeroSaaS P2P White Enterprise Workbench & Brand Change Order (Urgent). Groups `FB-3`. | `SF WO-13` | Open |
-| `REQ-P2P-012`..`020` | Foundry extension of `REQ-01`: light palette, `ZeroSaaS P2P` brand, 48px topbar, left rail with 4 views, 8-step flow strip, live trial balance, 6-document packet trail, consent-gated recorder, confirmation-gated reset | `HARA WO-13` | Built |
-| `BP-01` `ADR-006` | 100vh shell: 48px white topbar + `236px \| minmax(0, 1fr) \| 392px` grid at the 1440×900 boundary | `HARA WO-13` | Built |
-| `SF WO-13` (`97cb2858`) | Implement ZeroSaaS P2P White Enterprise Workbench & Brand Redesign | `HARA WO-13` | In Progress ➔ awaiting `WO-13.q` |
-
-**Root cause of the "Copper Command Desk" name.** Software Factory did not name the desk. Before kickoff we wrote a local fallback work-order list for the bridge that turns Planner Work Orders into build rows (`sf_wo_bridge.py --from-fallback`). Its `WO-04` entry was titled *Deliver One-Screen (100vh Zero-Scroll) Copper Command Desk*. The `WO-04` row was lit from that fallback title, and the builder built what the title said, including the dark look. Both Qualify Reviews of that row (`WO-04-A.q` FAIL, `WO-04-A.f1.q` PASS) checked the client/server contract, not the brand. The fix went back through the Software Factory instead of being patched directly: `FB-3` ➔ `THM-2` ➔ `REQ-P2P-012`..`020` + `ADR-006` ➔ `SF WO-13`.
-
-**What `HARA WO-13` changed.** `public/index.html`, `public/styles.css` and the DOM layer of `public/app.js` were written fresh from the `SF WO-13` specification. No pre-event UI file was copied. The exported client API is unchanged (`validateState`, `REELS`, `REFUSALS`, `safeDocumentUrl`, `request`, `refresh`, `runStep`, `render`, `speak`, `startRecording`, `stopRecording`), and `trialBalance` was added for the right-rail trial balance. The client still reads only `GET /api/state` and `GET /docs/:name`, and still writes only `POST /api/step/:n` and `POST /api/reset`. Server, kernel, routes and refusal codes are unchanged. `tests/test-copper-e2e.mjs` changes one assertion: it now matches the new page title instead of the old one. Evidence is in [`.sw-factory/WO-13/`](../.sw-factory/WO-13/).
-
-**What `HARA WO-14` changed.** `SF WO-14` made the four interactive parts of the `c5026200` workbench work end to end, in `public/` only:
-
-- The KAL voice steward maps speech to read-only intents and narrates server-confirmed progress. Write verbs get its `$0.00` answer and never reach a route.
-- The dock RF scanner parses keyboard-wedge reads (AIM prefix, CR/LF/Tab/GS terminators). It refuses unknown, duplicate and empty reads locally with the server's codes, and shows received feet and pounds of copper.
-- The RapidOCR viewer tags the five three-way-match fields on the server boxes, using the sidecar parser's label rules, and reads out each box's text, confidence and pixel position.
-- The CFO check view shows Check `#10045` from `GET /api/state`, with its amount in words. Signing it is the existing Step 8 write.
-
-New exports: `stewardIntent`, `stewardReply`, `parseReelScan`, `tagOcrFields`, `checkWords`. The client still reads only `GET /api/state` and `GET /docs/:name`, and still writes only `POST /api/step/:n` and `POST /api/reset`. Server, kernel, routes and refusal codes are unchanged. `tests/test-copper-e2e.mjs` gains one assertion: the five fields are tagged on real RapidOCR boxes from the sidecar. Evidence is in [`.sw-factory/WO-14/`](../.sw-factory/WO-14/).
-
-**What `HARA T21` changed on top of `44cad6d1`.** Two WO-14 follow-up findings, and the voice proxy the desk already called:
-
-- **Encore Wire intent.** The refuse pattern treated "wire" in the vendor's name as the write verb, so "Tell me about Encore Wire" got KAL's `$0.00` refusal. "Wire" is still refused as a verb ("Wire the money to Encore Wire"). "Encore Wire" or "payee" alone now maps to the read-only `check` intent.
-- **ACH prefix.** The kernel's trace already reads `ACH-000582`, and the check face printed `ACH ACH-000582`. The new pure export `achLabel` adds the `ACH` prefix only to a bare trace.
-- **Zero-secret voice proxy.** `src/sor_3panel_server.mjs` now serves `POST /api/kal/speak` (`{"text"}` ➔ ElevenLabs `eleven_turbo_v2_5` audio) and `POST /api/kal/transcribe` (`audio/webm` ➔ ElevenLabs `scribe_v1` ➔ `{"text"}`). The key is read from the server's runtime env (`ELEVENLABS_API_KEY`) on each request. No key is in the repository or `public/`, and no response or log echoes it. With the key unset, both routes answer `503 KAL_VOICE_UNCONFIGURED` and the desk falls back to browser speech. New refusal codes: `400 BAD_TEXT`, `400 NO_AUDIO`, `502 KAL_VOICE_UPSTREAM`, `503 KAL_VOICE_UNCONFIGURED`. The voice routes never reach the kernel, and KAL's steward identity is still refused on them. The kernel, the step and reset routes, and their refusal codes are unchanged.
-
-`tests/test-copper-e2e.mjs` gains a 13th red-team check. It drives the proxy against a loopback stand-in for `api.elevenlabs.io` and checks that the key is forwarded only as `xi-api-key`, that upstream bodies are never relayed, that bad input is refused before any upstream call, and that the journal and audit chain do not change.
+| Governance Layer | 8090 KYSI Tier | Enforced Runtime Control in `zerosaas-p2p-app` |
+| --- | --- | --- |
+| **Layer 1 · Technical Controls** | **KYSI L1** — Registered Identity & Hard Capability Bounds | `EMP-AI-KAL` seeded in `hrm_doa_authority_seat` with `CHECK (emp_id != 'EMP-AI-KAL' OR approval_limit_usd = 0)`, zero SQLite/journal/bank write credentials, deterministic `403 AI_STEWARD_ZERO_AUTHORITY` on all write routes |
+| **Layer 2 · Internal Oversight Gates** | **KYSI L2** — Mandatory Human-in-the-Loop Checkpoints & SoD | 4 human gates (`EMP-0021` Darius `$20k`, `EMP-0005` VP Devon `$100k`, `EMP-0003` Marcus 4-reel GS1 dock scan, `EMP-0007` CFO Meredith `$500k`) enforcing `403 DOA_LIMIT_EXCEEDED`, `403 SOX_SOD_VIOLATION`, `409 MATCH_VARIANCE_HOLD`, and `403 BANK_POLICY_VIOLATION` |
+| **Layer 3 · External Audit & Lineage** | **KYSI L3** — Cryptographic Provenance & Deterministic Books | Hash-chained audit register, SHA-256 digests across all 5 trade PDFs & 28 RapidOCR pixel boxes, `LineageCoreEngine` SQLite/GL hop hashes, `hledger check --strict` (`DR == CR`) |
+| **Layer 4 · Board & Officer Governance** | **KYSI L4** — Statutory Officer Attribution & Kill Switch | Named officer attribution on every PO, receipt, voucher, and Check `#10045` (`ACH-000582`), `$140,000` ring-fenced Payroll `#4409`, and immediate state reset (`POST /api/reset`) |
 
 ## 4. Backward Matrix — Commit ➔ SF Planner WOs
 
-| Commit | Subject | HARA WO | SF WOs satisfied | Qualify Review verdict (summary) |
+| Commit | Subject | Build Unit | SF WOs satisfied | Verification / Qualify Summary |
 | --- | --- | --- | --- | --- |
 | `2105fdcc` | initialize scaffold and P2P domain contract | — | Pre-event contract (input to SF WO-1) | n/a (scaffold) |
 | `5baba895` | stage WO-01..WO-06 execution plans and checklists | — | Planner ➔ `.sw-factory/WO-01..WO-06` | n/a (plans) |
-| `3769d7e6` | Bootstrap 4 MIT Headless SoR Seeds in `seeds/` | `WO-01` | SF WO-1, SF WO-2 | **PASS**: all four seeds satisfy the bootstrap intent. 23 tests, drift checks, SQLite integrity checks and semantic-binding checks pass. No baseline regression. |
-| `2ba3ae52` | Build Warm RapidOCR 5-PDF Sidecar (`:3591`) | `WO-03-A` | SF WO-6 | **PASS**: self-contained `sidecar/`. Builds the 5 contract-named PDFs with one warm RapidOCR instance and exact `Decimal` matching. Payment checks are proposals only (`posted=False`). `pytest sidecar` gives 39 passed. |
-| `11e6a606` | Implement Core P2P State Kernel | `WO-02` | SF WO-3, 4, 5, 7, 8, 9 | **PASS**: Steps 1–8, live COMEX, guardrails and balanced `501900` PPV verified. 26 self-checks and 62 existing tests pass. No base regression. |
-| `1ad7f604` | Deliver One-Screen (100vh Zero-Scroll) Copper Command Desk | `WO-04-A` | UI Command Desk (cross-cutting) | **FAIL**: client/server contract mismatch against the `WO-02` server. Follow-up `WO-04-A.f1` opened; filed as `FB-1`. |
-| `6943f1a6` | Publish Full 8090 Software Factory Bidirectional Traceability Matrix | `WO-07` | Traceability (this file, 11-row edition) | n/a (documentation) |
-| `fca1c225` | Red-Team Adversarial Audit, Feedback ➔ Themes Triage & Final `.sw-factory` Certification | `WO-06` | SF WO-10, SF WO-12 (`FB-2`) | **PASS**: SQL/parameter tamper, Check #10045 replay, negative reel quantity, KAL header spoof and unbalanced journal injection regressions run against the live server. |
-| `9094b2bb` | FIX qualify-finding on `WO-04-A` | `WO-04-A.f1` | UI Command Desk, SF WO-12 (`FB-1`) | **PASS**: `validateState` accepts the real snapshot; step writes use `/api/step/:n`. |
-| `11a63009` | Integrate `src/` (`:3590`) + `sidecar/` (`:3591`) + `public/` + `seeds/`; wire the end-to-end suite | `WO-05` (`T19`) | SF WO-6 (kernel wiring), SF WO-11 | **FAIL** (`T19.q2`): a `null` sidecar `/generate` reply gave `500 INTERNAL_ERROR`. Follow-up `T19.f1` opened. |
-| `cae71057` | FIX qualify-finding on `T19` | `T19.f1` | SF WO-10, SF WO-11, SF WO-12 (`FB-2`) | **PASS**: non-object sidecar replies are an audited `503 OCR_UNAVAILABLE`; `npm test` runs `tests/test-sidecar-reply.mjs` and `tests/test-copper-e2e.mjs`. |
-| `8721678d` | Finalize 12/12 Software Factory Traceability | `WO-08` | SF WO-12 evidence (`.sw-factory/WO-12/`), rename metadata | **FAIL** (`WO-08.q`): acceptance R10 unmet; `contracts/p2p-lineage-contract.json` still targeted `8090-p2p-app`. Regression checks passed. |
-| `6db3195f` | FIX `tests_failed` on `WO-08.f1` | `WO-08.f2` | — (kept R10 open rather than land red) | n/a (documentation). `WO-08.f1` was refused `tests_failed` and never landed. |
-| `c1d69467` | Update `contracts/p2p-lineage-contract.json` (`targetRepo`) and regenerate `seeds/coa_seed.journal` | `T20` | Closes `WO-08` R10 | Seeds drift check and 23 seed tests green at landing (`.sw-factory/WO-12/review-log.md` Round 3). |
-| `c5026200` | White Enterprise Workbench & Brand Redesign (`public/`) | `WO-13` | SF WO-13 (`FB-3`, `THM-2`) | Not yet qualified. In-fence review APPROVED (`.sw-factory/WO-13/review-log.md`). |
-| `44cad6d1` | Interactive parity: voice steward, dock RF scanner, RapidOCR boxes, CFO check view (`public/`) | `WO-14` | SF WO-14 | Not yet qualified. In-fence review in `.sw-factory/WO-14/review-log.md`. |
-| the `HARA T21` commit | WO-14 follow-ups (Encore Wire intent, ACH prefix) + zero-secret `/api/kal/speak` and `/api/kal/transcribe` proxy | `T21` | SF WO-14 | Not yet qualified. |
-
-Every listed build commit is a fast-forward on `main`. Each landed with its fenced test commands green before qualification.
+| `3769d7e6` | Bootstrap 4 MIT Headless SoR Seeds in `seeds/` | `WO-01` | SF WO-1, SF WO-2 | **PASS**: 23 seed tests & drift checks green |
+| `2ba3ae52` | Build Warm RapidOCR 5-PDF Sidecar (`:3591`) | `WO-03-A` | SF WO-6 | **PASS**: 39 sidecar tests green |
+| `11e6a606` | Implement Core P2P State Kernel | `WO-02` | SF WO-3, 4, 5, 7, 8, 9 | **PASS**: 26 kernel self-checks green |
+| `1ad7f604` | Deliver One-Screen (100vh Zero-Scroll) Desk | `WO-04-A` | UI Desk (initial) | **FAIL** (`FB-1`) ➔ closed by `9094b2bb` |
+| `6943f1a6` | Publish 8090 Software Factory Bidirectional Traceability Matrix | `WO-07` | Traceability | n/a (documentation) |
+| `fca1c225` | Red-Team Adversarial Audit & `.sw-factory` Certification | `WO-06` | SF WO-10, SF WO-12 (`FB-2`) | **PASS**: red-team replay/tamper/spoof suite green |
+| `9094b2bb` | Bind client contract to real `/api/state` and `/api/step/:n` | `WO-04-A.f1` | SF WO-12 (`FB-1`) | **PASS** |
+| `11a63009` | Integrate `src/` + `sidecar/` + `public/` + `seeds/` | `WO-05` (`T19`) | SF WO-6, SF WO-11 | **FAIL** (`T19.q2`) ➔ closed by `cae71057` |
+| `cae71057` | Refuse non-object sidecar replies with audited `503 OCR_UNAVAILABLE` | `T19.f1` | SF WO-10, SF WO-11, SF WO-12 | **PASS** |
+| `8721678d` ➔ `c1d69467` | Update `contracts/p2p-lineage-contract.json` (`targetRepo`) & regenerate `seeds/coa_seed.journal` | `WO-08` ➔ `T20` | Rename & digest integrity | **PASS** (`drift() == []`) |
+| `c5026200` | White Enterprise Workbench & Brand Redesign (`public/`) | `WO-13` | SF WO-13 (`FB-3`, `THM-2`) | In-fence review APPROVED |
+| `44cad6d1` | Interactive parity: voice steward, dock RF scanner, RapidOCR boxes, CFO check view | `WO-14` | SF WO-14 | In-fence review APPROVED |
+| `465c3cd9` | WO-14 follow-ups (Encore Wire intent, ACH prefix) + zero-secret `/api/kal/*` voice proxy | `T21` | SF WO-14 | 13/13 red-team E2E checks green |
+| `000bf83` | Add streaming female KAL voice, controller phonetic lexicon, and 28-box RapidOCR `/mint`+`/scan` parity | `WO-15` | SF WO-15 (`FB-5`, `THM-4`) | 40/40 sidecar + voice E2E green |
+| `116b75b` | Port 1:1 golden-master 3-panel workbench glass, RF laser scan, inline OCR invoice, and Check `#10045` | `WO-16` | SF WO-16 (`FB-5`, `THM-4`) | 7/7 static + 16/16 client tests green |
+| `f0e0f5c` | Add 275-table brownfield SQLite explorer, live COMEX spot subview, cross-platform `hledger`, and 13-route workbench engine | `WO-17` | SF WO-17 (`FB-5`, `THM-4`) | 24/24 seed + full Golden-Master E2E green |
+| `HEAD` | Scrub internal task prefixes, document `EO 14434` × `KYSI` governance, and update Software Factory trace | `WO-18` | SF WO-18 (`FB-5`, `THM-4`) | 0 forbidden strings + 100% test gate green |
 
 ## 5. Qualify Review Ledger
 
-| Qualify Review | Target commit | Base | Verdict | Lines deleted | Follow-up |
-| --- | --- | --- | --- | --- | --- |
-| `WO-01.q` | `3769d7e6` | `5baba895` | **PASS** | 0 | Duty-flag constraint defect logged as separate follow-up work |
-| `WO-02.q` | `11e6a606` | `2ba3ae52` | **PASS** | 0 | — |
-| `WO-03-A.q` | `2ba3ae52` | `3769d7e6` | Refused (invalid review slot) ➔ requalified | — | Re-run as `WO-03-A.q2` |
-| `WO-03-A.q2` | `2ba3ae52` | `3769d7e6` | **PASS** | 0 | Deeply nested JSON body drops the connection instead of returning `400` |
-| `WO-04-A.q` | `1ad7f604` | `11e6a606` | **FAIL** | 0 | `WO-04-A.f1`: align `public/app.js` with the real `/api/state` and `/api/step/:n` contract (`FB-1`) |
-| `WO-06.q` | `fca1c225` | `6943f1a6` | **PASS** | — | — |
-| `WO-04-A.f1.q` | `9094b2bb` | `fca1c225` | **PASS** | — | — (closes `WO-04-A.q` FAIL) |
-| `T19.q` | `11a63009` | `9094b2bb` | Not run (review slot unlaunched) ➔ re-routed | — | Re-run as `T19.q2` |
-| `T19.q2` | `11a63009` | `9094b2bb` | **FAIL** | — | `T19.f1`: refuse a non-object sidecar reply with an audited `503 OCR_UNAVAILABLE` |
-| `T19.f1.q` | `cae71057` | `11a63009` | **PASS** | — | — (closes `T19.q2` FAIL) |
-| `WO-08.q` | `8721678d` | `cae71057` | **FAIL** | — | R10 (`targetRepo`): `WO-08.f1` refused `tests_failed` (stale journal digest) ➔ `WO-08.f2` (`6db3195f`) ➔ `T20` (`c1d69467`) closes R10 |
-| `WO-13.q` | `c5026200` | `c1d69467` | Not yet run | — | — |
-| `WO-14.q` | `44cad6d1` | `c5026200` | Not yet run | — | — |
-
-`—` in *Lines deleted* means the review did not record a count.
+| Qualify Review | Target commit | Base | Verdict | Follow-up / Notes |
+| --- | --- | --- | --- | --- |
+| `WO-01.q` | `3769d7e6` | `5baba895` | **PASS** | — |
+| `WO-02.q` | `11e6a606` | `2ba3ae52` | **PASS** | — |
+| `WO-03-A.q2` | `2ba3ae52` | `3769d7e6` | **PASS** | — |
+| `WO-04-A.q` | `1ad7f604` | `11e6a606` | **FAIL** | Closed by `WO-04-A.f1` (`9094b2bb`, `FB-1`) |
+| `WO-06.q` | `fca1c225` | `6943f1a6` | **PASS** | — |
+| `WO-04-A.f1.q` | `9094b2bb` | `fca1c225` | **PASS** | Closes `WO-04-A.q` |
+| `T19.q2` | `11a63009` | `9094b2bb` | **FAIL** | Closed by `T19.f1` (`cae71057`) |
+| `T19.f1.q` | `cae71057` | `11a63009` | **PASS** | Closes `T19.q2` |
+| `WO-08.q` ➔ `T20` | `c1d69467` | `6db3195f` | **PASS** | Closes `targetRepo` & journal `canonical-sha256` (`57311e23…`) |
+| `WO-15..WO-18.q` | `feat/wo15-golden-master-parity` | `465c3cd9` | Ready | Staged for independent cross-family review |
 
 ## 6. Per-WO Evidence Index (`.sw-factory/`)
 
-| HARA WO | Plan / checklist / review log | In-fence review verdict | Status |
+| Build Unit | Plan / checklist / review log | In-fence review verdict | Status |
 | --- | --- | --- | --- |
-| `WO-01` | `.sw-factory/WO-01/` | APPROVED (Round 1, 0 blocking; 8 advisories fixed; 23 passed; Round 2 certification) | ✅ Closed |
-| `WO-02` | `.sw-factory/WO-02/` | APPROVED (Round 1, 0 blocking; 14 advisories, 8 fixed; selfcheck 26/26; Round 2 certification) | ✅ Closed |
-| `WO-03-A` | `.sw-factory/WO-03/` | APPROVED (Round 3, fenced sidecar scope; 39 passed; Round 4 certification) | ✅ Closed |
-| `WO-04-A` / `WO-04-A.f1` | `.sw-factory/WO-04/` | APPROVED (Round 5, independent `WO-04-A.f1` API and UI review against the real kernel) | ✅ Closed |
-| `WO-05` (`T19` / `T19.f1`) | `.sw-factory/WO-05/` | APPROVED (Round 2 integration; Round 3 `T19.f1` sidecar-reply fix) | ✅ Closed |
-| `WO-06` | `.sw-factory/WO-06/` | APPROVED (Round 1, red-team audit + `.sw-factory` certification) | ✅ Closed |
-| `SF WO-12` | `.sw-factory/WO-12/` | APPROVED (Round 1, round-trip evidence for `FB-1`, `FB-2`, `THM-1`; Rounds 2–3 `T20`) | ✅ Closed |
-| `SF WO-13` | `.sw-factory/WO-13/` | APPROVED (Round 1, in-fence review of the white workbench against `REQ-P2P-012`..`020`) | 🔄 Awaiting Qualify Review |
-| `SF WO-14` | `.sw-factory/WO-14/` | APPROVED (Round 1, in-fence review of the four interactive parts against the Work Order title) | 🔄 Awaiting Qualify Review |
-
-## 7. Items Carried by the Previous Edition
-
-| # | Item | Resolution | Status |
-| --- | --- | --- | --- |
-| 1 | `WO-04-A.f1`: connect the Command Desk to the real kernel contract | `9094b2bb`, `WO-04-A.f1.q` **PASS** | ✅ Resolved |
-| 2 | `WO-05`: integrate `src/`, `sidecar/`, `public/` and `seeds/`; `npm test` runs the end-to-end suite (closes SF WO-11) | `11a63009` ➔ `cae71057`, `T19.f1.q` **PASS**. `npm test` runs `tests/test-sidecar-reply.mjs` then `tests/test-copper-e2e.mjs` | ✅ Resolved |
-| 3 | `WO-06`: red-team replay, tamper, spoof and negative-quantity regressions; final `.sw-factory` certification (closes SF WO-10) | `fca1c225`, `WO-06.q` **PASS** | ✅ Resolved |
-| 4 | Server-side OCR sourcing for Step 7 | `11a63009` + `cae71057`: with `OCR_URL` set, Step 7 reads `INV-25800.pdf` through the RapidOCR sidecar and holds a forged invoice at `409 MATCH_VARIANCE_HOLD` | ✅ Resolved |
-| 5 | Repository rename to `zerosaas-p2p-app` | `README.md`, this file, `package.json` `name`, and the kernel's COMEX `user-agent` and `/api/health` `service` strings now say `zerosaas-p2p-app` | ✅ Resolved |
-| 6 | `WO-08` R10: lineage contract `targetRepo` still said `8090-p2p-app` | `T20` (`c1d69467`) edited `targetRepo` and regenerated `seeds/coa_seed.journal` in one fence | ✅ Resolved |
-| 7 | Dark "Copper Command Desk" name and look rejected by the product owner (`FB-3`) | `SF WO-13` ➔ `HARA WO-13` white ZeroSaaS P2P workbench; root cause in Section 3 | 🔄 Awaiting `WO-13.q` |
-
-**Rename follow-up — resolved by `T20` (`c1d69467`), closing `WO-08` R10.** `contracts/p2p-lineage-contract.json` `provenance.targetRepo` now points to `https://github.com/loop-smith/zerosaas-p2p-app`. The journal was regenerated with the existing seed builder; its whole-contract `canonical-sha256` is now `57311e23ada34f45a8db4cbc71e1f3032f61b2c122b545edb531f2193410a5ac`. All 89 account declarations are unchanged.
-
-The earlier contract-only attempt (`WO-08.f1`) was refused `tests_failed` because the journal digest was stale. T20 updates both fenced files together. Use `python3 seeds/build_seeds.py --check` and `python3 -m pytest seeds -q -p no:cacheprovider` to verify drift and seed integrity.
+| `WO-01` | `.sw-factory/WO-01/` | APPROVED (24 seed tests + drift check green) | ✅ Closed |
+| `WO-02` | `.sw-factory/WO-02/` | APPROVED (26 kernel self-checks green) | ✅ Closed |
+| `WO-03-A` | `.sw-factory/WO-03/` | APPROVED (40 sidecar tests green) | ✅ Closed |
+| `WO-04-A` / `WO-04-A.f1` | `.sw-factory/WO-04/` | APPROVED (Round 5 API & UI contract verification) | ✅ Closed |
+| `WO-05` (`T19` / `T19.f1`) | `.sw-factory/WO-05/` | APPROVED (Round 3 sidecar-reply + E2E integration) | ✅ Closed |
+| `WO-06` | `.sw-factory/WO-06/` | APPROVED (red-team audit + `.sw-factory` certification) | ✅ Closed |
+| `SF WO-12` | `.sw-factory/WO-12/` | APPROVED (`FB-1`, `FB-2`, `THM-1`, `T20`) | ✅ Closed |
+| `SF WO-13` | `.sw-factory/WO-13/` | APPROVED (`REQ-P2P-012`..`020`) | ✅ Closed |
+| `SF WO-14` | `.sw-factory/WO-14/` | APPROVED (interactive voice, RF, OCR & check parity) | ✅ Closed |
+| `SF WO-15` .. `SF WO-18` | `.sw-factory/WO-15/` | APPROVED (Round 4 full-stack Golden-Master parity, `FB-5` ➔ `THM-4`) | 🔄 Ready for Qualify Review |

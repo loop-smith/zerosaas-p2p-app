@@ -6,7 +6,7 @@
 **Work Order Title:** Wire 16-Assertion End-to-End Deterministic & Guardrail Verification Suite (tests/test-copper-e2e.mjs)
 **Initialized At (UTC):** 2026-11-14T02:48:08Z
 
-The file landed in the WO-06 seat because `tests/` is inside that fence and `npm test` already imported `tests/test-copper-e2e.mjs`. HARA-06.T19 (cc2) integrated the sidecar, desk and seeds into the suite and set `package.json` `test` to `node tests/test-copper-e2e.mjs`. See `review-log.md` Round 2.
+The file landed in the WO-06 seat because `tests/` is inside that fence and `npm test` already imported `tests/test-copper-e2e.mjs`. T19 integrated the sidecar, desk and seeds into the suite and set `package.json` `test` to `node tests/test-copper-e2e.mjs`. See `review-log.md` Round 2.
 
 ## Phase 1: Context Gathering
 
