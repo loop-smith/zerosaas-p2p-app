@@ -1,0 +1,1069 @@
+{
+  "schema": "zerosaas.brownfield-ddl.v1",
+  "counts": {
+    "crmCore": 1,
+    "crmAux": 150,
+    "crmTotal": 151,
+    "wmsCore": 9,
+    "wmsAux": 110,
+    "wmsTotal": 119,
+    "hrmCore": 3,
+    "hrmAux": 2,
+    "hrmTotal": 5,
+    "grandTotal": 275
+  },
+  "crm": [
+    {
+      "table": "account_email",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"account_email\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"message_subject\" text NULL, \"message_body\" text NULL, \"timezone\" varchar(100) NOT NULL, \"scheduled_date_time\" datetime NULL, \"scheduled_later\" bool NOT NULL, \"from_email\" varchar(254) NOT NULL, \"rendered_message_body\" text NULL, \"created_by_id\" char(32) NULL, \"from_account_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL );"
+    },
+    {
+      "table": "account_email_recipients",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"account_email_recipients\" ( \"id\" integer NOT NULL PRIMARY KEY, \"accountemail_id\" char(32) NOT NULL, \"contact_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "accounts",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"accounts\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"name\" varchar(255) NOT NULL, \"email\" varchar(254) NULL, \"phone\" varchar(25) NULL, \"website\" varchar(200) NULL, \"industry\" varchar(255) NULL, \"number_of_employees\" integer unsigned NULL CHECK (\"number_of_employees\" >= 0), \"annual_revenue\" decimal NULL, \"address_line\" varchar(255) NULL, \"city\" varchar(255) NULL, \"state\" varchar(255) NULL, \"postcode\" varchar(64) NULL, \"country\" varchar(3) NULL, \"description\" text NULL, \"is_active\" bool NOT NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, \"currency\" varchar(3) NULL, \"custom_fields\" text NOT NULL CHECK ((JSON_VALID(\"custom_fields\") OR \"custom_fields\" IS NULL)), \"is_sample\" bool NOT NULL, CONSTRAINT \"account_revenue_non_negative\" CHECK ((\"annual_revenue\" >= '0' OR \"annual_revenue\" IS NULL)) );"
+    },
+    {
+      "table": "accounts_assigned_to",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"accounts_assigned_to\" ( \"id\" integer NOT NULL PRIMARY KEY, \"account_id\" char(32) NOT NULL, \"profile_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "accounts_contacts",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"accounts_contacts\" ( \"id\" integer NOT NULL PRIMARY KEY, \"account_id\" char(32) NOT NULL, \"contact_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "accounts_tags",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"accounts_tags\" ( \"id\" integer NOT NULL PRIMARY KEY, \"account_id\" char(32) NOT NULL, \"tags_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "accounts_teams",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"accounts_teams\" ( \"id\" integer NOT NULL PRIMARY KEY, \"account_id\" char(32) NOT NULL, \"teams_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "activity",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"activity\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"entity_type\" varchar(50) NOT NULL, \"entity_id\" char(32) NOT NULL, \"entity_name\" varchar(255) NOT NULL, \"description\" text NOT NULL, \"created_by_id\" char(32) NULL, \"updated_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"user_id\" char(32) NULL, \"metadata\" text NOT NULL CHECK ((JSON_VALID(\"metadata\") OR \"metadata\" IS NULL)), \"action\" varchar(32) NOT NULL );"
+    },
+    {
+      "table": "address",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"address\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"address_line\" varchar(255) NOT NULL, \"street\" varchar(55) NOT NULL, \"city\" varchar(255) NOT NULL, \"state\" varchar(255) NOT NULL, \"postcode\" varchar(64) NOT NULL, \"country\" varchar(3) NOT NULL, \"created_by_id\" char(32) NULL, \"updated_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "apiSettings",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"apiSettings\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"title\" text NOT NULL, \"website\" varchar(255) NULL, \"created_by_id\" char(32) NULL, \"updated_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"apikey\" varchar(64) NOT NULL );"
+    },
+    {
+      "table": "apiSettings_lead_assigned_to",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"apiSettings_lead_assigned_to\" ( \"id\" integer NOT NULL PRIMARY KEY, \"apisettings_id\" char(32) NOT NULL, \"profile_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "apiSettings_tags",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"apiSettings_tags\" ( \"id\" integer NOT NULL PRIMARY KEY, \"apisettings_id\" char(32) NOT NULL, \"tags_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "approval",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"approval\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"state\" varchar(16) NOT NULL, \"note\" text NOT NULL, \"reason\" text NOT NULL, \"decided_at\" datetime NULL, \"approver_id\" char(32) NULL, \"case_id\" char(32) NOT NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"requested_by_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, \"rule_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "approval_rule",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"approval_rule\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"name\" varchar(128) NOT NULL, \"trigger_event\" varchar(16) NOT NULL, \"match_priority\" varchar(32) NULL, \"match_case_type\" varchar(32) NULL, \"approver_role\" varchar(16) NOT NULL, \"is_active\" bool NOT NULL, \"created_by_id\" char(32) NULL, \"match_team_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL );"
+    },
+    {
+      "table": "approval_rule_approvers",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"approval_rule_approvers\" ( \"id\" integer NOT NULL PRIMARY KEY, \"approvalrule_id\" char(32) NOT NULL, \"profile_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "attachments",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"attachments\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"object_id\" char(32) NOT NULL, \"file_name\" varchar(60) NOT NULL, \"attachment\" varchar(1001) NOT NULL, \"content_type_id\" integer NOT NULL, \"created_by_id\" char(32) NULL, \"updated_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "auth_group",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"auth_group\" ( \"id\" integer NOT NULL PRIMARY KEY, \"name\" varchar(150) NOT NULL UNIQUE );"
+    },
+    {
+      "table": "auth_group_permissions",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"auth_group_permissions\" ( \"id\" integer NOT NULL PRIMARY KEY, \"group_id\" integer NOT NULL, \"permission_id\" integer NOT NULL );"
+    },
+    {
+      "table": "auth_permission",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"auth_permission\" ( \"id\" integer NOT NULL PRIMARY KEY, \"content_type_id\" integer NOT NULL, \"codename\" varchar(100) NOT NULL, \"name\" varchar(255) NOT NULL );"
+    },
+    {
+      "table": "automation_rotation",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"automation_rotation\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"action_index\" smallint unsigned NOT NULL CHECK (\"action_index\" >= 0), \"next_index\" integer unsigned NOT NULL CHECK (\"next_index\" >= 0), \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, \"rule_id\" char(32) NOT NULL, CONSTRAINT \"uniq_automation_rotation\" UNIQUE (\"rule_id\", \"action_index\") );"
+    },
+    {
+      "table": "automation_rule",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"automation_rule\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"name\" varchar(120) NOT NULL, \"object_key\" varchar(64) NOT NULL, \"trigger\" text NOT NULL CHECK ((JSON_VALID(\"trigger\") OR \"trigger\" IS NULL)), \"match\" varchar(3) NOT NULL, \"conditions\" text NOT NULL CHECK ((JSON_VALID(\"conditions\") OR \"conditions\" IS NULL)), \"actions\" text NOT NULL CHECK ((JSON_VALID(\"actions\") OR \"actions\" IS NULL)), \"is_active\" bool NOT NULL, \"position\" integer unsigned NOT NULL CHECK (\"position\" >= 0), \"switched_on_at\" datetime NULL, \"paused_reason\" varchar(32) NOT NULL, \"last_failure_notice_at\" datetime NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"owner_id\" char(32) NULL, \"updated_by_id\" char(32) NULL );"
+    },
+    {
+      "table": "automation_run",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"automation_run\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"object_key\" varchar(64) NOT NULL, \"record_id\" char(32) NOT NULL, \"record_name\" varchar(255) NOT NULL, \"status\" varchar(8) NOT NULL, \"reason\" varchar(255) NOT NULL, \"chain_id\" char(32) NOT NULL, \"depth\" smallint unsigned NOT NULL CHECK (\"depth\" >= 0), \"steps\" text NOT NULL CHECK ((JSON_VALID(\"steps\") OR \"steps\" IS NULL)), \"skipped_count\" integer unsigned NOT NULL CHECK (\"skipped_count\" >= 0), \"window_start\" datetime NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"rule_id\" char(32) NOT NULL, \"triggered_by_id\" char(32) NULL, \"updated_by_id\" char(32) NULL );"
+    },
+    {
+      "table": "board",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"board\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"name\" varchar(255) NOT NULL, \"description\" text NULL, \"is_archived\" bool NOT NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"owner_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL );"
+    },
+    {
+      "table": "board_column",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"board_column\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"name\" varchar(100) NOT NULL, \"order\" integer unsigned NOT NULL CHECK (\"order\" >= 0), \"color\" varchar(7) NOT NULL, \"limit\" integer unsigned NULL CHECK (\"limit\" >= 0), \"board_id\" char(32) NOT NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL );"
+    },
+    {
+      "table": "board_member",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"board_member\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"role\" varchar(20) NOT NULL, \"board_id\" char(32) NOT NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"profile_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL );"
+    },
+    {
+      "table": "board_task",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"board_task\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"title\" varchar(255) NOT NULL, \"description\" text NULL, \"order\" integer unsigned NOT NULL CHECK (\"order\" >= 0), \"priority\" varchar(10) NOT NULL, \"due_date\" datetime NULL, \"completed_at\" datetime NULL, \"account_id\" char(32) NULL, \"column_id\" char(32) NOT NULL, \"contact_id\" char(32) NULL, \"created_by_id\" char(32) NULL, \"opportunity_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL );"
+    },
+    {
+      "table": "board_task_assigned_to",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"board_task_assigned_to\" ( \"id\" integer NOT NULL PRIMARY KEY, \"boardtask_id\" char(32) NOT NULL, \"profile_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "business_calendar",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"business_calendar\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"name\" varchar(100) NOT NULL, \"timezone\" varchar(64) NOT NULL, \"is_default\" bool NOT NULL, \"monday_open\" time NULL, \"monday_close\" time NULL, \"tuesday_open\" time NULL, \"tuesday_close\" time NULL, \"wednesday_open\" time NULL, \"wednesday_close\" time NULL, \"thursday_open\" time NULL, \"thursday_close\" time NULL, \"friday_open\" time NULL, \"friday_close\" time NULL, \"saturday_open\" time NULL, \"saturday_close\" time NULL, \"sunday_open\" time NULL, \"sunday_close\" time NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL );"
+    },
+    {
+      "table": "business_holiday",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"business_holiday\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"date\" date NOT NULL, \"name\" varchar(100) NOT NULL, \"calendar_id\" char(32) NOT NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, CONSTRAINT \"uniq_business_holiday_per_calendar_date\" UNIQUE (\"calendar_id\", \"date\") );"
+    },
+    {
+      "table": "calendar_feed_token",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"calendar_feed_token\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"token_hash\" varchar(64) NOT NULL UNIQUE, \"last_used_at\" datetime NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"profile_id\" char(32) NOT NULL UNIQUE, \"updated_by_id\" char(32) NULL );"
+    },
+    {
+      "table": "case",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"case\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"name\" varchar(64) NOT NULL, \"status\" varchar(64) NOT NULL, \"priority\" varchar(64) NOT NULL, \"case_type\" varchar(255) NULL, \"closed_on\" date NULL, \"description\" text NULL, \"is_active\" bool NOT NULL, \"account_id\" char(32) NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, \"first_response_at\" datetime NULL, \"resolved_at\" datetime NULL, \"sla_first_response_hours\" integer unsigned NULL CHECK (\"sla_first_response_hours\" >= 0), \"kanban_order\" decimal NOT NULL, \"stage_id\" char(32) NULL, \"custom_fields\" text NOT NULL CHECK ((JSON_VALID(\"custom_fields\") OR \"custom_fields\" IS NULL)), \"escalation_count\" smallint unsigned NOT NULL CHECK (\"escalation_count\" >= 0), \"last_escalation_fired_at\" datetime NULL, \"external_thread_id\" varchar(255) NULL, \"alt_thread_ids\" text NOT NULL CHECK ((JSON_VALID(\"alt_thread_ids\") OR \"alt_thread_ids\" IS NULL)), \"merged_at\" datetime NULL, \"merged_by_id\" char(32) NULL, \"sla_paused_at\" datetime NULL, \"sla_paused_seconds\" integer unsigned NOT NULL CHECK (\"sla_paused_seconds\" >= 0), \"is_problem\" bool NOT NULL, \"merge_record\" text NULL CHECK ((JSON_VALID(\"merge_record\") OR \"merge_record\" IS NULL)), \"is_sample\" bool NOT NULL, \"sla_resolution_hours\" integer unsigned NULL CHECK (\"sla_resolution_hours\" >= 0), \"merged_into_id\" char(32) NULL, \"parent_id\" char(32) NULL );"
+    },
+    {
+      "table": "case_assigned_to",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"case_assigned_to\" ( \"id\" integer NOT NULL PRIMARY KEY, \"case_id\" char(32) NOT NULL, \"profile_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "case_contacts",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"case_contacts\" ( \"id\" integer NOT NULL PRIMARY KEY, \"case_id\" char(32) NOT NULL, \"contact_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "case_pipeline",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"case_pipeline\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"name\" varchar(255) NOT NULL, \"description\" text NULL, \"is_default\" bool NOT NULL, \"is_active\" bool NOT NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL );"
+    },
+    {
+      "table": "case_stage",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"case_stage\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"name\" varchar(100) NOT NULL, \"order\" integer unsigned NOT NULL CHECK (\"order\" >= 0), \"color\" varchar(7) NOT NULL, \"stage_type\" varchar(20) NOT NULL, \"maps_to_status\" varchar(64) NULL, \"wip_limit\" integer unsigned NULL CHECK (\"wip_limit\" >= 0), \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"pipeline_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL );"
+    },
+    {
+      "table": "case_tags",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"case_tags\" ( \"id\" integer NOT NULL PRIMARY KEY, \"case_id\" char(32) NOT NULL, \"tags_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "case_teams",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"case_teams\" ( \"id\" integer NOT NULL PRIMARY KEY, \"case_id\" char(32) NOT NULL, \"teams_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "case_watcher",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"case_watcher\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"subscribed_via\" varchar(16) NOT NULL, \"case_id\" char(32) NOT NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"profile_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, CONSTRAINT \"uniq_case_watcher_per_profile\" UNIQUE (\"case_id\", \"profile_id\") );"
+    },
+    {
+      "table": "comment",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"comment\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"object_id\" char(32) NOT NULL, \"commented_on\" datetime NOT NULL, \"content_type_id\" integer NOT NULL, \"created_by_id\" char(32) NULL, \"updated_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"commented_by_id\" char(32) NULL, \"is_internal\" bool NOT NULL, \"commented_by_contact_id\" char(32) NULL, \"comment\" text NOT NULL, CONSTRAINT \"comment_single_author\" CHECK ((\"commented_by_id\" IS NULL OR \"commented_by_contact_id\" IS NULL)) );"
+    },
+    {
+      "table": "commentFiles",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"commentFiles\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"comment_file\" varchar(100) NULL, \"comment_id\" char(32) NOT NULL, \"created_by_id\" char(32) NULL, \"updated_by_id\" char(32) NULL, \"org_id\" char(32) NULL );"
+    },
+    {
+      "table": "contact_form_submission",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"contact_form_submission\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"name\" varchar(255) NOT NULL, \"email\" varchar(254) NOT NULL, \"message\" text NOT NULL, \"reason\" varchar(100) NOT NULL, \"ip_address\" char(39) NULL, \"user_agent\" text NULL, \"referrer\" varchar(500) NULL, \"status\" varchar(20) NOT NULL, \"replied_at\" datetime NULL, \"created_by_id\" char(32) NULL, \"replied_by_id\" char(32) NULL, \"updated_by_id\" char(32) NULL );"
+    },
+    {
+      "table": "contacts",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"contacts\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"first_name\" varchar(255) NOT NULL, \"last_name\" varchar(255) NOT NULL, \"email\" varchar(254) NULL, \"phone\" varchar(25) NULL, \"organization\" varchar(255) NULL, \"title\" varchar(255) NULL, \"department\" varchar(255) NULL, \"do_not_call\" bool NOT NULL, \"address_line\" varchar(255) NULL, \"city\" varchar(255) NULL, \"state\" varchar(255) NULL, \"postcode\" varchar(64) NULL, \"country\" varchar(3) NULL, \"description\" text NULL, \"is_active\" bool NOT NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, \"account_id\" char(32) NULL, \"linkedin_url\" varchar(200) NULL, \"auto_created\" bool NOT NULL, \"custom_fields\" text NOT NULL CHECK ((JSON_VALID(\"custom_fields\") OR \"custom_fields\" IS NULL)), \"is_sample\" bool NOT NULL, \"phone_e164\" varchar(32) NOT NULL, \"source\" varchar(255) NOT NULL, \"source_detail\" varchar(100) NOT NULL, \"source_ref\" varchar(255) NOT NULL );"
+    },
+    {
+      "table": "contacts_assigned_to",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"contacts_assigned_to\" ( \"id\" integer NOT NULL PRIMARY KEY, \"contact_id\" char(32) NOT NULL, \"profile_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "contacts_tags",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"contacts_tags\" ( \"id\" integer NOT NULL PRIMARY KEY, \"contact_id\" char(32) NOT NULL, \"tags_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "contacts_teams",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"contacts_teams\" ( \"id\" integer NOT NULL PRIMARY KEY, \"contact_id\" char(32) NOT NULL, \"teams_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "csat_survey",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"csat_survey\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"token_hash\" varchar(64) NOT NULL UNIQUE, \"sent_at\" datetime NOT NULL, \"rating\" smallint unsigned NULL CHECK (\"rating\" >= 0), \"comment\" text NOT NULL, \"responded_at\" datetime NULL, \"expires_at\" datetime NOT NULL, \"case_id\" char(32) NOT NULL UNIQUE, \"contact_id\" char(32) NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL );"
+    },
+    {
+      "table": "custom_field_definition",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"custom_field_definition\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"target_model\" varchar(32) NOT NULL, \"key\" varchar(64) NOT NULL, \"label\" varchar(128) NOT NULL, \"field_type\" varchar(16) NOT NULL, \"options\" text NULL CHECK ((JSON_VALID(\"options\") OR \"options\" IS NULL)), \"is_required\" bool NOT NULL, \"is_filterable\" bool NOT NULL, \"display_order\" integer unsigned NOT NULL CHECK (\"display_order\" >= 0), \"is_active\" bool NOT NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, CONSTRAINT \"uniq_custom_field_per_org_target\" UNIQUE (\"org_id\", \"target_model\", \"key\") );"
+    },
+    {
+      "table": "device_token",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"device_token\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"token\" varchar(4096) NOT NULL, \"platform\" varchar(10) NOT NULL, \"app_version\" varchar(32) NOT NULL, \"last_seen_at\" datetime NOT NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, \"user_id\" char(32) NOT NULL, CONSTRAINT \"unique_device_token_per_org\" UNIQUE (\"org_id\", \"token\") );"
+    },
+    {
+      "table": "django_admin_log",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"django_admin_log\" ( \"id\" integer NOT NULL PRIMARY KEY, \"object_id\" text NULL, \"object_repr\" varchar(200) NOT NULL, \"action_flag\" smallint unsigned NOT NULL CHECK (\"action_flag\" >= 0), \"change_message\" text NOT NULL, \"content_type_id\" integer NULL, \"user_id\" char(32) NOT NULL, \"action_time\" datetime NOT NULL );"
+    },
+    {
+      "table": "django_content_type",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"django_content_type\" ( \"id\" integer NOT NULL PRIMARY KEY, \"app_label\" varchar(100) NOT NULL, \"model\" varchar(100) NOT NULL );"
+    },
+    {
+      "table": "django_migrations",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"django_migrations\" ( \"id\" integer NOT NULL PRIMARY KEY, \"app\" varchar(255) NOT NULL, \"name\" varchar(255) NOT NULL, \"applied\" datetime NOT NULL );"
+    },
+    {
+      "table": "django_ses_blacklistedemail",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"django_ses_blacklistedemail\" ( \"id\" integer NOT NULL PRIMARY KEY, \"email\" varchar(255) NOT NULL UNIQUE );"
+    },
+    {
+      "table": "django_ses_sesstat",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"django_ses_sesstat\" ( \"id\" integer NOT NULL PRIMARY KEY, \"date\" date NOT NULL UNIQUE, \"delivery_attempts\" integer unsigned NOT NULL CHECK (\"delivery_attempts\" >= 0), \"bounces\" integer unsigned NOT NULL CHECK (\"bounces\" >= 0), \"complaints\" integer unsigned NOT NULL CHECK (\"complaints\" >= 0), \"rejects\" integer unsigned NOT NULL CHECK (\"rejects\" >= 0) );"
+    },
+    {
+      "table": "django_session",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"django_session\" ( \"session_key\" varchar(40) NOT NULL PRIMARY KEY, \"session_data\" text NOT NULL, \"expire_date\" datetime NOT NULL );"
+    },
+    {
+      "table": "document",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"document\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"title\" text NULL, \"document_file\" varchar(5000) NOT NULL, \"status\" varchar(64) NOT NULL, \"created_by_id\" char(32) NULL, \"updated_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "document_shared_to",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"document_shared_to\" ( \"id\" integer NOT NULL PRIMARY KEY, \"document_id\" char(32) NOT NULL, \"profile_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "document_teams",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"document_teams\" ( \"id\" integer NOT NULL PRIMARY KEY, \"document_id\" char(32) NOT NULL, \"teams_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "emailLogs",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"emailLogs\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"is_sent\" bool NOT NULL, \"contact_id\" char(32) NULL, \"created_by_id\" char(32) NULL, \"email_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL );"
+    },
+    {
+      "table": "email_message",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"email_message\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"direction\" varchar(16) NOT NULL, \"message_id\" varchar(512) NOT NULL, \"in_reply_to\" varchar(512) NOT NULL, \"references\" text NOT NULL, \"from_address\" varchar(254) NOT NULL, \"to_addresses\" text NOT NULL, \"cc_addresses\" text NOT NULL, \"subject\" varchar(512) NOT NULL, \"body_text\" text NOT NULL, \"body_html\" text NOT NULL, \"received_at\" datetime NOT NULL, \"drop_reason\" varchar(64) NOT NULL, \"case_id\" char(32) NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, \"mailbox_id\" char(32) NULL, CONSTRAINT \"uniq_email_message_per_org_id\" UNIQUE (\"org_id\", \"message_id\") );"
+    },
+    {
+      "table": "escalation_policy",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"escalation_policy\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"priority\" varchar(64) NOT NULL, \"first_response_action\" varchar(32) NOT NULL, \"resolution_action\" varchar(32) NOT NULL, \"is_active\" bool NOT NULL, \"created_by_id\" char(32) NULL, \"first_response_target_id\" char(32) NULL, \"notify_team_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"resolution_target_id\" char(32) NULL, \"updated_by_id\" char(32) NULL, \"first_response_hours\" integer unsigned NULL CHECK (\"first_response_hours\" >= 0), \"resolution_hours\" integer unsigned NULL CHECK (\"resolution_hours\" >= 0), \"next_response_hours\" integer unsigned NULL CHECK (\"next_response_hours\" >= 0), CONSTRAINT \"uniq_escalation_policy_per_org_priority\" UNIQUE (\"org_id\", \"priority\") );"
+    },
+    {
+      "table": "estimate",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"estimate\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"estimate_number\" varchar(50) NOT NULL, \"title\" varchar(100) NOT NULL, \"status\" varchar(20) NOT NULL, \"client_name\" varchar(255) NOT NULL, \"client_email\" varchar(254) NOT NULL, \"client_phone\" varchar(25) NOT NULL, \"client_address_line\" varchar(255) NOT NULL, \"client_city\" varchar(100) NOT NULL, \"client_state\" varchar(100) NOT NULL, \"client_postcode\" varchar(20) NOT NULL, \"client_country\" varchar(3) NOT NULL, \"subtotal\" decimal NOT NULL, \"discount_type\" varchar(20) NOT NULL, \"discount_value\" decimal NOT NULL, \"discount_amount\" decimal NOT NULL, \"tax_rate\" decimal NOT NULL, \"tax_amount\" decimal NOT NULL, \"total_amount\" decimal NOT NULL, \"currency\" varchar(3) NOT NULL, \"issue_date\" date NOT NULL, \"expiry_date\" date NULL, \"sent_at\" datetime NULL, \"viewed_at\" datetime NULL, \"accepted_at\" datetime NULL, \"declined_at\" datetime NULL, \"public_token\" varchar(64) NOT NULL UNIQUE, \"public_link_enabled\" bool NOT NULL, \"notes\" text NOT NULL, \"terms\" text NOT NULL, \"account_id\" char(32) NULL, \"contact_id\" char(32) NULL, \"converted_to_invoice_id\" char(32) NULL, \"created_by_id\" char(32) NULL, \"opportunity_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, \"custom_fields\" text NOT NULL CHECK ((JSON_VALID(\"custom_fields\") OR \"custom_fields\" IS NULL)), \"accepted_by_email\" varchar(254) NOT NULL, \"accepted_by_name\" varchar(255) NOT NULL, \"accepted_ip\" char(39) NULL, \"accepted_user_agent\" text NOT NULL, \"deposit_invoice_id\" char(32) NULL, \"deposit_percent\" decimal NULL, \"introduction\" text NOT NULL, \"project_id\" char(32) NULL, \"project_billing_type\" varchar(20) NOT NULL, \"start_project\" bool NOT NULL, CONSTRAINT \"unique_estimate_number_per_org\" UNIQUE (\"org_id\", \"estimate_number\") );"
+    },
+    {
+      "table": "estimate_assigned_to",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"estimate_assigned_to\" ( \"id\" integer NOT NULL PRIMARY KEY, \"estimate_id\" char(32) NOT NULL, \"profile_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "estimate_line_item",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"estimate_line_item\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"description\" varchar(500) NOT NULL, \"quantity\" decimal NOT NULL, \"unit_price\" decimal NOT NULL, \"discount_type\" varchar(20) NOT NULL, \"discount_value\" decimal NOT NULL, \"discount_amount\" decimal NOT NULL, \"tax_rate\" decimal NOT NULL, \"tax_amount\" decimal NOT NULL, \"subtotal\" decimal NOT NULL, \"total\" decimal NOT NULL, \"order\" integer unsigned NOT NULL CHECK (\"order\" >= 0), \"created_by_id\" char(32) NULL, \"estimate_id\" char(32) NOT NULL, \"org_id\" char(32) NOT NULL, \"product_id\" char(32) NULL, \"updated_by_id\" char(32) NULL, \"name\" varchar(255) NULL );"
+    },
+    {
+      "table": "estimate_teams",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"estimate_teams\" ( \"id\" integer NOT NULL PRIMARY KEY, \"estimate_id\" char(32) NOT NULL, \"teams_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "inbound_mailbox",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"inbound_mailbox\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"address\" varchar(254) NOT NULL, \"provider\" varchar(16) NOT NULL, \"webhook_secret\" varchar(128) NOT NULL, \"imap_host\" varchar(255) NOT NULL, \"imap_port\" integer unsigned NULL CHECK (\"imap_port\" >= 0), \"imap_username\" varchar(255) NOT NULL, \"imap_password_enc\" varchar(512) NOT NULL, \"default_priority\" varchar(64) NOT NULL, \"default_case_type\" varchar(255) NULL, \"is_active\" bool NOT NULL, \"created_by_id\" char(32) NULL, \"default_assignee_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, \"topic_arn\" varchar(256) NOT NULL, \"creates\" varchar(16) NOT NULL, \"is_generated\" bool NOT NULL, \"lead_source\" varchar(64) NOT NULL, \"lead_source_detail\" varchar(100) NOT NULL, CONSTRAINT \"uniq_inbound_mailbox_per_org_address\" UNIQUE (\"org_id\", \"address\") );"
+    },
+    {
+      "table": "installed_app",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"installed_app\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"app_id\" varchar(64) NOT NULL, \"installed_version\" integer unsigned NOT NULL CHECK (\"installed_version\" >= 0), \"status\" varchar(16) NOT NULL, \"installed_at\" datetime NOT NULL, \"removed_at\" datetime NULL, \"owned\" text NOT NULL CHECK ((JSON_VALID(\"owned\") OR \"owned\" IS NULL)), \"offered\" text NOT NULL CHECK ((JSON_VALID(\"offered\") OR \"offered\" IS NULL)), \"created_by_id\" char(32) NULL, \"installed_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, CONSTRAINT \"unique_installed_app_per_org\" UNIQUE (\"org_id\", \"app_id\") );"
+    },
+    {
+      "table": "interaction",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"interaction\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"kind\" varchar(16) NOT NULL, \"direction\" varchar(8) NOT NULL, \"occurred_at\" datetime NOT NULL, \"duration_seconds\" integer unsigned NULL CHECK (\"duration_seconds\" >= 0), \"duration_estimated\" bool NOT NULL, \"outcome\" varchar(16) NOT NULL, \"subject\" varchar(200) NOT NULL, \"body\" text NOT NULL, \"participants\" text NOT NULL CHECK ((JSON_VALID(\"participants\") OR \"participants\" IS NULL)), \"home\" varchar(16) NOT NULL, \"origin\" varchar(32) NOT NULL, \"external_id\" varchar(255) NOT NULL, \"account_id\" char(32) NULL, \"case_id\" char(32) NULL, \"contact_id\" char(32) NULL, \"created_by_id\" char(32) NULL, \"lead_id\" char(32) NULL, \"logged_by_id\" char(32) NULL, \"opportunity_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, CONSTRAINT \"interaction_home_is_linked\" CHECK (((\"home\" = 'lead' AND \"lead_id\" IS NOT NULL) OR (\"contact_id\" IS NOT NULL AND \"home\" = 'contact') OR (\"account_id\" IS NOT NULL AND \"home\" = 'account') OR (\"home\" = 'opportunity' AND \"opportunity_id\" IS NOT NULL) OR (\"case_id\" IS NOT NULL AND \"home\" = 'case'))) );"
+    },
+    {
+      "table": "invoice",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"invoice\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"invoice_title\" varchar(100) NOT NULL, \"invoice_number\" varchar(50) NOT NULL, \"total_amount\" decimal NOT NULL, \"currency\" varchar(3) NOT NULL, \"amount_due\" decimal NOT NULL, \"amount_paid\" decimal NOT NULL, \"is_email_sent\" bool NOT NULL, \"status\" varchar(20) NOT NULL, \"details\" text NULL, \"due_date\" date NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, \"account_id\" char(32) NULL, \"billing_address_line\" varchar(255) NOT NULL, \"billing_city\" varchar(100) NOT NULL, \"billing_country\" varchar(3) NOT NULL, \"billing_postcode\" varchar(20) NOT NULL, \"billing_state\" varchar(100) NOT NULL, \"client_address_line\" varchar(255) NOT NULL, \"client_city\" varchar(100) NOT NULL, \"client_country\" varchar(3) NOT NULL, \"client_email\" varchar(254) NOT NULL, \"client_name\" varchar(255) NOT NULL, \"client_phone\" varchar(25) NOT NULL, \"client_postcode\" varchar(20) NOT NULL, \"client_state\" varchar(100) NOT NULL, \"contact_id\" char(32) NULL, \"discount_amount\" decimal NOT NULL, \"discount_type\" varchar(20) NOT NULL, \"discount_value\" decimal NOT NULL, \"last_reminder_sent\" datetime NULL, \"notes\" text NOT NULL, \"opportunity_id\" char(32) NULL, \"paid_at\" datetime NULL, \"payment_terms\" varchar(20) NOT NULL, \"public_link_enabled\" bool NOT NULL, \"public_token\" varchar(64) NOT NULL UNIQUE, \"reminder_count\" integer unsigned NOT NULL CHECK (\"reminder_count\" >= 0), \"reminder_days_after\" integer unsigned NOT NULL CHECK (\"reminder_days_after\" >= 0), \"reminder_days_before\" integer unsigned NOT NULL CHECK (\"reminder_days_before\" >= 0), \"reminder_enabled\" bool NOT NULL, \"reminder_frequency\" varchar(20) NOT NULL, \"sent_at\" datetime NULL, \"shipping_amount\" decimal NOT NULL, \"subtotal\" decimal NOT NULL, \"tax_amount\" decimal NOT NULL, \"tax_rate\" decimal NOT NULL, \"terms\" text NOT NULL, \"viewed_at\" datetime NULL, \"template_id\" char(32) NULL, \"billing_period\" varchar(100) NULL, \"po_number\" varchar(100) NULL, \"cancelled_at\" datetime NULL, \"custom_fields\" text NOT NULL CHECK ((JSON_VALID(\"custom_fields\") OR \"custom_fields\" IS NULL)), \"issue_date\" date NOT NULL, \"project_id\" char(32) NULL, CONSTRAINT \"unique_invoice_number_per_org\" UNIQUE (\"org_id\", \"invoice_number\") );"
+    },
+    {
+      "table": "invoice_assigned_to",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"invoice_assigned_to\" ( \"id\" integer NOT NULL PRIMARY KEY, \"invoice_id\" char(32) NOT NULL, \"profile_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "invoice_history",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"invoice_history\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"invoice_title\" varchar(100) NOT NULL, \"invoice_number\" varchar(50) NOT NULL, \"currency\" varchar(3) NULL, \"amount_due\" decimal NOT NULL, \"status\" varchar(20) NOT NULL, \"details\" text NULL, \"due_date\" date NULL, \"created_by_id\" char(32) NULL, \"invoice_id\" char(32) NOT NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, \"client_email\" varchar(254) NOT NULL, \"client_name\" varchar(255) NOT NULL, \"total_amount\" decimal NOT NULL );"
+    },
+    {
+      "table": "invoice_line_item",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"invoice_line_item\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"description\" varchar(500) NOT NULL, \"quantity\" decimal NOT NULL, \"unit_price\" decimal NOT NULL, \"total\" decimal NOT NULL, \"order\" integer unsigned NOT NULL CHECK (\"order\" >= 0), \"created_by_id\" char(32) NULL, \"invoice_id\" char(32) NOT NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, \"product_id\" char(32) NULL, \"discount_amount\" decimal NOT NULL, \"discount_type\" varchar(20) NOT NULL, \"discount_value\" decimal NOT NULL, \"subtotal\" decimal NOT NULL, \"tax_amount\" decimal NOT NULL, \"tax_rate\" decimal NOT NULL, \"name\" varchar(255) NULL );"
+    },
+    {
+      "table": "invoice_teams",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"invoice_teams\" ( \"id\" integer NOT NULL PRIMARY KEY, \"invoice_id\" char(32) NOT NULL, \"teams_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "invoice_template",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"invoice_template\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"name\" varchar(100) NOT NULL, \"logo\" varchar(100) NULL, \"primary_color\" varchar(7) NOT NULL, \"secondary_color\" varchar(7) NOT NULL, \"template_html\" text NOT NULL, \"template_css\" text NOT NULL, \"default_notes\" text NOT NULL, \"default_terms\" text NOT NULL, \"footer_text\" text NOT NULL, \"is_default\" bool NOT NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL );"
+    },
+    {
+      "table": "lead",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"lead\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"first_name\" varchar(255) NULL, \"last_name\" varchar(255) NULL, \"email\" varchar(254) NULL, \"phone\" varchar(25) NULL, \"website\" varchar(255) NULL, \"linkedin_url\" varchar(500) NULL, \"status\" varchar(255) NULL, \"source\" varchar(255) NULL, \"industry\" varchar(255) NULL, \"rating\" varchar(10) NULL, \"opportunity_amount\" decimal NULL, \"probability\" integer NULL, \"close_date\" date NULL, \"address_line\" varchar(255) NULL, \"city\" varchar(255) NULL, \"state\" varchar(255) NULL, \"postcode\" varchar(64) NULL, \"country\" varchar(3) NULL, \"last_contacted\" date NULL, \"next_follow_up\" date NULL, \"description\" text NULL, \"is_active\" bool NOT NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, \"company_name\" varchar(255) NULL, \"salutation\" varchar(64) NULL, \"job_title\" varchar(255) NULL, \"title\" varchar(255) NULL, \"currency\" varchar(3) NULL, \"kanban_order\" decimal NOT NULL, \"stage_id\" char(32) NULL, \"custom_fields\" text NOT NULL CHECK ((JSON_VALID(\"custom_fields\") OR \"custom_fields\" IS NULL)), \"is_sample\" bool NOT NULL, \"external_id\" varchar(255) NOT NULL, \"external_source\" varchar(100) NOT NULL, \"last_enquiry_at\" datetime NULL, \"phone_e164\" varchar(32) NOT NULL, \"source_detail\" varchar(100) NOT NULL, \"source_ref\" varchar(255) NOT NULL, \"first_response_at\" datetime NULL, \"first_response_by_id\" char(32) NULL, \"last_outbound_at\" datetime NULL, \"waiting_reminded_at\" datetime NULL, \"lost_at\" datetime NULL, \"won_at\" datetime NULL, CONSTRAINT \"lead_probability_range\" CHECK ((\"probability\" >= 0 AND \"probability\" <= 100)), CONSTRAINT \"lead_amount_non_negative\" CHECK ((\"opportunity_amount\" >= '0' OR \"opportunity_amount\" IS NULL)) );"
+    },
+    {
+      "table": "lead_assigned_to",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"lead_assigned_to\" ( \"id\" integer NOT NULL PRIMARY KEY, \"lead_id\" char(32) NOT NULL, \"profile_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "lead_contacts",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"lead_contacts\" ( \"id\" integer NOT NULL PRIMARY KEY, \"lead_id\" char(32) NOT NULL, \"contact_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "lead_intake",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"lead_intake\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"name\" varchar(100) NOT NULL, \"preset\" varchar(32) NOT NULL, \"key\" varchar(64) NOT NULL, \"previous_key\" varchar(64) NOT NULL, \"previous_key_expires_at\" datetime NULL, \"mapping\" text NOT NULL CHECK ((JSON_VALID(\"mapping\") OR \"mapping\" IS NULL)), \"default_source\" varchar(64) NOT NULL, \"source_detail\" varchar(100) NOT NULL, \"is_active\" bool NOT NULL, \"last_received_at\" datetime NULL, \"last_error\" text NOT NULL, \"assignee_id\" char(32) NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL );"
+    },
+    {
+      "table": "lead_intake_event",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"lead_intake_event\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"received_at\" datetime NOT NULL, \"result\" varchar(16) NOT NULL, \"external_id\" varchar(255) NOT NULL, \"error\" text NOT NULL, \"payload\" text NULL CHECK ((JSON_VALID(\"payload\") OR \"payload\" IS NULL)), \"created_by_id\" char(32) NULL, \"intake_id\" char(32) NOT NULL, \"lead_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL );"
+    },
+    {
+      "table": "lead_intake_tags",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"lead_intake_tags\" ( \"id\" integer NOT NULL PRIMARY KEY, \"leadintake_id\" char(32) NOT NULL, \"tags_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "lead_pipeline",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"lead_pipeline\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"name\" varchar(255) NOT NULL, \"description\" text NULL, \"is_default\" bool NOT NULL, \"is_active\" bool NOT NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL );"
+    },
+    {
+      "table": "lead_source",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"lead_source\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"key\" varchar(64) NOT NULL, \"label\" varchar(100) NOT NULL, \"is_active\" bool NOT NULL, \"order\" integer NOT NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, CONSTRAINT \"unique_lead_source_key_per_org\" UNIQUE (\"org_id\", \"key\") );"
+    },
+    {
+      "table": "lead_stage",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"lead_stage\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"name\" varchar(100) NOT NULL, \"order\" integer unsigned NOT NULL CHECK (\"order\" >= 0), \"color\" varchar(7) NOT NULL, \"stage_type\" varchar(10) NOT NULL, \"maps_to_status\" varchar(255) NULL, \"win_probability\" integer NOT NULL, \"wip_limit\" integer unsigned NULL CHECK (\"wip_limit\" >= 0), \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"pipeline_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, CONSTRAINT \"lead_stage_win_probability_range\" CHECK ((\"win_probability\" >= 0 AND \"win_probability\" <= 100)) );"
+    },
+    {
+      "table": "lead_tags",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"lead_tags\" ( \"id\" integer NOT NULL PRIMARY KEY, \"lead_id\" char(32) NOT NULL, \"tags_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "lead_teams",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"lead_teams\" ( \"id\" integer NOT NULL PRIMARY KEY, \"lead_id\" char(32) NOT NULL, \"teams_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "macro",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"macro\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"title\" varchar(255) NOT NULL, \"scope\" varchar(10) NOT NULL, \"is_active\" bool NOT NULL, \"usage_count\" integer unsigned NOT NULL CHECK (\"usage_count\" >= 0), \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"owner_id\" char(32) NULL, \"updated_by_id\" char(32) NULL, \"set_priority\" varchar(64) NOT NULL, \"set_status\" varchar(64) NOT NULL, \"body\" text NOT NULL, CONSTRAINT \"macro_scope_owner_consistent\" CHECK (((\"owner_id\" IS NULL AND \"scope\" = 'org') OR (\"owner_id\" IS NOT NULL AND \"scope\" = 'personal'))) );"
+    },
+    {
+      "table": "macro_set_assignees",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"macro_set_assignees\" ( \"id\" integer NOT NULL PRIMARY KEY, \"macro_id\" char(32) NOT NULL, \"profile_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "macro_tags",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"macro_tags\" ( \"id\" integer NOT NULL PRIMARY KEY, \"macro_id\" char(32) NOT NULL, \"tags_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "magic_link_token",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"magic_link_token\" ( \"id\" char(32) NOT NULL PRIMARY KEY, \"email\" varchar(254) NOT NULL, \"token\" varchar(64) NOT NULL UNIQUE, \"created_at\" datetime NOT NULL, \"expires_at\" datetime NOT NULL, \"is_used\" bool NOT NULL, \"used_at\" datetime NULL, \"ip_address\" char(39) NULL, \"delivery\" varchar(8) NOT NULL, \"code_hash\" varchar(256) NOT NULL, \"attempts\" smallint unsigned NOT NULL CHECK (\"attempts\" >= 0) );"
+    },
+    {
+      "table": "notification",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"notification\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"verb\" varchar(64) NOT NULL, \"entity_type\" varchar(50) NOT NULL, \"entity_id\" char(32) NULL, \"entity_name\" varchar(255) NOT NULL, \"data\" text NOT NULL CHECK ((JSON_VALID(\"data\") OR \"data\" IS NULL)), \"link\" varchar(500) NOT NULL, \"read_at\" datetime NULL, \"actor_id\" char(32) NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"recipient_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL );"
+    },
+    {
+      "table": "opportunity",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"opportunity\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"name\" varchar(255) NOT NULL, \"stage\" varchar(64) NOT NULL, \"opportunity_type\" varchar(64) NULL, \"currency\" varchar(3) NULL, \"amount\" decimal NULL, \"probability\" integer NULL, \"closed_on\" date NULL, \"lead_source\" varchar(255) NULL, \"description\" text NULL, \"is_active\" bool NOT NULL, \"account_id\" char(32) NULL, \"closed_by_id\" char(32) NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, \"amount_source\" varchar(20) NOT NULL, \"stage_changed_at\" datetime NULL, \"custom_fields\" text NOT NULL CHECK ((JSON_VALID(\"custom_fields\") OR \"custom_fields\" IS NULL)), \"kanban_order\" decimal NOT NULL, \"is_sample\" bool NOT NULL, \"pipeline_id\" char(32) NOT NULL, \"source_detail\" varchar(100) NOT NULL, \"source_ref\" varchar(255) NOT NULL, CONSTRAINT \"opportunity_probability_range\" CHECK ((\"probability\" >= 0 AND \"probability\" <= 100)), CONSTRAINT \"opportunity_amount_non_negative\" CHECK ((\"amount\" >= '0' OR \"amount\" IS NULL)) );"
+    },
+    {
+      "table": "opportunity_assigned_to",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"opportunity_assigned_to\" ( \"id\" integer NOT NULL PRIMARY KEY, \"opportunity_id\" char(32) NOT NULL, \"profile_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "opportunity_contacts",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"opportunity_contacts\" ( \"id\" integer NOT NULL PRIMARY KEY, \"opportunity_id\" char(32) NOT NULL, \"contact_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "opportunity_line_item",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"opportunity_line_item\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"created_by_id\" char(32) NULL, \"updated_by_id\" char(32) NULL, \"name\" varchar(255) NOT NULL, \"description\" varchar(500) NOT NULL, \"quantity\" decimal NOT NULL, \"unit_price\" decimal NOT NULL, \"discount_type\" varchar(20) NOT NULL, \"discount_value\" decimal NOT NULL, \"discount_amount\" decimal NOT NULL, \"subtotal\" decimal NOT NULL, \"total\" decimal NOT NULL, \"order\" integer unsigned NOT NULL CHECK (\"order\" >= 0), \"opportunity_id\" char(32) NOT NULL, \"product_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY );"
+    },
+    {
+      "table": "opportunity_pipeline",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"opportunity_pipeline\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"name\" varchar(100) NOT NULL, \"is_default\" bool NOT NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, CONSTRAINT \"unique_deal_pipeline_name_per_org\" UNIQUE (\"org_id\", \"name\") );"
+    },
+    {
+      "table": "opportunity_pipeline_stage",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"opportunity_pipeline_stage\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"code\" varchar(64) NOT NULL, \"label\" varchar(100) NOT NULL, \"order\" integer unsigned NOT NULL CHECK (\"order\" >= 0), \"kind\" varchar(10) NOT NULL, \"expected_days\" integer unsigned NULL CHECK (\"expected_days\" >= 0), \"warning_days\" integer unsigned NULL CHECK (\"warning_days\" >= 0), \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"pipeline_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, CONSTRAINT \"unique_deal_stage_code_per_pipeline\" UNIQUE (\"pipeline_id\", \"code\") );"
+    },
+    {
+      "table": "opportunity_tags",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"opportunity_tags\" ( \"id\" integer NOT NULL PRIMARY KEY, \"opportunity_id\" char(32) NOT NULL, \"tags_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "opportunity_teams",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"opportunity_teams\" ( \"id\" integer NOT NULL PRIMARY KEY, \"opportunity_id\" char(32) NOT NULL, \"teams_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "order_line_item",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"order_line_item\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"name\" varchar(255) NOT NULL, \"quantity\" decimal NOT NULL, \"unit_price\" decimal NOT NULL, \"discount_amount\" decimal NOT NULL, \"total\" decimal NOT NULL, \"sort_order\" integer NOT NULL, \"created_by_id\" char(32) NULL, \"order_id\" char(32) NOT NULL, \"org_id\" char(32) NOT NULL, \"product_id\" char(32) NULL, \"updated_by_id\" char(32) NULL, \"description\" text NOT NULL );"
+    },
+    {
+      "table": "orders",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"orders\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"name\" varchar(255) NOT NULL, \"order_number\" varchar(100) NOT NULL, \"status\" varchar(20) NOT NULL, \"currency\" varchar(3) NOT NULL, \"subtotal\" decimal NOT NULL, \"discount_amount\" decimal NOT NULL, \"tax_amount\" decimal NOT NULL, \"total_amount\" decimal NOT NULL, \"order_date\" date NULL, \"activated_date\" date NULL, \"shipped_date\" date NULL, \"billing_address_line\" varchar(255) NOT NULL, \"billing_city\" varchar(100) NOT NULL, \"billing_state\" varchar(100) NOT NULL, \"billing_postcode\" varchar(20) NOT NULL, \"billing_country\" varchar(3) NOT NULL, \"shipping_address_line\" varchar(255) NOT NULL, \"shipping_city\" varchar(100) NOT NULL, \"shipping_postcode\" varchar(20) NOT NULL, \"shipping_country\" varchar(3) NOT NULL, \"description\" text NOT NULL, \"account_id\" char(32) NOT NULL, \"contact_id\" char(32) NULL, \"created_by_id\" char(32) NULL, \"opportunity_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, \"shipping_state\" varchar(100) NOT NULL );"
+    },
+    {
+      "table": "organization",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"organization\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"name\" varchar(100) NULL, \"api_key\" text NOT NULL UNIQUE, \"is_active\" bool NOT NULL, \"created_by_id\" char(32) NULL, \"updated_by_id\" char(32) NULL, \"default_country\" varchar(2) NULL, \"default_currency\" varchar(3) NOT NULL, \"address_line\" varchar(255) NOT NULL, \"city\" varchar(100) NOT NULL, \"company_name\" varchar(255) NOT NULL, \"country\" varchar(3) NOT NULL, \"email\" varchar(254) NOT NULL, \"logo\" varchar(100) NULL, \"phone\" varchar(25) NOT NULL, \"postcode\" varchar(20) NOT NULL, \"state\" varchar(100) NOT NULL, \"tax_id\" varchar(50) NOT NULL, \"website\" varchar(200) NOT NULL, \"csat_enabled\" bool NOT NULL, \"auto_close_children_on_parent_close\" bool NOT NULL, \"terminology\" text NOT NULL CHECK ((JSON_VALID(\"terminology\") OR \"terminology\" IS NULL)), \"vertical\" varchar(64) NOT NULL, \"timezone\" varchar(64) NOT NULL, \"help_center_enabled\" bool NOT NULL, \"help_center_slug\" varchar(50) NULL, \"estimate_number_prefix\" varchar(20) NOT NULL, \"invoice_number_prefix\" varchar(20) NOT NULL, \"invoice_number_start\" integer unsigned NOT NULL CHECK (\"invoice_number_start\" >= 0), \"number_date_part\" varchar(5) NOT NULL, \"number_padding\" smallint unsigned NOT NULL CHECK (\"number_padding\" >= 0), \"module_order\" text NOT NULL CHECK ((JSON_VALID(\"module_order\") OR \"module_order\" IS NULL)), \"modules_off\" text NOT NULL CHECK ((JSON_VALID(\"modules_off\") OR \"modules_off\" IS NULL)), \"modules_on_at\" text NOT NULL CHECK ((JSON_VALID(\"modules_on_at\") OR \"modules_on_at\" IS NULL)), \"signup_source\" text NOT NULL CHECK ((JSON_VALID(\"signup_source\") OR \"signup_source\" IS NULL)), \"lead_response_since\" datetime NOT NULL, \"lead_reminder_minutes\" smallint unsigned NULL CHECK (\"lead_reminder_minutes\" >= 0), \"lead_reminder_since\" datetime DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')) NOT NULL, \"lead_outcomes_since\" datetime NOT NULL, CONSTRAINT \"org_help_center_enabled_needs_slug\" CHECK ((NOT \"help_center_enabled\" OR \"help_center_slug\" IS NOT NULL)), CONSTRAINT \"org_invoice_number_start_needs_undated\" CHECK ((\"number_date_part\" = 'NONE' OR \"invoice_number_start\" = 1)) );"
+    },
+    {
+      "table": "pack_application",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"pack_application\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"pack_id\" varchar(64) NOT NULL, \"pack_version\" integer unsigned NOT NULL CHECK (\"pack_version\" >= 0), \"result\" text NOT NULL CHECK ((JSON_VALID(\"result\") OR \"result\" IS NULL)), \"applied_by_id\" char(32) NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL );"
+    },
+    {
+      "table": "payment",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"payment\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"amount\" decimal NOT NULL, \"payment_date\" date NOT NULL, \"payment_method\" varchar(20) NOT NULL, \"reference_number\" varchar(100) NOT NULL, \"notes\" text NOT NULL, \"created_by_id\" char(32) NULL, \"invoice_id\" char(32) NOT NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL );"
+    },
+    {
+      "table": "personal_access_token",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"personal_access_token\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"name\" varchar(255) NOT NULL, \"token_hash\" varchar(64) NOT NULL UNIQUE, \"token_prefix\" varchar(20) NOT NULL, \"scopes\" text NOT NULL CHECK ((JSON_VALID(\"scopes\") OR \"scopes\" IS NULL)), \"expires_at\" datetime NULL, \"last_used_at\" datetime NULL, \"revoked_at\" datetime NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"profile_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL );"
+    },
+    {
+      "table": "portal_access_token",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"portal_access_token\" ( \"id\" char(32) NOT NULL PRIMARY KEY, \"token_hash\" varchar(64) NOT NULL UNIQUE, \"resource_type\" varchar(16) NOT NULL, \"resource_id\" char(32) NOT NULL, \"created_at\" datetime NOT NULL, \"org_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "portal_login_token",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"portal_login_token\" ( \"id\" char(32) NOT NULL PRIMARY KEY, \"code_hash\" varchar(256) NOT NULL, \"attempts\" smallint unsigned NOT NULL CHECK (\"attempts\" >= 0), \"created_at\" datetime NOT NULL, \"expires_at\" datetime NOT NULL, \"is_used\" bool NOT NULL, \"used_at\" datetime NULL, \"ip_address\" char(39) NULL, \"contact_id\" char(32) NOT NULL, \"org_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "product",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"product\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"name\" varchar(255) NOT NULL, \"description\" text NULL, \"sku\" varchar(100) NULL, \"price\" decimal NOT NULL, \"category\" varchar(100) NULL, \"is_active\" bool NOT NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, \"currency\" varchar(3) NULL );"
+    },
+    {
+      "table": "profile",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"profile\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"phone\" varchar(20) NULL, \"alternate_phone\" varchar(20) NULL, \"role\" varchar(50) NOT NULL, \"has_sales_access\" bool NOT NULL, \"has_marketing_access\" bool NOT NULL, \"is_active\" bool NOT NULL, \"is_organization_admin\" bool NOT NULL, \"date_of_joining\" date NULL, \"address_id\" char(32) NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, \"user_id\" char(32) NOT NULL, \"lead_alerts_email\" bool DEFAULT 1 NOT NULL, \"lead_alerts_push\" bool DEFAULT 1 NOT NULL, \"is_app\" bool DEFAULT 0 NOT NULL );"
+    },
+    {
+      "table": "project",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"project\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"name\" varchar(255) NOT NULL, \"status\" varchar(20) NOT NULL, \"billing_type\" varchar(20) NOT NULL, \"currency\" varchar(3) NOT NULL, \"budget_hours\" decimal NULL, \"budget_amount\" decimal NULL, \"hourly_rate\" decimal NULL, \"start_date\" date NULL, \"due_date\" date NULL, \"description\" text NOT NULL, \"custom_fields\" text NOT NULL CHECK ((JSON_VALID(\"custom_fields\") OR \"custom_fields\" IS NULL)), \"hours_alert\" smallint unsigned NOT NULL CHECK (\"hours_alert\" >= 0), \"amount_alert\" smallint unsigned NOT NULL CHECK (\"amount_alert\" >= 0), \"account_id\" char(32) NOT NULL, \"created_by_id\" char(32) NULL, \"deal_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, \"is_sample\" bool NOT NULL, \"retainer_carried_hours\" decimal NOT NULL, \"retainer_fee\" decimal NULL, \"retainer_hours\" decimal NULL, \"retainer_last_month\" date NULL, \"retainer_next_month\" date NULL, \"retainer_overage_rate\" decimal NULL, \"retainer_rollover\" bool NOT NULL, CONSTRAINT \"project_budget_hours_non_negative\" CHECK ((\"budget_hours\" >= '0' OR \"budget_hours\" IS NULL)), CONSTRAINT \"project_budget_amount_non_negative\" CHECK ((\"budget_amount\" >= '0' OR \"budget_amount\" IS NULL)), CONSTRAINT \"project_hourly_rate_non_negative\" CHECK ((\"hourly_rate\" >= '0' OR \"hourly_rate\" IS NULL)), CONSTRAINT \"project_due_not_before_start\" CHECK ((\"due_date\" IS NULL OR \"start_date\" IS NULL OR \"due_date\" >= (\"start_date\"))), CONSTRAINT \"project_retainer_fee_non_negative\" CHECK ((\"retainer_fee\" >= '0' OR \"retainer_fee\" IS NULL)), CONSTRAINT \"project_retainer_hours_non_negative\" CHECK ((\"retainer_hours\" >= '0' OR \"retainer_hours\" IS NULL)), CONSTRAINT \"project_retainer_overage_rate_non_negative\" CHECK ((\"retainer_overage_rate\" >= '0' OR \"retainer_overage_rate\" IS NULL)), CONSTRAINT \"project_retainer_carried_hours_non_negative\" CHECK (\"retainer_carried_hours\" >= '0') );"
+    },
+    {
+      "table": "project_assigned_to",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"project_assigned_to\" ( \"id\" integer NOT NULL PRIMARY KEY, \"project_id\" char(32) NOT NULL, \"profile_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "project_rate",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"project_rate\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"hourly_rate\" decimal NOT NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"profile_id\" char(32) NOT NULL, \"project_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, CONSTRAINT \"unique_project_rate_per_profile\" UNIQUE (\"project_id\", \"profile_id\"), CONSTRAINT \"project_rate_non_negative\" CHECK (\"hourly_rate\" >= '0') );"
+    },
+    {
+      "table": "project_tags",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"project_tags\" ( \"id\" integer NOT NULL PRIMARY KEY, \"project_id\" char(32) NOT NULL, \"tags_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "recurring_invoice",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"recurring_invoice\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"title\" varchar(100) NOT NULL, \"is_active\" bool NOT NULL, \"client_name\" varchar(255) NOT NULL, \"client_email\" varchar(254) NOT NULL, \"frequency\" varchar(20) NOT NULL, \"custom_days\" integer unsigned NULL CHECK (\"custom_days\" >= 0), \"end_date\" date NULL, \"next_generation_date\" date NOT NULL, \"payment_terms\" varchar(20) NOT NULL, \"auto_send\" bool NOT NULL, \"currency\" varchar(3) NOT NULL, \"subtotal\" decimal NOT NULL, \"discount_type\" varchar(20) NOT NULL, \"discount_value\" decimal NOT NULL, \"tax_rate\" decimal NOT NULL, \"total_amount\" decimal NOT NULL, \"notes\" text NOT NULL, \"terms\" text NOT NULL, \"invoices_generated\" integer unsigned NOT NULL CHECK (\"invoices_generated\" >= 0), \"account_id\" char(32) NULL, \"contact_id\" char(32) NULL, \"created_by_id\" char(32) NULL, \"opportunity_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, \"custom_fields\" text NOT NULL CHECK ((JSON_VALID(\"custom_fields\") OR \"custom_fields\" IS NULL)), \"start_date\" date NOT NULL );"
+    },
+    {
+      "table": "recurring_invoice_assigned_to",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"recurring_invoice_assigned_to\" ( \"id\" integer NOT NULL PRIMARY KEY, \"recurringinvoice_id\" char(32) NOT NULL, \"profile_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "recurring_invoice_line_item",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"recurring_invoice_line_item\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"description\" varchar(500) NOT NULL, \"quantity\" decimal NOT NULL, \"unit_price\" decimal NOT NULL, \"discount_type\" varchar(20) NOT NULL, \"discount_value\" decimal NOT NULL, \"tax_rate\" decimal NOT NULL, \"order\" integer unsigned NOT NULL CHECK (\"order\" >= 0), \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"product_id\" char(32) NULL, \"recurring_invoice_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, \"name\" varchar(255) NULL );"
+    },
+    {
+      "table": "recurring_invoice_teams",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"recurring_invoice_teams\" ( \"id\" integer NOT NULL PRIMARY KEY, \"recurringinvoice_id\" char(32) NOT NULL, \"teams_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "reopen_policy",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"reopen_policy\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"is_enabled\" bool NOT NULL, \"reopen_window_days\" smallint unsigned NOT NULL CHECK (\"reopen_window_days\" >= 0), \"reopen_to_status\" varchar(64) NOT NULL, \"notify_assigned\" bool NOT NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL UNIQUE, \"updated_by_id\" char(32) NULL );"
+    },
+    {
+      "table": "routing_rule",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"routing_rule\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"name\" varchar(255) NOT NULL, \"priority_order\" integer unsigned NOT NULL CHECK (\"priority_order\" >= 0), \"is_active\" bool NOT NULL, \"conditions\" text NOT NULL CHECK ((JSON_VALID(\"conditions\") OR \"conditions\" IS NULL)), \"strategy\" varchar(16) NOT NULL, \"stop_processing\" bool NOT NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"target_team_id\" char(32) NULL, \"updated_by_id\" char(32) NULL );"
+    },
+    {
+      "table": "routing_rule_state",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"routing_rule_state\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"last_assigned_index\" integer unsigned NOT NULL CHECK (\"last_assigned_index\" >= 0), \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"rule_id\" char(32) NOT NULL UNIQUE, \"updated_by_id\" char(32) NULL );"
+    },
+    {
+      "table": "routing_rule_target_assignees",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"routing_rule_target_assignees\" ( \"id\" integer NOT NULL PRIMARY KEY, \"routingrule_id\" char(32) NOT NULL, \"profile_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "sales_goal",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"sales_goal\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"name\" varchar(255) NOT NULL, \"goal_type\" varchar(20) NOT NULL, \"target_value\" decimal NOT NULL, \"period_type\" varchar(20) NOT NULL, \"period_start\" date NOT NULL, \"period_end\" date NOT NULL, \"is_active\" bool NOT NULL, \"milestone_50_notified\" bool NOT NULL, \"milestone_90_notified\" bool NOT NULL, \"milestone_100_notified\" bool NOT NULL, \"assigned_to_id\" char(32) NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"team_id\" char(32) NULL, \"updated_by_id\" char(32) NULL, \"type_weights\" text NOT NULL CHECK ((JSON_VALID(\"type_weights\") OR \"type_weights\" IS NULL)), \"currency\" varchar(3) NULL );"
+    },
+    {
+      "table": "saved_view",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"saved_view\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"name\" varchar(100) NOT NULL, \"filters\" text NOT NULL CHECK ((JSON_VALID(\"filters\") OR \"filters\" IS NULL)), \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"profile_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, \"module\" varchar(40) NOT NULL );"
+    },
+    {
+      "table": "security_audit_log",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"security_audit_log\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"event_type\" varchar(50) NOT NULL, \"description\" text NOT NULL, \"metadata\" text NOT NULL CHECK ((JSON_VALID(\"metadata\") OR \"metadata\" IS NULL)), \"ip_address\" char(39) NULL, \"user_agent\" text NOT NULL, \"request_path\" varchar(500) NOT NULL, \"request_method\" varchar(10) NOT NULL, \"success\" bool NOT NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NULL, \"updated_by_id\" char(32) NULL, \"user_id\" char(32) NULL );"
+    },
+    {
+      "table": "solution",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"solution\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"title\" varchar(255) NOT NULL, \"description\" text NOT NULL, \"status\" varchar(20) NOT NULL, \"is_published\" bool NOT NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL );"
+    },
+    {
+      "table": "solution_cases",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"solution_cases\" ( \"id\" integer NOT NULL PRIMARY KEY, \"solution_id\" char(32) NOT NULL, \"case_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "solution_tags",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"solution_tags\" ( \"id\" integer NOT NULL PRIMARY KEY, \"solution_id\" char(32) NOT NULL, \"tags_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "tags",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"tags\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"name\" varchar(50) NOT NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, \"color\" varchar(20) NOT NULL, \"description\" text NOT NULL, \"is_active\" bool NOT NULL, \"slug\" varchar(50) NOT NULL );"
+    },
+    {
+      "table": "task",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"task\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"title\" varchar(200) NOT NULL, \"status\" varchar(50) NOT NULL, \"priority\" varchar(50) NOT NULL, \"due_date\" date NULL, \"description\" text NULL, \"account_id\" char(32) NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, \"case_id\" char(32) NULL, \"lead_id\" char(32) NULL, \"opportunity_id\" char(32) NULL, \"kanban_order\" decimal NOT NULL, \"stage_id\" char(32) NULL, \"custom_fields\" text NOT NULL CHECK ((JSON_VALID(\"custom_fields\") OR \"custom_fields\" IS NULL)), \"is_sample\" bool NOT NULL, \"project_id\" char(32) NULL );"
+    },
+    {
+      "table": "task_assigned_to",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"task_assigned_to\" ( \"id\" integer NOT NULL PRIMARY KEY, \"task_id\" char(32) NOT NULL, \"profile_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "task_contacts",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"task_contacts\" ( \"id\" integer NOT NULL PRIMARY KEY, \"task_id\" char(32) NOT NULL, \"contact_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "task_pipeline",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"task_pipeline\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"name\" varchar(255) NOT NULL, \"description\" text NULL, \"is_default\" bool NOT NULL, \"is_active\" bool NOT NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL );"
+    },
+    {
+      "table": "task_stage",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"task_stage\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"name\" varchar(100) NOT NULL, \"order\" integer unsigned NOT NULL CHECK (\"order\" >= 0), \"color\" varchar(7) NOT NULL, \"stage_type\" varchar(20) NOT NULL, \"maps_to_status\" varchar(50) NULL, \"wip_limit\" integer unsigned NULL CHECK (\"wip_limit\" >= 0), \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"pipeline_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL );"
+    },
+    {
+      "table": "task_tags",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"task_tags\" ( \"id\" integer NOT NULL PRIMARY KEY, \"task_id\" char(32) NOT NULL, \"tags_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "task_teams",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"task_teams\" ( \"id\" integer NOT NULL PRIMARY KEY, \"task_id\" char(32) NOT NULL, \"teams_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "teams",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"teams\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"name\" varchar(100) NOT NULL, \"description\" text NOT NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL );"
+    },
+    {
+      "table": "teams_users",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"teams_users\" ( \"id\" integer NOT NULL PRIMARY KEY, \"teams_id\" char(32) NOT NULL, \"profile_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "time_entry",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"time_entry\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"started_at\" datetime NOT NULL, \"ended_at\" datetime NULL, \"duration_minutes\" integer unsigned NOT NULL CHECK (\"duration_minutes\" >= 0), \"description\" text NOT NULL, \"billable\" bool NOT NULL, \"hourly_rate\" decimal NULL, \"currency\" varchar(3) NOT NULL, \"auto_stopped\" bool NOT NULL, \"case_id\" char(32) NULL, \"created_by_id\" char(32) NULL, \"invoice_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"profile_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, \"project_id\" char(32) NULL, \"task_id\" char(32) NULL, \"is_sample\" bool NOT NULL, CONSTRAINT \"time_entry_end_after_start\" CHECK ((\"ended_at\" IS NULL OR \"ended_at\" >= (\"started_at\"))), CONSTRAINT \"time_entry_one_parent\" CHECK ((\"case_id\" IS NULL OR \"project_id\" IS NULL)) );"
+    },
+    {
+      "table": "token_blacklist_blacklistedtoken",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"token_blacklist_blacklistedtoken\" ( \"blacklisted_at\" datetime NOT NULL, \"token_id\" bigint NOT NULL UNIQUE, \"id\" integer NOT NULL PRIMARY KEY );"
+    },
+    {
+      "table": "token_blacklist_outstandingtoken",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"token_blacklist_outstandingtoken\" ( \"token\" text NOT NULL, \"created_at\" datetime NULL, \"expires_at\" datetime NOT NULL, \"user_id\" char(32) NULL, \"jti\" varchar(255) NOT NULL UNIQUE, \"id\" integer NOT NULL PRIMARY KEY );"
+    },
+    {
+      "table": "users",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"users\" ( \"password\" varchar(128) NOT NULL, \"last_login\" datetime NULL, \"is_superuser\" bool NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"email\" varchar(254) NOT NULL UNIQUE, \"profile_pic\" varchar(1000) NULL, \"activation_key\" varchar(150) NULL, \"key_expires\" datetime NULL, \"is_active\" bool NOT NULL, \"is_staff\" bool NOT NULL, \"name\" varchar(255) NOT NULL );"
+    },
+    {
+      "table": "users_groups",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"users_groups\" ( \"id\" integer NOT NULL PRIMARY KEY, \"user_id\" char(32) NOT NULL, \"group_id\" integer NOT NULL );"
+    },
+    {
+      "table": "users_user_permissions",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"users_user_permissions\" ( \"id\" integer NOT NULL PRIMARY KEY, \"user_id\" char(32) NOT NULL, \"permission_id\" integer NOT NULL );"
+    },
+    {
+      "table": "web_form",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"web_form\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"name\" varchar(255) NOT NULL, \"is_published\" bool NOT NULL, \"allowed_origins\" text NOT NULL CHECK ((JSON_VALID(\"allowed_origins\") OR \"allowed_origins\" IS NULL)), \"submit_button_label\" varchar(64) NOT NULL, \"success_mode\" varchar(16) NOT NULL, \"success_message\" text NOT NULL, \"redirect_url\" varchar(500) NOT NULL, \"captcha_provider\" varchar(16) NOT NULL, \"captcha_site_key\" varchar(255) NOT NULL, \"captcha_secret\" varchar(255) NOT NULL, \"reject_disposable_email\" bool NOT NULL, \"assign_to_id\" char(32) NULL, \"created_by_id\" char(32) NULL, \"legacy_api_setting_id\" char(32) NULL UNIQUE, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, \"target\" varchar(16) NOT NULL, \"ticket_priority\" varchar(64) NOT NULL, \"ticket_type\" varchar(255) NOT NULL, \"assignment_mode\" varchar(16) NOT NULL, \"rotation_cap\" integer unsigned NULL CHECK (\"rotation_cap\" >= 0), \"rotation_last_assigned_id\" char(32) NULL, \"lead_source\" varchar(64) NOT NULL );"
+    },
+    {
+      "table": "web_form_daily_stat",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"web_form_daily_stat\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"date\" date NOT NULL, \"views\" integer unsigned NOT NULL CHECK (\"views\" >= 0), \"created_by_id\" char(32) NULL, \"form_id\" char(32) NOT NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, CONSTRAINT \"web_form_daily_stat_unique_day\" UNIQUE (\"form_id\", \"date\") );"
+    },
+    {
+      "table": "web_form_field",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"web_form_field\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"order\" integer unsigned NOT NULL CHECK (\"order\" >= 0), \"source\" varchar(16) NOT NULL, \"lead_field\" varchar(32) NOT NULL, \"label\" varchar(128) NOT NULL, \"placeholder\" varchar(128) NOT NULL, \"is_required\" bool NOT NULL, \"created_by_id\" char(32) NULL, \"custom_field_id\" char(32) NULL, \"form_id\" char(32) NOT NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, \"ticket_field\" varchar(32) NOT NULL, CONSTRAINT \"web_form_field_exactly_one_target\" CHECK (((\"custom_field_id\" IS NOT NULL AND \"lead_field\" = '' AND \"ticket_field\" = '') OR (NOT (\"lead_field\" = '') AND \"custom_field_id\" IS NULL AND \"ticket_field\" = '') OR (NOT (\"ticket_field\" = '') AND \"custom_field_id\" IS NULL AND \"lead_field\" = ''))) );"
+    },
+    {
+      "table": "web_form_notify_profiles",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"web_form_notify_profiles\" ( \"id\" integer NOT NULL PRIMARY KEY, \"webform_id\" char(32) NOT NULL, \"profile_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "web_form_rotation_members",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"web_form_rotation_members\" ( \"id\" integer NOT NULL PRIMARY KEY, \"webform_id\" char(32) NOT NULL, \"profile_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "web_form_submission",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"web_form_submission\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"payload\" text NOT NULL CHECK ((JSON_VALID(\"payload\") OR \"payload\" IS NULL)), \"status\" varchar(32) NOT NULL, \"reject_reason\" varchar(255) NOT NULL, \"submitted_ip\" char(39) NULL, \"referer\" varchar(512) NOT NULL, \"created_by_id\" char(32) NULL, \"form_id\" char(32) NOT NULL, \"lead_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, \"case_id\" char(32) NULL, CONSTRAINT \"web_form_submission_lead_or_case\" CHECK ((\"lead_id\" IS NULL OR \"case_id\" IS NULL)) );"
+    },
+    {
+      "table": "web_form_tags",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"web_form_tags\" ( \"id\" integer NOT NULL PRIMARY KEY, \"webform_id\" char(32) NOT NULL, \"tags_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "webhook_delivery",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"webhook_delivery\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"event\" varchar(64) NOT NULL, \"event_id\" char(32) NOT NULL, \"payload\" text NOT NULL CHECK ((JSON_VALID(\"payload\") OR \"payload\" IS NULL)), \"status\" varchar(10) NOT NULL, \"attempts\" smallint unsigned NOT NULL CHECK (\"attempts\" >= 0), \"response_status\" smallint unsigned NULL CHECK (\"response_status\" >= 0), \"error\" varchar(255) NOT NULL, \"next_attempt_at\" datetime NULL, \"last_attempt_at\" datetime NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, \"endpoint_id\" char(32) NOT NULL );"
+    },
+    {
+      "table": "webhook_endpoint",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"webhook_endpoint\" ( \"created_at\" datetime NOT NULL, \"updated_at\" datetime NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY, \"url\" varchar(500) NOT NULL, \"description\" varchar(255) NOT NULL, \"events\" text NOT NULL CHECK ((JSON_VALID(\"events\") OR \"events\" IS NULL)), \"format\" varchar(10) NOT NULL, \"is_active\" bool NOT NULL, \"disabled_reason\" varchar(255) NOT NULL, \"secret\" varchar(100) NOT NULL, \"created_by_id\" char(32) NULL, \"org_id\" char(32) NOT NULL, \"updated_by_id\" char(32) NULL, \"app_id\" char(32) NULL );"
+    }
+  ],
+  "wms": [
+    {
+      "table": "account_emailaddress",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"account_emailaddress\" ( \"id\" integer NOT NULL PRIMARY KEY, \"verified\" bool NOT NULL, \"primary\" bool NOT NULL, \"user_id\" integer NOT NULL, \"email\" varchar(254) NOT NULL );"
+    },
+    {
+      "table": "account_emailconfirmation",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"account_emailconfirmation\" ( \"id\" integer NOT NULL PRIMARY KEY, \"created\" datetime NOT NULL, \"sent\" datetime NULL, \"key\" varchar(64) NOT NULL UNIQUE, \"email_address_id\" integer NOT NULL );"
+    },
+    {
+      "table": "audit_auditlogentry",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"audit_auditlogentry\" ( \"id\" integer NOT NULL PRIMARY KEY, \"object_pk\" varchar(255) NOT NULL, \"object_id\" bigint NULL, \"object_repr\" text NOT NULL, \"serialized_data\" text NULL CHECK ((JSON_VALID(\"serialized_data\") OR \"serialized_data\" IS NULL)), \"action\" smallint unsigned NOT NULL CHECK (\"action\" >= 0), \"changes_text\" text NOT NULL, \"changes\" text NULL CHECK ((JSON_VALID(\"changes\") OR \"changes\" IS NULL)), \"cid\" varchar(255) NULL, \"remote_addr\" char(39) NULL, \"remote_port\" integer unsigned NULL CHECK (\"remote_port\" >= 0), \"timestamp\" datetime NOT NULL, \"additional_data\" text NULL CHECK ((JSON_VALID(\"additional_data\") OR \"additional_data\" IS NULL)), \"actor_email\" varchar(254) NULL, \"parent_object_pk\" varchar(255) NULL, \"actor_id\" integer NULL, \"content_type_id\" integer NOT NULL, \"parent_content_type_id\" integer NULL, \"actor_username\" varchar(150) NULL, \"event_type\" integer unsigned NULL CHECK (\"event_type\" >= 0), \"notes\" varchar(512) NULL );"
+    },
+    {
+      "table": "auth_group",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"auth_group\" ( \"id\" integer NOT NULL PRIMARY KEY, \"name\" varchar(150) NOT NULL UNIQUE );"
+    },
+    {
+      "table": "auth_group_permissions",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"auth_group_permissions\" ( \"id\" integer NOT NULL PRIMARY KEY, \"group_id\" integer NOT NULL, \"permission_id\" integer NOT NULL );"
+    },
+    {
+      "table": "auth_permission",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"auth_permission\" ( \"id\" integer NOT NULL PRIMARY KEY, \"content_type_id\" integer NOT NULL, \"codename\" varchar(100) NOT NULL, \"name\" varchar(255) NOT NULL );"
+    },
+    {
+      "table": "auth_user",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"auth_user\" ( \"id\" integer NOT NULL PRIMARY KEY, \"password\" varchar(128) NOT NULL, \"last_login\" datetime NULL, \"is_superuser\" bool NOT NULL, \"username\" varchar(150) NOT NULL UNIQUE, \"last_name\" varchar(150) NOT NULL, \"email\" varchar(254) NOT NULL, \"is_staff\" bool NOT NULL, \"is_active\" bool NOT NULL, \"date_joined\" datetime NOT NULL, \"first_name\" varchar(150) NOT NULL );"
+    },
+    {
+      "table": "auth_user_groups",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"auth_user_groups\" ( \"id\" integer NOT NULL PRIMARY KEY, \"user_id\" integer NOT NULL, \"group_id\" integer NOT NULL );"
+    },
+    {
+      "table": "auth_user_user_permissions",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"auth_user_user_permissions\" ( \"id\" integer NOT NULL PRIMARY KEY, \"user_id\" integer NOT NULL, \"permission_id\" integer NOT NULL );"
+    },
+    {
+      "table": "build_build",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"build_build\" ( \"id\" integer NOT NULL PRIMARY KEY, \"title\" varchar(100) NOT NULL, \"quantity\" integer unsigned NOT NULL CHECK (\"quantity\" >= 0), \"status\" integer unsigned NOT NULL CHECK (\"status\" >= 0), \"batch\" varchar(100) NULL, \"creation_date\" date NOT NULL, \"completion_date\" date NULL, \"completed_by_id\" integer NULL, \"part_id\" integer NOT NULL, \"take_from_id\" integer NULL, \"link\" varchar(2000) NOT NULL, \"sales_order_id\" integer NULL, \"level\" integer unsigned NOT NULL CHECK (\"level\" >= 0), \"lft\" integer unsigned NOT NULL CHECK (\"lft\" >= 0), \"rght\" integer unsigned NOT NULL CHECK (\"rght\" >= 0), \"tree_id\" integer unsigned NOT NULL CHECK (\"tree_id\" >= 0), \"reference\" varchar(64) NOT NULL UNIQUE, \"destination_id\" integer NULL, \"completed\" integer unsigned NOT NULL CHECK (\"completed\" >= 0), \"target_date\" date NULL, \"issued_by_id\" integer NULL, \"responsible_id\" integer NULL, \"reference_int\" bigint NOT NULL, \"priority\" integer unsigned NOT NULL CHECK (\"priority\" >= 0), \"metadata\" text NULL CHECK ((JSON_VALID(\"metadata\") OR \"metadata\" IS NULL)), \"barcode_data\" varchar(500) NOT NULL, \"barcode_hash\" varchar(128) NOT NULL, \"project_code_id\" integer NULL, \"status_custom_key\" integer unsigned NULL CHECK (\"status_custom_key\" >= 0), \"start_date\" date NULL, \"external\" bool NOT NULL, \"parent_id\" integer NULL );"
+    },
+    {
+      "table": "build_builditem",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"build_builditem\" ( \"id\" integer NOT NULL PRIMARY KEY, \"quantity\" decimal NOT NULL, \"stock_item_id\" integer NOT NULL, \"install_into_id\" integer NULL, \"metadata\" text NULL CHECK ((JSON_VALID(\"metadata\") OR \"metadata\" IS NULL)), \"build_line_id\" integer NULL );"
+    },
+    {
+      "table": "build_buildline",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"build_buildline\" ( \"id\" integer NOT NULL PRIMARY KEY, \"quantity\" decimal NOT NULL, \"bom_item_id\" integer NOT NULL, \"build_id\" integer NOT NULL, \"consumed\" decimal NOT NULL );"
+    },
+    {
+      "table": "common_attachment",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"common_attachment\" ( \"id\" integer NOT NULL PRIMARY KEY, \"model_id\" integer unsigned NOT NULL CHECK (\"model_id\" >= 0), \"attachment\" varchar(100) NULL, \"link\" varchar(2000) NULL, \"comment\" varchar(250) NOT NULL, \"upload_date\" date NULL, \"file_size\" integer unsigned NOT NULL CHECK (\"file_size\" >= 0), \"model_type\" varchar(100) NOT NULL, \"upload_user_id\" integer NULL, \"metadata\" text NULL CHECK ((JSON_VALID(\"metadata\") OR \"metadata\" IS NULL)), \"thumbnail\" varchar(100) NULL, \"is_image\" bool NOT NULL );"
+    },
+    {
+      "table": "common_barcodescanresult",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"common_barcodescanresult\" ( \"id\" integer NOT NULL PRIMARY KEY, \"data\" varchar(250) NOT NULL, \"timestamp\" datetime NOT NULL, \"endpoint\" varchar(250) NULL, \"context\" text NULL CHECK ((JSON_VALID(\"context\") OR \"context\" IS NULL)), \"response\" text NULL CHECK ((JSON_VALID(\"response\") OR \"response\" IS NULL)), \"result\" bool NOT NULL, \"user_id\" integer NULL );"
+    },
+    {
+      "table": "common_customunit",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"common_customunit\" ( \"id\" integer NOT NULL PRIMARY KEY, \"name\" varchar(50) NOT NULL UNIQUE, \"definition\" varchar(50) NOT NULL, \"symbol\" varchar(10) NOT NULL );"
+    },
+    {
+      "table": "common_dataoutput",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"common_dataoutput\" ( \"id\" integer NOT NULL PRIMARY KEY, \"created\" date NOT NULL, \"total\" integer unsigned NOT NULL CHECK (\"total\" >= 0), \"progress\" integer unsigned NOT NULL CHECK (\"progress\" >= 0), \"complete\" bool NOT NULL, \"output_type\" varchar(100) NULL, \"template_name\" varchar(100) NULL, \"plugin\" varchar(100) NULL, \"output\" varchar(100) NULL, \"errors\" text NULL CHECK ((JSON_VALID(\"errors\") OR \"errors\" IS NULL)), \"user_id\" integer NULL );"
+    },
+    {
+      "table": "common_emailmessage",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"common_emailmessage\" ( \"message_id_key\" varchar(250) NULL, \"thread_id_key\" varchar(250) NULL, \"subject\" varchar(250) NOT NULL, \"body\" text NOT NULL, \"to\" varchar(254) NOT NULL, \"sender\" varchar(254) NOT NULL, \"status\" varchar(50) NULL, \"timestamp\" datetime NOT NULL, \"headers\" text NULL CHECK ((JSON_VALID(\"headers\") OR \"headers\" IS NULL)), \"full_message\" text NULL, \"direction\" varchar(50) NULL, \"priority\" integer NOT NULL, \"delivery_options\" text NULL CHECK ((JSON_VALID(\"delivery_options\") OR \"delivery_options\" IS NULL)), \"error_code\" varchar(50) NULL, \"error_message\" text NULL, \"error_timestamp\" datetime NULL, \"thread_id\" char(32) NULL, \"global_id\" char(32) NOT NULL PRIMARY KEY );"
+    },
+    {
+      "table": "common_emailthread",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"common_emailthread\" ( \"metadata\" text NULL CHECK ((JSON_VALID(\"metadata\") OR \"metadata\" IS NULL)), \"key\" varchar(250) NULL, \"started_internal\" bool NOT NULL, \"created\" datetime NOT NULL, \"updated\" datetime NOT NULL, \"global_id\" char(32) NOT NULL PRIMARY KEY );"
+    },
+    {
+      "table": "common_inventreecustomuserstatemodel",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"common_inventreecustomuserstatemodel\" ( \"id\" integer NOT NULL PRIMARY KEY, \"key\" integer NOT NULL, \"name\" varchar(250) NOT NULL, \"label\" varchar(250) NOT NULL, \"color\" varchar(10) NOT NULL, \"logical_key\" integer NOT NULL, \"reference_status\" varchar(250) NOT NULL, \"model_id\" integer NULL );"
+    },
+    {
+      "table": "common_inventreesetting",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"common_inventreesetting\" ( \"id\" integer NOT NULL PRIMARY KEY, \"key\" varchar(50) NOT NULL UNIQUE, \"value\" varchar(2000) NOT NULL, \"touched\" bool NOT NULL, \"updated\" datetime NULL, \"updated_by_id\" integer NULL );"
+    },
+    {
+      "table": "common_inventreeusersetting",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"common_inventreeusersetting\" ( \"id\" integer NOT NULL PRIMARY KEY, \"value\" varchar(2000) NOT NULL, \"key\" varchar(50) NOT NULL, \"user_id\" integer NULL, \"touched\" bool NOT NULL, \"updated\" datetime NULL, \"updated_by_id\" integer NULL, CONSTRAINT \"unique key and user\" UNIQUE (\"key\", \"user_id\") );"
+    },
+    {
+      "table": "common_newsfeedentry",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"common_newsfeedentry\" ( \"id\" integer NOT NULL PRIMARY KEY, \"feed_id\" varchar(250) NOT NULL UNIQUE, \"title\" varchar(250) NOT NULL, \"link\" varchar(250) NOT NULL, \"published\" datetime NOT NULL, \"author\" varchar(250) NOT NULL, \"summary\" varchar(250) NOT NULL, \"read\" bool NOT NULL );"
+    },
+    {
+      "table": "common_note",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"common_note\" ( \"id\" integer NOT NULL PRIMARY KEY, \"metadata\" text NULL CHECK ((JSON_VALID(\"metadata\") OR \"metadata\" IS NULL)), \"updated\" datetime NULL, \"model_id\" integer unsigned NULL CHECK (\"model_id\" >= 0), \"title\" varchar(100) NOT NULL, \"description\" varchar(250) NOT NULL, \"content\" text NOT NULL, \"model_type_id\" integer NULL, \"template\" bool NOT NULL, \"updated_by_id\" integer NULL, \"primary\" bool NOT NULL );"
+    },
+    {
+      "table": "common_notesimage",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"common_notesimage\" ( \"id\" integer NOT NULL PRIMARY KEY, \"image\" varchar(100) NOT NULL, \"date\" datetime NOT NULL, \"user_id\" integer NULL, \"note_id\" integer NOT NULL );"
+    },
+    {
+      "table": "common_notificationentry",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"common_notificationentry\" ( \"id\" integer NOT NULL PRIMARY KEY, \"key\" varchar(250) NOT NULL, \"updated\" datetime NULL, \"uid\" varchar(255) NOT NULL );"
+    },
+    {
+      "table": "common_notificationmessage",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"common_notificationmessage\" ( \"id\" integer NOT NULL PRIMARY KEY, \"target_object_id\" varchar(255) NOT NULL, \"category\" varchar(250) NOT NULL, \"name\" varchar(250) NOT NULL, \"message\" varchar(250) NULL, \"creation\" datetime NOT NULL, \"read\" bool NOT NULL, \"source_content_type_id\" integer NULL, \"target_content_type_id\" integer NOT NULL, \"user_id\" integer NULL, \"source_object_id\" varchar(255) NULL, \"link\" varchar(500) NULL );"
+    },
+    {
+      "table": "common_projectcode",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"common_projectcode\" ( \"id\" integer NOT NULL PRIMARY KEY, \"code\" varchar(50) NOT NULL UNIQUE, \"description\" varchar(200) NOT NULL, \"metadata\" text NULL CHECK ((JSON_VALID(\"metadata\") OR \"metadata\" IS NULL)), \"responsible_id\" integer NULL, \"active\" bool NOT NULL );"
+    },
+    {
+      "table": "common_selectionlist",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"common_selectionlist\" ( \"id\" integer NOT NULL PRIMARY KEY, \"metadata\" text NULL CHECK ((JSON_VALID(\"metadata\") OR \"metadata\" IS NULL)), \"name\" varchar(100) NOT NULL UNIQUE, \"description\" varchar(250) NOT NULL, \"locked\" bool NOT NULL, \"active\" bool NOT NULL, \"source_string\" varchar(1000) NOT NULL, \"created\" datetime NOT NULL, \"last_updated\" datetime NOT NULL, \"default_id\" integer NULL, \"source_plugin_id\" integer NULL );"
+    },
+    {
+      "table": "common_selectionlistentry",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"common_selectionlistentry\" ( \"id\" integer NOT NULL PRIMARY KEY, \"value\" varchar(255) NOT NULL, \"label\" varchar(255) NOT NULL, \"description\" varchar(250) NOT NULL, \"active\" bool NOT NULL, \"list_id\" integer NULL );"
+    },
+    {
+      "table": "common_webhookendpoint",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"common_webhookendpoint\" ( \"id\" integer NOT NULL PRIMARY KEY, \"endpoint_id\" varchar(255) NOT NULL, \"name\" varchar(255) NULL, \"active\" bool NOT NULL, \"token\" varchar(255) NULL, \"secret\" varchar(255) NULL, \"user_id\" integer NULL );"
+    },
+    {
+      "table": "common_webhookmessage",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"common_webhookmessage\" ( \"host\" varchar(255) NOT NULL, \"header\" varchar(255) NULL, \"body\" text NULL CHECK ((JSON_VALID(\"body\") OR \"body\" IS NULL)), \"worked_on\" bool NOT NULL, \"endpoint_id\" integer NULL, \"message_id\" char(32) NOT NULL PRIMARY KEY );"
+    },
+    {
+      "table": "company_address",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"company_address\" ( \"id\" integer NOT NULL PRIMARY KEY, \"title\" varchar(100) NOT NULL, \"primary\" bool NOT NULL, \"line1\" varchar(50) NOT NULL, \"line2\" varchar(50) NOT NULL, \"postal_code\" varchar(10) NOT NULL, \"postal_city\" varchar(50) NOT NULL, \"province\" varchar(50) NOT NULL, \"country\" varchar(50) NOT NULL, \"shipping_notes\" varchar(100) NOT NULL, \"internal_shipping_notes\" varchar(100) NOT NULL, \"link\" varchar(2000) NOT NULL, \"company_id\" integer NOT NULL, \"email\" varchar(254) NOT NULL, \"phone\" varchar(50) NOT NULL );"
+    },
+    {
+      "table": "company_contact",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"company_contact\" ( \"id\" integer NOT NULL PRIMARY KEY, \"name\" varchar(100) NOT NULL, \"phone\" varchar(100) NOT NULL, \"email\" varchar(254) NOT NULL, \"role\" varchar(100) NOT NULL, \"company_id\" integer NOT NULL, \"metadata\" text NULL CHECK ((JSON_VALID(\"metadata\") OR \"metadata\" IS NULL)) );"
+    },
+    {
+      "table": "company_manufacturerpart",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"company_manufacturerpart\" ( \"id\" integer NOT NULL PRIMARY KEY, \"MPN\" varchar(100) NULL, \"link\" varchar(2000) NULL, \"description\" varchar(250) NULL, \"manufacturer_id\" integer NULL, \"part_id\" integer NOT NULL, \"metadata\" text NULL CHECK ((JSON_VALID(\"metadata\") OR \"metadata\" IS NULL)), \"barcode_data\" varchar(500) NOT NULL, \"barcode_hash\" varchar(128) NOT NULL );"
+    },
+    {
+      "table": "django_admin_log",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"django_admin_log\" ( \"id\" integer NOT NULL PRIMARY KEY, \"object_id\" text NULL, \"object_repr\" varchar(200) NOT NULL, \"action_flag\" smallint unsigned NOT NULL CHECK (\"action_flag\" >= 0), \"change_message\" text NOT NULL, \"content_type_id\" integer NULL, \"user_id\" integer NOT NULL, \"action_time\" datetime NOT NULL );"
+    },
+    {
+      "table": "django_content_type",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"django_content_type\" ( \"id\" integer NOT NULL PRIMARY KEY, \"app_label\" varchar(100) NOT NULL, \"model\" varchar(100) NOT NULL );"
+    },
+    {
+      "table": "django_mailbox_mailbox",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"django_mailbox_mailbox\" ( \"id\" integer NOT NULL PRIMARY KEY, \"name\" varchar(255) NOT NULL, \"uri\" varchar(255) NULL, \"from_email\" varchar(255) NULL, \"active\" bool NOT NULL, \"last_polling\" datetime NULL );"
+    },
+    {
+      "table": "django_mailbox_message",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"django_mailbox_message\" ( \"id\" integer NOT NULL PRIMARY KEY, \"subject\" varchar(255) NOT NULL, \"message_id\" varchar(255) NOT NULL, \"from_header\" varchar(255) NOT NULL, \"to_header\" text NOT NULL, \"outgoing\" bool NOT NULL, \"body\" text NOT NULL, \"encoded\" bool NOT NULL, \"processed\" datetime NOT NULL, \"read\" datetime NULL, \"mailbox_id\" integer NOT NULL, \"eml\" varchar(100) NULL, \"in_reply_to_id\" integer NULL );"
+    },
+    {
+      "table": "django_mailbox_messageattachment",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"django_mailbox_messageattachment\" ( \"id\" integer NOT NULL PRIMARY KEY, \"headers\" text NULL, \"message_id\" integer NULL, \"document\" varchar(100) NOT NULL );"
+    },
+    {
+      "table": "django_migrations",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"django_migrations\" ( \"id\" integer NOT NULL PRIMARY KEY, \"app\" varchar(255) NOT NULL, \"name\" varchar(255) NOT NULL, \"applied\" datetime NOT NULL );"
+    },
+    {
+      "table": "django_q_ormq",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"django_q_ormq\" ( \"id\" integer NOT NULL PRIMARY KEY, \"key\" varchar(100) NOT NULL, \"payload\" text NOT NULL, \"lock\" datetime NULL );"
+    },
+    {
+      "table": "django_q_schedule",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"django_q_schedule\" ( \"id\" integer NOT NULL PRIMARY KEY, \"func\" varchar(256) NOT NULL, \"hook\" varchar(256) NULL, \"args\" text NULL, \"kwargs\" text NULL, \"repeats\" integer NOT NULL, \"next_run\" datetime NULL, \"task\" varchar(100) NULL, \"name\" varchar(100) NULL, \"minutes\" smallint unsigned NULL CHECK (\"minutes\" >= 0), \"cron\" varchar(100) NULL, \"cluster\" varchar(100) NULL, \"schedule_type\" varchar(2) NOT NULL, \"intended_date_kwarg\" varchar(100) NULL );"
+    },
+    {
+      "table": "django_q_task",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"django_q_task\" ( \"name\" varchar(100) NOT NULL, \"func\" varchar(256) NOT NULL, \"hook\" varchar(256) NULL, \"args\" text NULL, \"kwargs\" text NULL, \"result\" text NULL, \"started\" datetime NOT NULL, \"stopped\" datetime NOT NULL, \"success\" bool NOT NULL, \"id\" varchar(32) NOT NULL PRIMARY KEY, \"group\" varchar(100) NULL, \"attempt_count\" integer NOT NULL, \"cluster\" varchar(100) NULL );"
+    },
+    {
+      "table": "django_session",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"django_session\" ( \"session_key\" varchar(40) NOT NULL PRIMARY KEY, \"session_data\" text NOT NULL, \"expire_date\" datetime NOT NULL );"
+    },
+    {
+      "table": "error_report_error",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"error_report_error\" ( \"id\" integer NOT NULL PRIMARY KEY, \"kind\" varchar(128) NULL, \"info\" text NOT NULL, \"data\" text NULL, \"path\" varchar(200) NULL, \"when\" datetime NOT NULL, \"html\" text NULL, \"modified\" datetime NOT NULL );"
+    },
+    {
+      "table": "exchange_exchangebackend",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"exchange_exchangebackend\" ( \"name\" varchar(255) NOT NULL PRIMARY KEY, \"last_update\" datetime NOT NULL, \"base_currency\" varchar(3) NOT NULL );"
+    },
+    {
+      "table": "exchange_rate",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"exchange_rate\" ( \"id\" integer NOT NULL PRIMARY KEY, \"currency\" varchar(3) NOT NULL, \"value\" decimal NOT NULL, \"backend_id\" varchar(255) NOT NULL );"
+    },
+    {
+      "table": "flags_flagstate",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"flags_flagstate\" ( \"id\" integer NOT NULL PRIMARY KEY, \"name\" varchar(64) NOT NULL, \"condition\" varchar(64) NOT NULL, \"value\" varchar(127) NOT NULL, \"required\" bool NOT NULL, CONSTRAINT \"flags_flagstate_unique_name_condition_value\" UNIQUE (\"name\", \"condition\", \"value\") );"
+    },
+    {
+      "table": "importer_dataimportcolumnmap",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"importer_dataimportcolumnmap\" ( \"id\" integer NOT NULL PRIMARY KEY, \"field\" varchar(100) NOT NULL, \"column\" varchar(100) NOT NULL, \"session_id\" bigint NOT NULL, \"lookup_field\" varchar(100) NULL );"
+    },
+    {
+      "table": "importer_dataimportrow",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"importer_dataimportrow\" ( \"id\" integer NOT NULL PRIMARY KEY, \"row_index\" integer unsigned NOT NULL CHECK (\"row_index\" >= 0), \"data\" text NULL CHECK ((JSON_VALID(\"data\") OR \"data\" IS NULL)), \"errors\" text NULL CHECK ((JSON_VALID(\"errors\") OR \"errors\" IS NULL)), \"valid\" bool NOT NULL, \"complete\" bool NOT NULL, \"session_id\" bigint NOT NULL, \"row_data\" text NULL CHECK ((JSON_VALID(\"row_data\") OR \"row_data\" IS NULL)) );"
+    },
+    {
+      "table": "importer_dataimportsession",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"importer_dataimportsession\" ( \"id\" integer NOT NULL PRIMARY KEY, \"timestamp\" datetime NOT NULL, \"data_file\" varchar(100) NOT NULL, \"columns\" text NULL CHECK ((JSON_VALID(\"columns\") OR \"columns\" IS NULL)), \"model_type\" varchar(100) NOT NULL, \"status\" integer unsigned NOT NULL CHECK (\"status\" >= 0), \"field_defaults\" text NULL CHECK ((JSON_VALID(\"field_defaults\") OR \"field_defaults\" IS NULL)), \"user_id\" integer NULL, \"field_filters\" text NULL CHECK ((JSON_VALID(\"field_filters\") OR \"field_filters\" IS NULL)), \"update_records\" bool NOT NULL, \"completed_row_count_history\" integer unsigned NULL CHECK (\"completed_row_count_history\" >= 0), \"row_count_history\" integer unsigned NULL CHECK (\"row_count_history\" >= 0), \"field_overrides\" text NULL CHECK ((JSON_VALID(\"field_overrides\") OR \"field_overrides\" IS NULL)) );"
+    },
+    {
+      "table": "machine_machineconfig",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"machine_machineconfig\" ( \"name\" varchar(255) NOT NULL UNIQUE, \"machine_type\" varchar(255) NOT NULL, \"driver\" varchar(255) NOT NULL, \"active\" bool NOT NULL, \"id\" char(32) NOT NULL PRIMARY KEY );"
+    },
+    {
+      "table": "machine_machinesetting",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"machine_machinesetting\" ( \"id\" integer NOT NULL PRIMARY KEY, \"key\" varchar(50) NOT NULL, \"value\" varchar(2000) NOT NULL, \"config_type\" varchar(1) NOT NULL, \"machine_config_id\" char(32) NOT NULL, \"touched\" bool NOT NULL, \"updated\" datetime NULL, \"updated_by_id\" integer NULL );"
+    },
+    {
+      "table": "mfa_authenticator",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"mfa_authenticator\" ( \"id\" integer NOT NULL PRIMARY KEY, \"type\" varchar(20) NOT NULL, \"data\" text NOT NULL CHECK ((JSON_VALID(\"data\") OR \"data\" IS NULL)), \"user_id\" integer NOT NULL, \"created_at\" datetime NOT NULL, \"last_used_at\" datetime NULL );"
+    },
+    {
+      "table": "oauth2_provider_accesstoken",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"oauth2_provider_accesstoken\" ( \"id\" integer NOT NULL PRIMARY KEY, \"token\" text NOT NULL, \"expires\" datetime NOT NULL, \"scope\" text NOT NULL, \"application_id\" bigint NULL, \"user_id\" integer NULL, \"created\" datetime NOT NULL, \"updated\" datetime NOT NULL, \"source_refresh_token_id\" bigint NULL UNIQUE, \"id_token_id\" bigint NULL UNIQUE, \"token_checksum\" varchar(64) NOT NULL UNIQUE, \"resource\" text NOT NULL CHECK ((JSON_VALID(\"resource\") OR \"resource\" IS NULL)) );"
+    },
+    {
+      "table": "oauth2_provider_application",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"oauth2_provider_application\" ( \"id\" integer NOT NULL PRIMARY KEY, \"redirect_uris\" text NOT NULL, \"client_type\" varchar(32) NOT NULL, \"authorization_grant_type\" varchar(44) NOT NULL, \"client_secret\" varchar(255) NOT NULL, \"name\" varchar(255) NOT NULL, \"user_id\" integer NULL, \"skip_authorization\" bool NOT NULL, \"created\" datetime NOT NULL, \"updated\" datetime NOT NULL, \"algorithm\" varchar(5) NOT NULL, \"post_logout_redirect_uris\" text NOT NULL, \"hash_client_secret\" bool NOT NULL, \"allowed_origins\" text NOT NULL, \"registration_source\" varchar(32) NOT NULL, \"cimd_expires_at\" datetime NULL, \"client_id\" varchar(255) NOT NULL UNIQUE );"
+    },
+    {
+      "table": "oauth2_provider_devicegrant",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"oauth2_provider_devicegrant\" ( \"id\" integer NOT NULL PRIMARY KEY, \"device_code\" varchar(100) NOT NULL, \"user_code\" varchar(100) NOT NULL, \"interval\" integer NOT NULL, \"expires\" datetime NOT NULL, \"status\" varchar(64) NOT NULL, \"client_id\" varchar(100) NOT NULL, \"last_checked\" datetime NOT NULL, \"user_id\" integer NULL, \"scope\" text NOT NULL, CONSTRAINT \"oauth2_provider_devicegrant_unique_device_code\" UNIQUE (\"device_code\") );"
+    },
+    {
+      "table": "oauth2_provider_grant",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"oauth2_provider_grant\" ( \"id\" integer NOT NULL PRIMARY KEY, \"code\" varchar(255) NOT NULL UNIQUE, \"expires\" datetime NOT NULL, \"redirect_uri\" text NOT NULL, \"scope\" text NOT NULL, \"application_id\" bigint NOT NULL, \"user_id\" integer NOT NULL, \"created\" datetime NOT NULL, \"updated\" datetime NOT NULL, \"code_challenge\" varchar(128) NOT NULL, \"code_challenge_method\" varchar(10) NOT NULL, \"nonce\" varchar(255) NOT NULL, \"claims\" text NOT NULL, \"resource\" text NOT NULL CHECK ((JSON_VALID(\"resource\") OR \"resource\" IS NULL)) );"
+    },
+    {
+      "table": "oauth2_provider_idtoken",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"oauth2_provider_idtoken\" ( \"id\" integer NOT NULL PRIMARY KEY, \"jti\" char(32) NOT NULL UNIQUE, \"expires\" datetime NOT NULL, \"scope\" text NOT NULL, \"created\" datetime NOT NULL, \"updated\" datetime NOT NULL, \"application_id\" bigint NULL, \"user_id\" integer NULL );"
+    },
+    {
+      "table": "oauth2_provider_refreshtoken",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"oauth2_provider_refreshtoken\" ( \"id\" integer NOT NULL PRIMARY KEY, \"token\" text NOT NULL, \"access_token_id\" bigint NULL UNIQUE, \"application_id\" bigint NOT NULL, \"user_id\" integer NOT NULL, \"created\" datetime NOT NULL, \"updated\" datetime NOT NULL, \"revoked\" datetime NULL, \"token_family\" char(32) NULL, \"token_checksum\" varchar(64) NOT NULL, \"resource\" text NOT NULL CHECK ((JSON_VALID(\"resource\") OR \"resource\" IS NULL)) );"
+    },
+    {
+      "table": "order_purchaseorderextraline",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"order_purchaseorderextraline\" ( \"id\" integer NOT NULL PRIMARY KEY, \"quantity\" decimal NOT NULL, \"reference\" varchar(100) NOT NULL, \"notes\" varchar(500) NOT NULL, \"target_date\" date NULL, \"context\" text NULL CHECK ((JSON_VALID(\"context\") OR \"context\" IS NULL)), \"price_currency\" varchar(3) NULL, \"price\" decimal NULL, \"order_id\" integer NOT NULL, \"metadata\" text NULL CHECK ((JSON_VALID(\"metadata\") OR \"metadata\" IS NULL)), \"link\" varchar(2000) NOT NULL, \"description\" varchar(250) NOT NULL, \"project_code_id\" integer NULL, \"line\" varchar(20) NOT NULL, \"line_int\" integer NOT NULL, \"discount\" decimal NOT NULL );"
+    },
+    {
+      "table": "order_returnorder",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"order_returnorder\" ( \"id\" integer NOT NULL PRIMARY KEY, \"metadata\" text NULL CHECK ((JSON_VALID(\"metadata\") OR \"metadata\" IS NULL)), \"reference_int\" bigint NOT NULL, \"description\" varchar(250) NOT NULL, \"link\" varchar(2000) NOT NULL, \"creation_date\" date NULL, \"reference\" varchar(64) NOT NULL UNIQUE, \"status\" integer unsigned NOT NULL CHECK (\"status\" >= 0), \"customer_reference\" varchar(64) NOT NULL, \"issue_date\" date NULL, \"complete_date\" date NULL, \"created_by_id\" integer NULL, \"customer_id\" integer NULL, \"responsible_id\" integer NULL, \"contact_id\" integer NULL, \"target_date\" date NULL, \"total_price_currency\" varchar(3) NULL, \"total_price\" decimal NULL, \"barcode_data\" varchar(500) NOT NULL, \"barcode_hash\" varchar(128) NOT NULL, \"project_code_id\" integer NULL, \"order_currency\" varchar(3) NULL, \"address_id\" integer NULL, \"status_custom_key\" integer unsigned NULL CHECK (\"status_custom_key\" >= 0), \"start_date\" date NULL, \"updated_at\" datetime NULL );"
+    },
+    {
+      "table": "order_returnorderextraline",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"order_returnorderextraline\" ( \"id\" integer NOT NULL PRIMARY KEY, \"quantity\" decimal NOT NULL, \"reference\" varchar(100) NOT NULL, \"notes\" varchar(500) NOT NULL, \"target_date\" date NULL, \"context\" text NULL CHECK ((JSON_VALID(\"context\") OR \"context\" IS NULL)), \"price_currency\" varchar(3) NULL, \"price\" decimal NULL, \"order_id\" integer NOT NULL, \"metadata\" text NULL CHECK ((JSON_VALID(\"metadata\") OR \"metadata\" IS NULL)), \"link\" varchar(2000) NOT NULL, \"description\" varchar(250) NOT NULL, \"project_code_id\" integer NULL, \"line\" varchar(20) NOT NULL, \"line_int\" integer NOT NULL, \"discount\" decimal NOT NULL );"
+    },
+    {
+      "table": "order_returnorderlineitem",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"order_returnorderlineitem\" ( \"id\" integer NOT NULL PRIMARY KEY, \"quantity\" decimal NOT NULL, \"reference\" varchar(100) NOT NULL, \"notes\" varchar(500) NOT NULL, \"target_date\" date NULL, \"received_date\" date NULL, \"outcome\" integer unsigned NOT NULL CHECK (\"outcome\" >= 0), \"price_currency\" varchar(3) NULL, \"price\" decimal NULL, \"link\" varchar(2000) NOT NULL, \"item_id\" integer NOT NULL, \"order_id\" integer NOT NULL, \"metadata\" text NULL CHECK ((JSON_VALID(\"metadata\") OR \"metadata\" IS NULL)), \"outcome_custom_key\" integer unsigned NULL CHECK (\"outcome_custom_key\" >= 0), \"project_code_id\" integer NULL, \"line\" varchar(20) NOT NULL, \"line_int\" integer NOT NULL, \"discount\" decimal NOT NULL );"
+    },
+    {
+      "table": "order_salesorder",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"order_salesorder\" ( \"id\" integer NOT NULL PRIMARY KEY, \"reference\" varchar(64) NOT NULL UNIQUE, \"description\" varchar(250) NOT NULL, \"link\" varchar(2000) NOT NULL, \"creation_date\" date NULL, \"customer_reference\" varchar(64) NOT NULL, \"created_by_id\" integer NULL, \"customer_id\" integer NULL, \"shipment_date\" date NULL, \"shipped_by_id\" integer NULL, \"target_date\" date NULL, \"responsible_id\" integer NULL, \"reference_int\" bigint NOT NULL, \"metadata\" text NULL CHECK ((JSON_VALID(\"metadata\") OR \"metadata\" IS NULL)), \"total_price_currency\" varchar(3) NULL, \"total_price\" decimal NULL, \"contact_id\" integer NULL, \"barcode_data\" varchar(500) NOT NULL, \"barcode_hash\" varchar(128) NOT NULL, \"project_code_id\" integer NULL, \"order_currency\" varchar(3) NULL, \"address_id\" integer NULL, \"status\" integer unsigned NOT NULL CHECK (\"status\" >= 0), \"status_custom_key\" integer unsigned NULL CHECK (\"status_custom_key\" >= 0), \"start_date\" date NULL, \"issue_date\" date NULL, \"updated_at\" datetime NULL );"
+    },
+    {
+      "table": "order_salesorderallocation",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"order_salesorderallocation\" ( \"id\" integer NOT NULL PRIMARY KEY, \"quantity\" decimal NOT NULL, \"item_id\" integer NOT NULL, \"line_id\" integer NOT NULL, \"shipment_id\" integer NULL );"
+    },
+    {
+      "table": "order_salesorderextraline",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"order_salesorderextraline\" ( \"id\" integer NOT NULL PRIMARY KEY, \"quantity\" decimal NOT NULL, \"reference\" varchar(100) NOT NULL, \"notes\" varchar(500) NOT NULL, \"target_date\" date NULL, \"context\" text NULL CHECK ((JSON_VALID(\"context\") OR \"context\" IS NULL)), \"price_currency\" varchar(3) NULL, \"price\" decimal NULL, \"order_id\" integer NOT NULL, \"metadata\" text NULL CHECK ((JSON_VALID(\"metadata\") OR \"metadata\" IS NULL)), \"link\" varchar(2000) NOT NULL, \"description\" varchar(250) NOT NULL, \"project_code_id\" integer NULL, \"line\" varchar(20) NOT NULL, \"line_int\" integer NOT NULL, \"discount\" decimal NOT NULL );"
+    },
+    {
+      "table": "order_salesorderlineitem",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"order_salesorderlineitem\" ( \"id\" integer NOT NULL PRIMARY KEY, \"quantity\" decimal NOT NULL, \"reference\" varchar(100) NOT NULL, \"notes\" varchar(500) NOT NULL, \"order_id\" integer NOT NULL, \"part_id\" integer NULL, \"sale_price_currency\" varchar(3) NULL, \"sale_price\" decimal NULL, \"shipped\" decimal NOT NULL, \"target_date\" date NULL, \"metadata\" text NULL CHECK ((JSON_VALID(\"metadata\") OR \"metadata\" IS NULL)), \"link\" varchar(2000) NOT NULL, \"project_code_id\" integer NULL, \"line\" varchar(20) NOT NULL, \"line_int\" integer NOT NULL, \"discount\" decimal NOT NULL );"
+    },
+    {
+      "table": "order_salesordershipment",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"order_salesordershipment\" ( \"id\" integer NOT NULL PRIMARY KEY, \"shipment_date\" date NULL, \"reference\" varchar(100) NOT NULL, \"checked_by_id\" integer NULL, \"order_id\" integer NOT NULL, \"tracking_number\" varchar(100) NOT NULL, \"invoice_number\" varchar(100) NOT NULL, \"link\" varchar(2000) NOT NULL, \"metadata\" text NULL CHECK ((JSON_VALID(\"metadata\") OR \"metadata\" IS NULL)), \"delivery_date\" date NULL, \"barcode_data\" varchar(500) NOT NULL, \"barcode_hash\" varchar(128) NOT NULL, \"shipment_address_id\" integer NULL, \"contact_id\" integer NULL );"
+    },
+    {
+      "table": "order_transferorder",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"order_transferorder\" ( \"id\" integer NOT NULL PRIMARY KEY, \"metadata\" text NULL CHECK ((JSON_VALID(\"metadata\") OR \"metadata\" IS NULL)), \"reference_int\" bigint NOT NULL, \"barcode_data\" varchar(500) NOT NULL, \"barcode_hash\" varchar(128) NOT NULL, \"description\" varchar(250) NOT NULL, \"link\" varchar(2000) NOT NULL, \"start_date\" date NULL, \"target_date\" date NULL, \"creation_date\" date NULL, \"issue_date\" date NULL, \"reference\" varchar(64) NOT NULL UNIQUE, \"consume\" bool NOT NULL, \"complete_date\" date NULL, \"status_custom_key\" integer unsigned NULL CHECK (\"status_custom_key\" >= 0), \"status\" integer unsigned NOT NULL CHECK (\"status\" >= 0), \"address_id\" integer NULL, \"contact_id\" integer NULL, \"created_by_id\" integer NULL, \"destination_id\" integer NULL, \"project_code_id\" integer NULL, \"responsible_id\" integer NULL, \"take_from_id\" integer NULL, \"updated_at\" datetime NULL );"
+    },
+    {
+      "table": "order_transferorderallocation",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"order_transferorderallocation\" ( \"id\" integer NOT NULL PRIMARY KEY, \"quantity\" decimal NOT NULL, \"item_id\" integer NOT NULL, \"line_id\" integer NOT NULL );"
+    },
+    {
+      "table": "order_transferorderlineitem",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"order_transferorderlineitem\" ( \"id\" integer NOT NULL PRIMARY KEY, \"metadata\" text NULL CHECK ((JSON_VALID(\"metadata\") OR \"metadata\" IS NULL)), \"quantity\" decimal NOT NULL, \"reference\" varchar(100) NOT NULL, \"notes\" varchar(500) NOT NULL, \"link\" varchar(2000) NOT NULL, \"target_date\" date NULL, \"order_id\" integer NOT NULL, \"part_id\" integer NULL, \"project_code_id\" integer NULL, \"transferred\" decimal NOT NULL, \"line\" varchar(20) NOT NULL, \"line_int\" integer NOT NULL, \"discount\" decimal NOT NULL );"
+    },
+    {
+      "table": "otp_static_staticdevice",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"otp_static_staticdevice\" ( \"id\" integer NOT NULL PRIMARY KEY, \"name\" varchar(64) NOT NULL, \"confirmed\" bool NOT NULL, \"user_id\" integer NOT NULL, \"throttling_failure_count\" integer unsigned NOT NULL CHECK (\"throttling_failure_count\" >= 0), \"throttling_failure_timestamp\" datetime NULL );"
+    },
+    {
+      "table": "otp_static_statictoken",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"otp_static_statictoken\" ( \"id\" integer NOT NULL PRIMARY KEY, \"token\" varchar(16) NOT NULL, \"device_id\" integer NOT NULL );"
+    },
+    {
+      "table": "otp_totp_totpdevice",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"otp_totp_totpdevice\" ( \"id\" integer NOT NULL PRIMARY KEY, \"name\" varchar(64) NOT NULL, \"confirmed\" bool NOT NULL, \"key\" varchar(80) NOT NULL, \"step\" smallint unsigned NOT NULL CHECK (\"step\" >= 0), \"t0\" bigint NOT NULL, \"digits\" smallint unsigned NOT NULL CHECK (\"digits\" >= 0), \"tolerance\" smallint unsigned NOT NULL CHECK (\"tolerance\" >= 0), \"drift\" smallint NOT NULL, \"last_t\" bigint NOT NULL, \"user_id\" integer NOT NULL, \"throttling_failure_count\" integer unsigned NOT NULL CHECK (\"throttling_failure_count\" >= 0), \"throttling_failure_timestamp\" datetime NULL );"
+    },
+    {
+      "table": "part_bomitem",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"part_bomitem\" ( \"id\" integer NOT NULL PRIMARY KEY, \"quantity\" decimal NOT NULL, \"note\" varchar(500) NOT NULL, \"part_id\" integer NOT NULL, \"sub_part_id\" integer NOT NULL, \"reference\" varchar(5000) NOT NULL, \"checksum\" varchar(128) NOT NULL, \"optional\" bool NOT NULL, \"inherited\" bool NOT NULL, \"allow_variants\" bool NOT NULL, \"consumable\" bool NOT NULL, \"validated\" bool NOT NULL, \"metadata\" text NULL CHECK ((JSON_VALID(\"metadata\") OR \"metadata\" IS NULL)), \"attrition\" decimal NOT NULL, \"rounding_multiple\" decimal NULL, \"setup_quantity\" decimal NOT NULL, \"raw_amount\" varchar(25) NOT NULL, \"piece_count\" integer unsigned NOT NULL CHECK (\"piece_count\" >= 0) );"
+    },
+    {
+      "table": "part_bomitemsubstitute",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"part_bomitemsubstitute\" ( \"id\" integer NOT NULL PRIMARY KEY, \"bom_item_id\" integer NOT NULL, \"part_id\" integer NOT NULL, \"metadata\" text NULL CHECK ((JSON_VALID(\"metadata\") OR \"metadata\" IS NULL)) );"
+    },
+    {
+      "table": "part_partcategoryparametertemplate",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"part_partcategoryparametertemplate\" ( \"id\" integer NOT NULL PRIMARY KEY, \"default_value\" varchar(500) NOT NULL, \"category_id\" integer NOT NULL, \"metadata\" text NULL CHECK ((JSON_VALID(\"metadata\") OR \"metadata\" IS NULL)), \"template_id\" integer NOT NULL, CONSTRAINT \"unique_category_parameter_pair\" UNIQUE (\"category_id\", \"template_id\") );"
+    },
+    {
+      "table": "part_partcategorystar",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"part_partcategorystar\" ( \"id\" integer NOT NULL PRIMARY KEY, \"category_id\" integer NOT NULL, \"user_id\" integer NOT NULL );"
+    },
+    {
+      "table": "part_partinternalpricebreak",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"part_partinternalpricebreak\" ( \"id\" integer NOT NULL PRIMARY KEY, \"quantity\" decimal NOT NULL, \"price\" decimal NULL, \"part_id\" integer NOT NULL, \"updated\" datetime NULL, \"price_currency\" varchar(3) NULL );"
+    },
+    {
+      "table": "part_partparameter",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"part_partparameter\" ( \"id\" integer NOT NULL PRIMARY KEY, \"data\" varchar(500) NOT NULL, \"template_id\" integer NOT NULL, \"data_numeric\" real NULL, \"metadata\" text NULL CHECK ((JSON_VALID(\"metadata\") OR \"metadata\" IS NULL)), \"note\" varchar(500) NOT NULL, \"updated\" datetime NULL, \"updated_by_id\" integer NULL, \"model_type_id\" integer NOT NULL, \"model_id\" integer unsigned NOT NULL CHECK (\"model_id\" >= 0) );"
+    },
+    {
+      "table": "part_partparametertemplate",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"part_partparametertemplate\" ( \"id\" integer NOT NULL PRIMARY KEY, \"metadata\" text NULL CHECK ((JSON_VALID(\"metadata\") OR \"metadata\" IS NULL)), \"name\" varchar(100) NOT NULL UNIQUE, \"units\" varchar(25) NOT NULL, \"description\" varchar(250) NOT NULL, \"checkbox\" bool NOT NULL, \"choices\" varchar(5000) NOT NULL, \"enabled\" bool NOT NULL, \"model_type_id\" integer NULL, \"selectionlist_id\" integer NULL, \"unique\" integer unsigned NOT NULL CHECK (\"unique\" >= 0) );"
+    },
+    {
+      "table": "part_partrelated",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"part_partrelated\" ( \"id\" integer NOT NULL PRIMARY KEY, \"part_1_id\" integer NOT NULL, \"part_2_id\" integer NOT NULL, \"metadata\" text NULL CHECK ((JSON_VALID(\"metadata\") OR \"metadata\" IS NULL)), \"note\" varchar(500) NOT NULL );"
+    },
+    {
+      "table": "part_partsellpricebreak",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"part_partsellpricebreak\" ( \"id\" integer NOT NULL PRIMARY KEY, \"quantity\" decimal NOT NULL, \"part_id\" integer NOT NULL, \"price_currency\" varchar(3) NULL, \"price\" decimal NULL, \"updated\" datetime NULL );"
+    },
+    {
+      "table": "part_partstar",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"part_partstar\" ( \"id\" integer NOT NULL PRIMARY KEY, \"part_id\" integer NOT NULL, \"user_id\" integer NOT NULL );"
+    },
+    {
+      "table": "part_partstocktake",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"part_partstocktake\" ( \"id\" integer NOT NULL PRIMARY KEY, \"quantity\" decimal NOT NULL, \"date\" date NOT NULL, \"part_id\" integer NOT NULL, \"cost_max_currency\" varchar(3) NULL, \"cost_max\" decimal NULL, \"cost_min_currency\" varchar(3) NULL, \"cost_min\" decimal NULL, \"item_count\" integer NOT NULL );"
+    },
+    {
+      "table": "part_parttesttemplate",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"part_parttesttemplate\" ( \"id\" integer NOT NULL PRIMARY KEY, \"test_name\" varchar(100) NOT NULL, \"required\" bool NOT NULL, \"part_id\" integer NOT NULL, \"description\" varchar(100) NULL, \"requires_attachment\" bool NOT NULL, \"requires_value\" bool NOT NULL, \"metadata\" text NULL CHECK ((JSON_VALID(\"metadata\") OR \"metadata\" IS NULL)), \"key\" varchar(100) NOT NULL, \"enabled\" bool NOT NULL, \"choices\" varchar(5000) NOT NULL );"
+    },
+    {
+      "table": "part_supplierpricebreak",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"part_supplierpricebreak\" ( \"id\" integer NOT NULL PRIMARY KEY, \"quantity\" decimal NOT NULL, \"part_id\" integer NOT NULL, \"price_currency\" varchar(3) NULL, \"updated\" datetime NULL, \"price\" decimal NULL );"
+    },
+    {
+      "table": "plugin_pluginconfig",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"plugin_pluginconfig\" ( \"id\" integer NOT NULL PRIMARY KEY, \"name\" varchar(255) NULL, \"active\" bool NOT NULL, \"metadata\" text NULL CHECK ((JSON_VALID(\"metadata\") OR \"metadata\" IS NULL)), \"package_name\" varchar(255) NULL, \"key\" varchar(255) NOT NULL UNIQUE );"
+    },
+    {
+      "table": "plugin_pluginsetting",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"plugin_pluginsetting\" ( \"id\" integer NOT NULL PRIMARY KEY, \"key\" varchar(50) NOT NULL, \"value\" varchar(2000) NOT NULL, \"plugin_id\" integer NOT NULL, \"touched\" bool NOT NULL, \"updated\" datetime NULL, \"updated_by_id\" integer NULL );"
+    },
+    {
+      "table": "plugin_pluginusersetting",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"plugin_pluginusersetting\" ( \"id\" integer NOT NULL PRIMARY KEY, \"key\" varchar(50) NOT NULL, \"value\" varchar(2000) NOT NULL, \"plugin_id\" integer NOT NULL, \"user_id\" integer NOT NULL, \"touched\" bool NOT NULL, \"updated\" datetime NULL, \"updated_by_id\" integer NULL );"
+    },
+    {
+      "table": "report_labeltemplate",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"report_labeltemplate\" ( \"id\" integer NOT NULL PRIMARY KEY, \"metadata\" text NULL CHECK ((JSON_VALID(\"metadata\") OR \"metadata\" IS NULL)), \"name\" varchar(100) NOT NULL, \"description\" varchar(250) NOT NULL, \"template\" varchar(100) NOT NULL, \"revision\" integer unsigned NOT NULL CHECK (\"revision\" >= 0), \"filename_pattern\" varchar(100) NOT NULL, \"enabled\" bool NOT NULL, \"model_type\" varchar(100) NOT NULL, \"filters\" varchar(250) NOT NULL, \"width\" real NOT NULL, \"height\" real NOT NULL, \"attach_to_model\" bool NOT NULL, \"updated\" datetime NULL, \"updated_by_id\" integer NULL );"
+    },
+    {
+      "table": "report_reportasset",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"report_reportasset\" ( \"id\" integer NOT NULL PRIMARY KEY, \"description\" varchar(250) NOT NULL, \"asset\" varchar(100) NOT NULL );"
+    },
+    {
+      "table": "report_reportsnippet",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"report_reportsnippet\" ( \"id\" integer NOT NULL PRIMARY KEY, \"description\" varchar(250) NOT NULL, \"snippet\" varchar(100) NOT NULL );"
+    },
+    {
+      "table": "report_reporttemplate",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"report_reporttemplate\" ( \"id\" integer NOT NULL PRIMARY KEY, \"metadata\" text NULL CHECK ((JSON_VALID(\"metadata\") OR \"metadata\" IS NULL)), \"name\" varchar(100) NOT NULL, \"template\" varchar(100) NOT NULL, \"description\" varchar(250) NOT NULL, \"revision\" integer unsigned NOT NULL CHECK (\"revision\" >= 0), \"page_size\" varchar(20) NOT NULL, \"landscape\" bool NOT NULL, \"filename_pattern\" varchar(100) NOT NULL, \"enabled\" bool NOT NULL, \"model_type\" varchar(100) NOT NULL, \"filters\" varchar(250) NOT NULL, \"attach_to_model\" bool NOT NULL, \"merge\" bool NOT NULL, \"updated\" datetime NULL, \"updated_by_id\" integer NULL );"
+    },
+    {
+      "table": "scim_scimconfiguration",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"scim_scimconfiguration\" ( \"id\" integer NOT NULL PRIMARY KEY, \"enabled\" bool NOT NULL, \"secret_digest\" varchar(64) NOT NULL, \"secret_generated\" datetime NULL, \"last_used\" datetime NULL );"
+    },
+    {
+      "table": "socialaccount_socialaccount",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"socialaccount_socialaccount\" ( \"id\" integer NOT NULL PRIMARY KEY, \"provider\" varchar(200) NOT NULL, \"uid\" varchar(191) NOT NULL, \"last_login\" datetime NOT NULL, \"date_joined\" datetime NOT NULL, \"user_id\" integer NOT NULL, \"extra_data\" text NOT NULL CHECK ((JSON_VALID(\"extra_data\") OR \"extra_data\" IS NULL)) );"
+    },
+    {
+      "table": "socialaccount_socialapp",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"socialaccount_socialapp\" ( \"id\" integer NOT NULL PRIMARY KEY, \"provider\" varchar(30) NOT NULL, \"name\" varchar(40) NOT NULL, \"client_id\" varchar(191) NOT NULL, \"secret\" varchar(191) NOT NULL, \"key\" varchar(191) NOT NULL, \"provider_id\" varchar(200) NOT NULL, \"settings\" text NOT NULL CHECK ((JSON_VALID(\"settings\") OR \"settings\" IS NULL)) );"
+    },
+    {
+      "table": "socialaccount_socialtoken",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"socialaccount_socialtoken\" ( \"id\" integer NOT NULL PRIMARY KEY, \"token\" text NOT NULL, \"token_secret\" text NOT NULL, \"expires_at\" datetime NULL, \"account_id\" integer NOT NULL, \"app_id\" integer NULL );"
+    },
+    {
+      "table": "stock_stockitemtestresult",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"stock_stockitemtestresult\" ( \"id\" integer NOT NULL PRIMARY KEY, \"result\" bool NOT NULL, \"value\" varchar(500) NOT NULL, \"attachment\" varchar(100) NULL, \"stock_item_id\" integer NOT NULL, \"user_id\" integer NULL, \"notes\" varchar(500) NOT NULL, \"metadata\" text NULL CHECK ((JSON_VALID(\"metadata\") OR \"metadata\" IS NULL)), \"template_id\" integer NOT NULL, \"test_station\" varchar(500) NOT NULL, \"finished_datetime\" datetime NULL, \"started_datetime\" datetime NULL, \"date\" datetime NOT NULL );"
+    },
+    {
+      "table": "stock_stockitemtracking",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"stock_stockitemtracking\" ( \"id\" integer NOT NULL PRIMARY KEY, \"tracking_type\" integer NOT NULL, \"date\" datetime NOT NULL, \"notes\" varchar(512) NULL, \"link\" varchar(2000) NOT NULL, \"deltas\" text NOT NULL, \"item_id\" integer NOT NULL, \"user_id\" integer NULL );"
+    },
+    {
+      "table": "stock_stocklocationtype",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"stock_stocklocationtype\" ( \"id\" integer NOT NULL PRIMARY KEY, \"metadata\" text NULL CHECK ((JSON_VALID(\"metadata\") OR \"metadata\" IS NULL)), \"name\" varchar(100) NOT NULL, \"description\" varchar(250) NOT NULL, \"icon\" varchar(100) NOT NULL );"
+    },
+    {
+      "table": "taggit_tag",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"taggit_tag\" ( \"id\" integer NOT NULL PRIMARY KEY, \"name\" varchar(100) NOT NULL UNIQUE, \"slug\" varchar(100) NOT NULL UNIQUE );"
+    },
+    {
+      "table": "taggit_taggeditem",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"taggit_taggeditem\" ( \"id\" integer NOT NULL PRIMARY KEY, \"object_id\" integer NOT NULL, \"content_type_id\" integer NOT NULL, \"tag_id\" integer NOT NULL, CONSTRAINT \"taggit_taggeditem_content_type_id_object_id_tag_id_4bb97a8e_uniq\" UNIQUE (\"content_type_id\", \"object_id\", \"tag_id\") );"
+    },
+    {
+      "table": "users_apitoken",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"users_apitoken\" ( \"id\" integer NOT NULL PRIMARY KEY, \"created\" datetime NOT NULL, \"name\" varchar(100) NOT NULL, \"expiry\" date NOT NULL, \"revoked\" bool NOT NULL, \"user_id\" integer NOT NULL, \"last_seen\" date NULL, \"metadata\" text NULL CHECK ((JSON_VALID(\"metadata\") OR \"metadata\" IS NULL)), \"hmac_digest\" varchar(200) NULL, \"issued_by_id\" integer NULL, \"pepper_id\" varchar(100) NULL, \"revocation_reason\" text NULL, \"revoked_by_id\" integer NULL, \"token_version\" smallint unsigned NOT NULL CHECK (\"token_version\" >= 0), \"key\" varchar(100) NOT NULL UNIQUE );"
+    },
+    {
+      "table": "users_owner",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"users_owner\" ( \"id\" integer NOT NULL PRIMARY KEY, \"owner_id\" integer unsigned NULL CHECK (\"owner_id\" >= 0), \"owner_type_id\" integer NULL, CONSTRAINT \"unique_owner\" UNIQUE (\"owner_type_id\", \"owner_id\") );"
+    },
+    {
+      "table": "users_ruleset",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"users_ruleset\" ( \"id\" integer NOT NULL PRIMARY KEY, \"name\" varchar(50) NOT NULL, \"can_view\" bool NOT NULL, \"can_add\" bool NOT NULL, \"can_change\" bool NOT NULL, \"can_delete\" bool NOT NULL, \"group_id\" integer NOT NULL );"
+    },
+    {
+      "table": "users_tipresult",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"users_tipresult\" ( \"id\" integer NOT NULL PRIMARY KEY, \"metadata\" text NULL CHECK ((JSON_VALID(\"metadata\") OR \"metadata\" IS NULL)), \"tip_id\" varchar(255) NOT NULL, \"shown\" bool NOT NULL, \"finished\" bool NOT NULL, \"updated\" datetime NOT NULL, \"user_id\" integer NOT NULL );"
+    },
+    {
+      "table": "users_userprofile",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"users_userprofile\" ( \"id\" integer NOT NULL PRIMARY KEY, \"metadata\" text NULL CHECK ((JSON_VALID(\"metadata\") OR \"metadata\" IS NULL)), \"language\" varchar(10) NULL, \"theme\" text NULL CHECK ((JSON_VALID(\"theme\") OR \"theme\" IS NULL)), \"widgets\" text NULL CHECK ((JSON_VALID(\"widgets\") OR \"widgets\" IS NULL)), \"displayname\" varchar(255) NULL, \"position\" varchar(255) NULL, \"status\" varchar(2000) NULL, \"location\" varchar(2000) NULL, \"active\" bool NOT NULL, \"contact\" varchar(255) NULL, \"type\" varchar(10) NOT NULL, \"organisation\" varchar(255) NULL, \"primary_group_id\" integer NULL, \"user_id\" integer NOT NULL UNIQUE );"
+    },
+    {
+      "table": "usersessions_usersession",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"usersessions_usersession\" ( \"id\" integer NOT NULL PRIMARY KEY, \"created_at\" datetime NOT NULL, \"ip\" char(39) NOT NULL, \"last_seen_at\" datetime NOT NULL, \"session_key\" varchar(40) NOT NULL UNIQUE, \"user_agent\" varchar(200) NOT NULL, \"data\" text NOT NULL CHECK ((JSON_VALID(\"data\") OR \"data\" IS NULL)), \"user_id\" integer NOT NULL );"
+    }
+  ],
+  "hrm": [
+    {
+      "table": "hrm_cdm_crosswalk",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"hrm_cdm_crosswalk\" ( cdm_party_id TEXT PRIMARY KEY, hrm_employee_id TEXT NOT NULL, beehive_fg_id TEXT NOT NULL, hledger_entity_tag TEXT NOT NULL, gl_labor_acct TEXT NOT NULL, gl_accrual_acct TEXT NOT NULL, erp_open_journal_ref TEXT NOT NULL, erp_period_journal_ref TEXT NOT NULL );"
+    },
+    {
+      "table": "hrm_timecard_allocation",
+      "ddl": "CREATE TABLE IF NOT EXISTS \"hrm_timecard_allocation\" ( timecard_id TEXT PRIMARY KEY, employee_id TEXT NOT NULL, beehive_fg_id TEXT NOT NULL, work_category TEXT NOT NULL, job_or_wfb_code TEXT NOT NULL, cost_code TEXT NOT NULL, hours_booked REAL NOT NULL, rate_usd REAL NOT NULL, total_labor_usd REAL NOT NULL, gaap_treatment TEXT NOT NULL, gl_debit_acct TEXT NOT NULL, gl_credit_acct TEXT NOT NULL, erp_journal_ref TEXT NOT NULL, status TEXT NOT NULL );"
+    }
+  ]
+}

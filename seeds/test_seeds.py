@@ -200,3 +200,29 @@ def test_drift_reports_corrupt_and_missing_seeds(tmp_path):
 
 def test_committed_seeds_match_contract():
     assert build_seeds.drift() == []
+
+
+def test_sqlite_seeds_275_brownfield_tables_and_doa_metadata(built):
+    counts = {
+        name: _query(
+            built[name],
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'",
+        )[0][0]
+        for name in build_seeds.SQLITE_SEEDS
+    }
+    assert counts == {
+        "crm_seed.sqlite3": 151,
+        "wms_seed.sqlite3": 119,
+        "hrm_seed.sqlite3": 5,
+    }
+    assert sum(counts.values()) == 275
+    doa_codes = dict(_query(built["hrm_seed.sqlite3"], "SELECT emp_id, emp_code FROM hrm_doa_authority_seat"))
+    assert doa_codes == {
+        "EMP-AI-KAL": "KAL-STEWARD",
+        "EMP-0021": "SC-PLAN-01",
+        "EMP-0002": "PROC-01",
+        "EMP-0005": "OPS-01",
+        "EMP-0003": "DOCK-01",
+        "EMP-0001": "CTRL-01",
+        "EMP-0007": "CFO-01",
+    }

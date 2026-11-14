@@ -25,6 +25,7 @@ from pathlib import Path
 
 SEEDS_DIR = Path(__file__).resolve().parent
 CONTRACT = SEEDS_DIR.parent / "contracts" / "p2p-lineage-contract.json"
+SCHEMAS_275 = SEEDS_DIR / "schemas_275.json"
 SQLITE_SEEDS = ("wms_seed.sqlite3", "hrm_seed.sqlite3", "crm_seed.sqlite3")
 JOURNAL_SEED = "coa_seed.journal"
 SEED_FILES = SQLITE_SEEDS + (JOURNAL_SEED,)
@@ -169,6 +170,11 @@ CREATE TABLE hrm_doa_authority_seat (
   may_release_payment INTEGER NOT NULL DEFAULT 0,
   is_ai_steward INTEGER NOT NULL DEFAULT 0 CHECK (is_ai_steward IN (0, 1)),
   db_write_credentials INTEGER NOT NULL DEFAULT 0 CHECK (db_write_credentials >= 0),
+  emp_code TEXT NOT NULL DEFAULT '',
+  full_name TEXT NOT NULL DEFAULT '',
+  role_title TEXT NOT NULL DEFAULT '',
+  department TEXT NOT NULL DEFAULT '',
+  p2p_sod_role TEXT NOT NULL DEFAULT '',
   CHECK ((emp_id LIKE 'EMP-AI-%') = (is_ai_steward = 1)),
   CHECK (is_ai_steward = 0 OR (approval_limit_usd = 0 AND db_write_credentials = 0
     AND may_request + may_approve_requisition + may_issue_po + may_receive_dock
@@ -375,12 +381,81 @@ def wms_rows(contract: dict) -> dict[str, list[tuple]]:
     }
 
 
+DOA_METADATA = {
+    "EMP-0001": (
+        "CTRL-01",
+        "Duncan Vance",
+        "Controller ($250k Signing Limit)",
+        "Finance & Accounting",
+        "AP Voucher & 3-Way Match Override ($250k Signing Limit)",
+    ),
+    "EMP-0002": (
+        "PROC-01",
+        "Nancy Rostova",
+        "Centralized Purchasing Lead ($50k Signing Limit)",
+        "Centralized Purchasing",
+        "Centralized Purchasing: Live Spot Lock & PO Execution ($50k Signing Limit)",
+    ),
+    "EMP-0003": (
+        "DOCK-01",
+        "Marcus Vance",
+        "Warehouse Dock Lead (Scan Gun)",
+        "Warehouse & Central Receiving Hub",
+        "Physical Dock RF Reel Scan & Bay 4 Receipt",
+    ),
+    "EMP-0005": (
+        "OPS-01",
+        "Devon Brooks",
+        "VP Supply Chain ($100k Signing Limit)",
+        "Supply Chain & Operations",
+        "Supply Chain Escalation Approver ($100k Signing Limit)",
+    ),
+    "EMP-0007": (
+        "CFO-01",
+        "Meredith Hale",
+        "Chief Financial Officer ($500k Signing Limit)",
+        "Executive Finance",
+        "Treasury Check #10045 & ACH Disbursement ($500k Signing Limit)",
+    ),
+    "EMP-0021": (
+        "SC-PLAN-01",
+        "Darius Mercer",
+        "Supply Chain Inventory Planner ($20k Signing Limit)",
+        "Supply Chain & Inventory Planning",
+        "Supply Chain Stock-Out Planner ($20k Signing Limit)",
+    ),
+}
+
+
+def load_aux_ddl() -> dict[str, str]:
+    data = json.loads(SCHEMAS_275.read_text(encoding="utf-8"))
+    return {
+        k: "\n".join(entry["ddl"] for entry in data.get(k, ()))
+        for k in ("wms", "hrm", "crm")
+    }
+
+
 def hrm_rows(contract: dict) -> dict[str, list[tuple]]:
     steward = contract["provenance"]["aiSteward"]
     employees = [(e, n, t, fg, 0, 1) for e, n, t, fg, *_ in OFFICERS]
-    seats = [(e, code, limit, *flags, 0, 1) for e, _n, _t, _fg, code, limit, flags in OFFICERS]
+    seats = [
+        (e, code, limit, *flags, 0, 1, *DOA_METADATA[e])
+        for e, _n, _t, _fg, code, limit, flags in OFFICERS
+    ]
     employees.append((steward["id"], steward["name"], steward["role"], None, 1, 1))
-    seats.append((steward["id"], "AI_STEWARD_ZERO_AUTHORITY", "0.00", 0, 0, 0, 0, 0, 0, 1, steward["dbWriteCredentials"]))
+    seats.append((
+        steward["id"],
+        "AI_STEWARD_ZERO_AUTHORITY",
+        "0.00",
+        0, 0, 0, 0, 0, 0,
+        1,
+        steward["dbWriteCredentials"],
+        "KAL-STEWARD",
+        steward["name"],
+        steward["role"],
+        "AI Workflow Governance",
+        "AI_STEWARD_READ_AND_NUDGE_ONLY ($0.00 Signing Limit · 0 Ledger/Bank Credentials)",
+    ))
     return {"hrm_beehive_department": list(DEPARTMENTS), "hrm_employee": employees, "hrm_doa_authority_seat": seats}
 
 
@@ -412,8 +487,12 @@ def build(out_dir: Path = SEEDS_DIR, contract_path: Path = CONTRACT) -> dict[str
     contract = load_contract(contract_path)
     try:
         _validate(contract)
-        rows = {"wms_seed.sqlite3": (WMS_DDL, wms_rows(contract)), "hrm_seed.sqlite3": (HRM_DDL, hrm_rows(contract)),
-                "crm_seed.sqlite3": (CRM_DDL, crm_rows(contract))}
+        aux = load_aux_ddl()
+        rows = {
+            "wms_seed.sqlite3": (WMS_DDL + "\n" + aux["wms"], wms_rows(contract)),
+            "hrm_seed.sqlite3": (HRM_DDL + "\n" + aux["hrm"], hrm_rows(contract)),
+            "crm_seed.sqlite3": (CRM_DDL + "\n" + aux["crm"], crm_rows(contract)),
+        }
     except (KeyError, TypeError, StopIteration) as exc:
         raise ValueError(f"SEED_CONTRACT_DRIFT: malformed contract ({type(exc).__name__}: {exc})") from exc
     out_dir.mkdir(parents=True, exist_ok=True)

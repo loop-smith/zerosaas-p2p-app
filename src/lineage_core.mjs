@@ -775,3 +775,4 @@ export class P2PKernel {
 }
 
 export const openKernel = (opts) => new P2PKernel(opts);
+export { LineageCoreEngine, sha256Text, callLiveLlmJson } from './workbench_lineage.mjs';
