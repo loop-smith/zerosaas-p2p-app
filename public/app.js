@@ -592,8 +592,9 @@
       ]);
     }
 
-    // Step 3 -> Step 4: VP Devon signs ceiling, fires live outbound COMEX API call, and STOPS on Step 4!
+    // Step 3 -> Step 4: VP Devon signs ceiling -> Central Purchasing reviews -> fires live outbound COMEX API call -> PAUSES on Step 4!
     let spotGateUnlockedAt = 0;
+    let ocrGateUnlockedAt = 0;
     async function approveCheckpoint2Devon() {
       if (busyAction) return;
       busyAction = true;
@@ -601,7 +602,8 @@
       deskSubView = 'auto';
       if (showcaseTimer) { clearTimeout(showcaseTimer); showcaseTimer = null; }
       try {
-        busyBannerText = 'Recording VP Devon Brooks ($100,000 Signing Limit) sign-off…';
+        stopKalAudio();
+        busyBannerText = 'Recording VP Devon Brooks ($100,000 Signing Limit) sign-off & routing to Central Purchasing…';
         renderAll();
         const r1 = await postStepRaw('wf0_approve_req');
         if (!r1.ok) {
@@ -609,23 +611,35 @@
           return;
         }
         STATE = r1.data;
-        // Show outbound TLS handshake dialing COMEX Copper feed while keeping busyAction=true, then STOP cleanly on Step 4!
-        liveShowcasePhase = 'spot_calling';
-        renderAll();
-        await new Promise(r => setTimeout(r, 450));
 
+        // Beat 1 (~850ms): Central Purchasing (Nancy Rostova) receives signed REQ-25800 and initiates spot review
+        liveShowcasePhase = 'cp_reviewing';
+        busyAction = false;
+        kalBadgeText = 'CENTRAL PURCHASING · NANCY ROSTOVA';
+        kalSubtitle = 'VP Devon signed REQ-25800 ($23,120 ceiling) ➔ Central Purchasing received the requisition and is launching a live COMEX copper spot check…';
+        renderAll();
+        await new Promise(r => setTimeout(r, 850));
+
+        // Beat 2 (~1,450ms min): Outbound TLS handshake pulls real-time COMEX Copper price live on screen
+        liveShowcasePhase = 'spot_calling';
+        kalBadgeText = 'LIVE HTTPS · COMEX COPPER SPOT';
+        kalSubtitle = 'Going out live to api.gold-api.com/price/HG + Yahoo Finance COMEX (HG=F) to benchmark against our $2.89/FT ($23,120) Standard Cost…';
+        renderAll();
+        const tSpotStart = Date.now();
         const r2 = await postStepRaw('wf1_check_spot');
+        const spotElapsed = Date.now() - tSpotStart;
+        if (spotElapsed < 1450) await new Promise(r => setTimeout(r, 1450 - spotElapsed));
+
+        // Beat 3: PAUSE cleanly on Step 4 so presenter can explain the live spot quote before approving!
         liveShowcasePhase = null;
-        spotGateUnlockedAt = Date.now() + 450;
+        spotGateUnlockedAt = Date.now() + 600;
         if (r2.ok) {
           STATE = r2.data;
           const stNow = STATE.runtimeState[selectedDeal];
-          busyAction = false;
           renderAll();
           if (stNow?.lastVoiceBrief) speakText(stNow.lastVoiceBrief, stNow.activeVoiceRole || 'ops_steward');
         } else {
           if (r2.data?.state) STATE = r2.data.state;
-          busyAction = false;
           renderAll();
         }
       } finally {
@@ -637,11 +651,16 @@
 
     // Re-poll live COMEX API right on Step 4 (proves real-time market tick on demand!)
     async function repollLiveComexSpot() {
-      if (busyAction) return;
+      if (busyAction || liveShowcasePhase === 'spot_calling' || liveShowcasePhase === 'cp_reviewing') return;
+      stopKalAudio();
       liveShowcasePhase = 'spot_calling';
+      kalBadgeText = 'LIVE HTTPS · COMEX COPPER SPOT';
+      kalSubtitle = 'Re-polling live COMEX Copper feeds (api.gold-api.com/price/HG + HG=F)…';
       renderAll();
-      await new Promise(r => setTimeout(r, 350));
+      const tSpotStart = Date.now();
       const r = await postStepRaw('wf1_check_spot');
+      const spotElapsed = Date.now() - tSpotStart;
+      if (spotElapsed < 1100) await new Promise(res => setTimeout(res, 1100 - spotElapsed));
       liveShowcasePhase = null;
       if (r.ok) {
         STATE = r.data;
@@ -654,12 +673,22 @@
     }
 
     // Step 4 -> Step 5: Central Purchasing clicks "OK to Proceed" -> Cuts PO-25800 + Receives Encore Vendor Ack ENC-OA-2026-884192 -> STOPS on Step 5!
-    function proceedStep4CutPo() {
-      if (busyAction || liveShowcasePhase === 'spot_calling' || Date.now() < spotGateUnlockedAt) return;
-      executeStewardSequence([
-        { action: 'wf1_commit_po', label: 'Central Purchasing cutting PO-25800 at live COMEX spot price…' },
+    async function proceedStep4CutPo() {
+      if (busyAction || liveShowcasePhase === 'cp_reviewing' || liveShowcasePhase === 'spot_calling' || Date.now() < spotGateUnlockedAt) return;
+      await executeStewardSequence([
+        { action: 'wf1_commit_po', label: 'Central Purchasing cutting PO-25800 at locked COMEX spot price…' },
         { action: 'wf1_vendor_ack', label: 'Receiving Encore Wire Vendor Ack ENC-OA-2026-884192 (ship & delivery dates)…' },
       ]);
+      // Pre-warm rendered invoice PNG in browser image cache so Step 7 OCR laser stage paints in 0ms
+      try {
+        const pngFile = STATE?.deals?.[selectedDeal]?.pngFile || 'INV-25800.png';
+        const poHash = STATE?.runtimeState?.[selectedDeal]?.poSha256;
+        const vQuery = poHash ? `&v=${encodeURIComponent(poHash.slice(0, 8))}` : '';
+        if (typeof Image !== 'undefined') {
+          const pre = new Image();
+          pre.src = `/api/invoice-image?file=${encodeURIComponent(pngFile)}${vQuery}`;
+        }
+      } catch {}
     }
 
     // Step 5 -> Step 6: Central Purchasing verifies OA ship/delivery dates copacetic -> clicks "OK to Proceed" -> STOPS on Step 6!
@@ -672,7 +701,7 @@
       ]);
     }
 
-    // Step 6 -> Step 7: Marcus submits all 4 RF Reel Barcode Scans -> AP Email arrives -> 2-Pass RapidOCR Laser Scan -> Laser STOPS -> 28 Boxes Lock -> KAL Speaks!
+    // Step 6 -> Step 7: Marcus submits all 4 RF Reel Barcode Scans -> AP Email arrives -> 2-Pass RapidOCR Laser Scan -> Laser STOPS -> 28 Boxes Lock -> PAUSES on Step 7!
     async function approveCheckpoint3MarcusDock() {
       if (busyAction || autoScanningReels) return;
       const dCur = STATE?.deals?.[selectedDeal];
@@ -697,16 +726,21 @@
           return;
         }
         STATE = r1.data;
-        // Sweep the blue laser 2 clean passes (2,250ms) while calling real RapidOCR ONNX (:3591/scan), STOP laser, lock 28 boxes, THEN KAL speaks!
+        await new Promise(r => setTimeout(r, 480));
+
+        // Sweep the blue laser 2 clean passes (~2,300ms) across INV-25800.png while calling real RapidOCR ONNX (:3591/scan), STOP laser, lock 28 boxes, and PAUSE on Step 7!
         liveShowcasePhase = 'ocr_scanning';
         busyAction = false;
+        kalBadgeText = 'RAPIDOCR ONNX · :3591/SCAN';
+        kalSubtitle = 'Encore Wire emailed INV-25800.pdf to AP — running live RapidOCR neural scan & sweeping 28 bounding boxes…';
         renderAll();
         const tScanStart = Date.now();
         const r2 = await postStepRaw('wf3_poll_and_ocr');
         const elapsed = Date.now() - tScanStart;
-        if (elapsed < 2250) await new Promise(r => setTimeout(r, 2250 - elapsed));
+        if (elapsed < 2300) await new Promise(r => setTimeout(r, 2300 - elapsed));
 
         liveShowcasePhase = null;
+        ocrGateUnlockedAt = Date.now() + 550;
         if (r2.ok) {
           STATE = r2.data;
           const stNow = STATE.runtimeState[selectedDeal];
@@ -717,6 +751,7 @@
           renderAll();
         }
       } finally {
+        liveShowcasePhase = null;
         busyAction = false;
         busyBannerText = '';
       }
@@ -728,12 +763,14 @@
       stopKalAudio();
       deskSubView = 'ocr';
       liveShowcasePhase = 'ocr_scanning';
+      kalBadgeText = 'RAPIDOCR ONNX · :3591/SCAN';
+      kalSubtitle = 'Re-running live RapidOCR neural scan on INV-25800.pdf (:3591/scan)…';
       renderAll();
       try {
         const tScanStart = Date.now();
         const r = await postStepRaw('wf3_rescan_ocr');
         const elapsed = Date.now() - tScanStart;
-        if (elapsed < 2250) await new Promise(res => setTimeout(res, 2250 - elapsed));
+        if (elapsed < 2300) await new Promise(res => setTimeout(res, 2300 - elapsed));
         liveShowcasePhase = null;
         if (r.ok) {
           STATE = r.data;
@@ -751,6 +788,7 @@
 
     // Step 7 -> Step 8: AP clicks "OK to Proceed" after reviewing 28 OCR tags & 3 tied-together forms -> STOPS on Step 8!
     function proceedStep7ConfirmMatch() {
+      if (busyAction || liveShowcasePhase === 'ocr_scanning' || Date.now() < ocrGateUnlockedAt) return;
       executeStewardSequence([
         { action: 'wf3_confirm_match', label: 'Routing verified 3-Way Match packet & Check #10045 to CFO Meredith Hale…' },
       ]);
@@ -1280,7 +1318,7 @@
       }
 
       // Live Outbound COMEX API Showcase OR On-Demand Inspection ('spot')
-      if (liveShowcasePhase === 'spot_calling' || deskSubView === 'spot') {
+      if (liveShowcasePhase === 'cp_reviewing' || liveShowcasePhase === 'spot_calling' || deskSubView === 'spot') {
         return renderLiveSpotCallDesk(d, st, stepIdx);
       }
 
@@ -1952,7 +1990,9 @@
 
     /* ================= STEP 4: LIVE OUTBOUND COMEX API & CENTRAL PURCHASING GATE ================= */
     function renderLiveSpotCallDesk(d, st, stepIdx) {
+      const isReviewing = liveShowcasePhase === 'cp_reviewing';
       const isCalling = liveShowcasePhase === 'spot_calling';
+      const isInFlight = isReviewing || isCalling;
       const sq = st.spotQuote || {};
       const endpointUrl = sq.endpointUrl || 'https://api.gold-api.com/price/HG';
       const spotLb = Number(sq.spotPerLbUsd || 6.2436);
@@ -1971,31 +2011,47 @@
       const absSpotPpv = Math.abs(favPpv);
       const pctVar = ((absSpotPpv / d.catalogEstimateUsd) * 100).toFixed(1);
 
+      const bannerTitle = isReviewing
+        ? `Central Purchasing Received Signed REQ-25800 (${fmtUsd(d.catalogEstimateUsd)} Ceiling) — Launching Spot Check…`
+        : (isCalling
+            ? `Going Out Live to COMEX Copper: GET ${esc(endpointUrl)} + Ticker HG=F…`
+            : (isFavSpot
+                ? `Better Live Spot Found: $${spotLb.toFixed(4)}/lb ➔ $${unitFt.toFixed(2)}/FT (${fmtUsd(quotedTotal)} · Saves ${fmtUsd(absSpotPpv)}!)`
+                : `Live Spot Quote Returned: $${spotLb.toFixed(4)}/lb ➔ $${unitFt.toFixed(2)}/FT (+${fmtUsd(absSpotPpv)} Unfavorable)`));
+
+      const bannerDesc = isReviewing
+        ? `VP Devon approved <strong>REQ-25800</strong> and routed it to <strong>Central Purchasing (Nancy Rostova · $50k Limit)</strong>. Reviewing standard cost baseline (<code>$2.89/FT</code>) and preparing live outbound COMEX copper query…`
+        : (isCalling
+            ? `Central Purchasing is making a <strong>real outbound HTTPS call</strong> to live public COMEX copper feeds (<code>api.gold-api.com/price/HG</code> + <code>HG=F</code>) to price 8,000 FT against our $23,120.00 standard ceiling…`
+            : `${isFavSpot
+                ? `Central Purchasing pulled a <strong>real live COMEX spot quote</strong> at <strong>$${unitFt.toFixed(2)}/FT (${fmtUsd(quotedTotal)})</strong> — <strong>${fmtUsd(absSpotPpv)} cheaper</strong> than our $2.89/FT ($23,120) Standard Cost! <em>(Auto-executed in production; paused here to explain — shall we approve?)</em>`
+                : `Central Purchasing pulled a <strong>real live COMEX spot quote</strong> at <strong>$${unitFt.toFixed(2)}/FT (${fmtUsd(quotedTotal)})</strong> — within Buyer Nancy's $50,000 Signing Limit. Paused here to review before cutting <code>${esc(d.id)}</code>.`}`);
+
       return `
         <div class="officer-desk" style="border-top-color:#0284c7;">
           <div class="desk-banner" style="background:linear-gradient(90deg,#f0f9ff 0%,#ffffff 100%);">
             <div>
               <div class="cp-eyebrow" style="color:#0369a1;">📡 STEP 4 OF 8 · CENTRAL PURCHASING AGENTIC SPOT ROUTINE (NANCY ROSTOVA · $50K LIMIT · <code>WO-02</code>)</div>
-              <div class="cp-title">${isCalling ? `Dialing Live Copper Spot Service: GET ${esc(endpointUrl)} …` : `Live Spot Quote Returned: $${spotLb.toFixed(4)}/lb ➔ $${unitFt.toFixed(2)}/FT (${isFavSpot ? fmtUsd(absSpotPpv) + ' Favorable' : '+' + fmtUsd(absSpotPpv) + ' Unfavorable'} Variance)`}</div>
-              <div class="cp-desc">
-                VP Devon signed REQ-25800. Central Purchasing called <strong>two live public copper feeds</strong> (check <code>HG=F</code> on your phone!) and quoted <strong>$${unitFt.toFixed(2)}/FT (${fmtUsd(quotedTotal)})</strong>${isFavSpot ? ` — beating our $2.89 Standard Cost!` : ` — within Buyer Nancy's $50,000 Signing Limit.`} Click <strong>OK to Proceed</strong> to cut <code>${esc(d.id)}</code>.
-              </div>
+              <div class="cp-title">${bannerTitle}</div>
+              <div class="cp-desc">${bannerDesc}</div>
             </div>
             <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
-              ${!isCalling ? `
+              ${!isInFlight ? `
                 <button class="btn-top" style="border-color:#0284c7;color:#0369a1;padding:8px 10px;" onclick="repollLiveComexSpot()" title="Fire another live outbound HTTPS request right now">
                   🔄 Re-Call Live API
                 </button>
               ` : ''}
-              ${isCalling ? `
-                <button class="btn-approve blue" disabled>📡 Calling Live API…</button>
+              ${isReviewing ? `
+                <button class="btn-approve blue" disabled>📋 Reviewing REQ-25800…</button>
+              ` : (isCalling ? `
+                <button class="btn-approve blue" disabled>📡 Pulling Live Spot…</button>
               ` : (isActiveStep4 ? `
                 <button class="btn-approve" onclick="proceedStep4CutPo()">
-                  ✓ OK to Proceed — Cut ${esc(d.id)} (Central Purchasing)
+                  ✓ Approve ${isFavSpot ? 'Better Spot ' : 'Spot '}Quote &amp; Cut ${esc(d.id)}
                 </button>
               ` : `
                 <button class="btn-approve blue" onclick="setDeskSubView('auto')">↩ Back to Active Step</button>
-              `)}
+              `))}
             </div>
           </div>
 
@@ -2008,34 +2064,37 @@
                     <div class="sheet-kicker" style="color:#38bdf8;">Live Outbound Market Services (Zero Mock · Real Prices)</div>
                     <div class="sheet-title" style="color:#f8fafc;">1. gold-api.com/price/HG &nbsp;+&nbsp; 2. COMEX Ticker HG=F</div>
                   </div>
-                  <span class="badge ${isCalling ? 'b-amber' : 'b-done'}">${isCalling ? 'DIALING TLS…' : `HTTP ${sq.httpStatus || 200} · ${sq.latencyMs || 180}ms`}</span>
+                  <span class="badge ${isInFlight ? 'b-amber' : 'b-done'}">${isReviewing ? 'INTAKE · REQ-25800' : (isCalling ? 'DIALING TLS…' : `HTTP ${sq.httpStatus || 200} · ${sq.latencyMs || 180}ms`)}</span>
                 </div>
 
                 <div style="margin:5px 0;display:flex;justify-content:space-between;align-items:center;gap:6px;">
                   <span class="api-url-pill">${esc(sq.httpMethod || 'GET')} ${esc(endpointUrl)}</span>
-                  <span style="font-family:var(--mono);font-size:9.5px;color:#4ade80;white-space:nowrap;">${esc(sq.calledAtLocal || 'Live')}</span>
+                  <span style="font-family:var(--mono);font-size:9.5px;color:${isInFlight ? '#fbbf24' : '#4ade80'};white-space:nowrap;">${isReviewing ? 'Staging Outbound Call…' : (isCalling ? 'Fetching Live Quote…' : esc(sq.calledAtLocal || 'Live'))}</span>
                 </div>
 
                 <div class="api-terminal" style="background:#020617;border-color:#1e293b;padding:6px 9px;">
-                  ${isCalling ? `
-                    <div style="color:#38bdf8;">&gt; TLS 1.3 handshake to api.gold-api.com + query1.finance.yahoo.com (HG=F)…</div>
-                    <div style="color:#94a3b8;">&gt; Fetching real-time COMEX High-Grade Copper ($/lb)…</div>
+                  ${isReviewing ? `
+                    <div style="color:#38bdf8;">&gt; Central Purchasing (EMP-0002 Nancy Rostova) received VP-approved REQ-25800…</div>
+                    <div style="color:#fbbf24;margin-top:2px;">&gt; Initializing outbound HTTPS client for COMEX Copper (HG / HG=F)…</div>
+                  ` : (isCalling ? `
+                    <div style="color:#38bdf8;">&gt; TLS 1.3 handshake ➔ GET https://api.gold-api.com/price/HG + Yahoo Finance (HG=F)…</div>
+                    <div style="color:#fbbf24;margin-top:2px;">&gt; Pulling real-time COMEX High-Grade Copper ($/lb) &amp; computing mill draw…</div>
                   ` : `
                     <div style="color:#94a3b8;">// Feed UTC: <span style="color:#38bdf8;">${esc(sq.feedTimestamp || sq.calledAtIso || 'Live')}</span></div>
                     <div style="color:#4ade80;margin-top:2px;word-break:break-all;">${esc(rawJson)}</div>
-                  `}
+                  `)}
                 </div>
 
                 <div class="kv-list" style="margin-top:5px;">
-                  <div class="kv-row" style="border-bottom-color:#1e293b;padding:3px 0;"><span class="kv-k" style="color:#94a3b8;">Service 1 · Spot REST (<code>HG</code>):</span><span class="kv-v" style="color:#38bdf8;">$${spotLb.toFixed(4)} / lb</span></div>
-                  <div class="kv-row" style="border-bottom-color:#1e293b;padding:3px 0;"><span class="kv-k" style="color:#94a3b8;">Service 2 · Phone Stocks (<code>HG=F</code>):</span><span class="kv-v" style="color:#fbbf24;">$${comexFutLb.toFixed(4)} / lb (COMEX)</span></div>
-                  <div class="kv-row" style="border-bottom:none;padding:3px 0;"><span class="kv-k" style="color:#94a3b8;">ASTM B8 Mill Formula (0.411 lb/FT):</span><span class="kv-v" style="color:#4ade80;">($${spotLb.toFixed(2)} + $0.32) × 0.411 = $${unitFt.toFixed(2)}/FT</span></div>
+                  <div class="kv-row" style="border-bottom-color:#1e293b;padding:3px 0;"><span class="kv-k" style="color:#94a3b8;">Service 1 · Spot REST (<code>HG</code>):</span><span class="kv-v" style="color:#38bdf8;">${isInFlight ? '📡 Querying live $/lb…' : `$${spotLb.toFixed(4)} / lb`}</span></div>
+                  <div class="kv-row" style="border-bottom-color:#1e293b;padding:3px 0;"><span class="kv-k" style="color:#94a3b8;">Service 2 · Phone Stocks (<code>HG=F</code>):</span><span class="kv-v" style="color:#fbbf24;">${isInFlight ? '📡 Cross-checking COMEX…' : `$${comexFutLb.toFixed(4)} / lb (COMEX)`}</span></div>
+                  <div class="kv-row" style="border-bottom:none;padding:3px 0;"><span class="kv-k" style="color:#94a3b8;">ASTM B8 Mill Formula (0.411 lb/FT):</span><span class="kv-v" style="color:#4ade80;">${isInFlight ? 'Awaiting live spot tick…' : `($${spotLb.toFixed(2)} + $0.32) × 0.411 = $${unitFt.toFixed(2)}/FT`}</span></div>
                 </div>
               </div>
 
               <div class="sig-strip" style="background:#1e293b;border-color:#334155;color:#cbd5e1;padding:5px 9px;">
                 <span>📱 Verify on Phone: Search <strong><code>HG=F</code></strong> (COMEX Copper Futures)</span>
-                <span style="font-family:var(--mono);font-size:9.5px;color:#4ade80;">LIVE HTTPS ✓</span>
+                <span style="font-family:var(--mono);font-size:9.5px;color:${isInFlight ? '#fbbf24' : '#4ade80'};">${isInFlight ? 'DIALING…' : 'LIVE HTTPS ✓'}</span>
               </div>
             </div>
 
@@ -2045,20 +2104,20 @@
                 <div class="sheet-top">
                   <div>
                     <div class="sheet-kicker">Central Purchasing Department · Automated Variance Check</div>
-                    <div class="sheet-title">Standard Cost vs. Live Spot — Ready to Cut ${esc(d.id)}</div>
+                    <div class="sheet-title">${isInFlight ? 'Benchmarking Live Market vs. $2.89/FT Standard Cost…' : `Standard Cost vs. Live Spot — Ready to Cut ${esc(d.id)}`}</div>
                   </div>
-                  <span class="badge ${isFavSpot ? 'b-done' : 'b-amber'}">${st.wf1_po_committed === 'done' ? 'PO Issued ✓' : (isFavSpot ? 'Favorable Variance ✓' : 'Market Variance · OK ✓')}</span>
+                  <span class="badge ${isInFlight ? 'b-amber' : (isFavSpot ? 'b-done' : 'b-amber')}">${isReviewing ? 'Intake Review' : (isCalling ? 'Polling COMEX…' : (st.wf1_po_committed === 'done' ? 'PO Issued ✓' : (isFavSpot ? 'Cheaper Spot Found ✓' : 'Market Variance · OK ✓')))}</span>
                 </div>
                 <div class="kv-list">
                   <div class="kv-row"><span class="kv-k">Annual Standard Cost Baseline:</span><span class="kv-v">8,000 FT × $2.89/FT = ${fmtUsd(d.catalogEstimateUsd)}</span></div>
-                  <div class="kv-row"><span class="kv-k">Live Encore Mill Quote (Spot Lock):</span><span class="kv-v" style="color:var(--blue);">8,000 FT × $${unitFt.toFixed(2)}/FT = ${fmtUsd(quotedTotal)}</span></div>
-                  <div class="kv-row"><span class="kv-k">Calculated Price Variance (501900 PPV):</span><span class="kv-v" style="color:${isFavSpot ? 'var(--green)' : '#b45309'};">${isFavSpot ? `-${fmtUsd(absSpotPpv)} Favorable (Saves ${pctVar}%)` : `+${fmtUsd(absSpotPpv)} Unfavorable (+${pctVar}%)`}</span></div>
+                  <div class="kv-row"><span class="kv-k">Live Encore Mill Quote (Spot Lock):</span><span class="kv-v" style="color:var(--blue);">${isInFlight ? '⏳ Pulling live COMEX quote…' : `8,000 FT × $${unitFt.toFixed(2)}/FT = ${fmtUsd(quotedTotal)}`}</span></div>
+                  <div class="kv-row"><span class="kv-k">Calculated Price Variance (501900 PPV):</span><span class="kv-v" style="color:${isInFlight ? 'var(--text-muted)' : (isFavSpot ? 'var(--green)' : '#b45309')};">${isInFlight ? 'Computing vs. $23,120.00 ceiling…' : (isFavSpot ? `-${fmtUsd(absSpotPpv)} Favorable (Saves ${pctVar}%)` : `+${fmtUsd(absSpotPpv)} Unfavorable (+${pctVar}%)`)}</span></div>
                   <div class="kv-row"><span class="kv-k">Approved Supplier (Django-CRM #181 · MIT):</span><span class="kv-v">Encore Wire Corp (McKinney, TX)</span></div>
                   <div class="kv-row"><span class="kv-k">Purchasing Buyer Authority:</span><span class="kv-v">Nancy Rostova ($50,000 Limit ✓)</span></div>
                 </div>
               </div>
-              <div class="sig-strip signed" style="padding:6px 10px;">
-                <span style="font-weight:800;color:var(--green);">✓ ${isFavSpot ? `Beats Standard Cost (${fmtUsd(quotedTotal)} ≤ ${fmtUsd(d.catalogEstimateUsd)})` : `Within $50,000 Purchasing Authority`} — Click OK to Proceed</span>
+              <div class="sig-strip ${isInFlight ? '' : 'signed'}" style="padding:6px 10px;">
+                <span style="font-weight:800;color:${isInFlight ? 'var(--blue)' : 'var(--green)'};">${isInFlight ? '📡 Waiting for live COMEX spot response before pausing for approval…' : `✓ ${isFavSpot ? `Cheaper Than Standard (${fmtUsd(quotedTotal)} vs ${fmtUsd(d.catalogEstimateUsd)}) — Shall We Approve?` : `Within $50,000 Purchasing Authority — Click Approve Above`}`}</span>
                 <span style="font-family:var(--mono);font-size:9.5px;font-weight:800;">Step 4 ➔ Step 5</span>
               </div>
             </div>
@@ -2221,7 +2280,7 @@
 
               <div class="live-ocr-stage" onclick="openModal('invoice')" style="cursor:pointer;">
                 <div class="live-ocr-inner">
-                  <img src="/api/invoice-image?file=${encodeURIComponent(d.pngFile)}" alt="Encore Wire Invoice INV-25800" />
+                  <img src="/api/invoice-image?file=${encodeURIComponent(d.pngFile)}${st.poSha256 ? `&v=${encodeURIComponent(st.poSha256.slice(0, 8))}` : ''}" alt="Encore Wire Invoice INV-25800" />
                   ${isScanning ? '<div class="ocr-laser-bar"></div>' : ''}
                   ${(!isScanning && ocr && ocr.boxes) ? ocr.boxes.map(b => `
                     <div class="ocr-tag-overlay" style="left:${b.xPct}%;top:${b.yPct}%;width:${b.wPct}%;height:${b.hPct}%;"></div>
@@ -2499,15 +2558,18 @@
     }
 
     function renderRightBottomArtifact(d, st, stepIdx) {
-      if (st.wf3_mailbox_polled && st.wf3_ocr_result) {
+      const isOcrScanningNow = liveShowcasePhase === 'ocr_scanning' || liveShowcasePhase === 'email_arrived';
+      if (isOcrScanningNow || (st.wf3_mailbox_polled && st.wf3_ocr_result)) {
         const ocr = st.wf3_ocr_result;
+        const cacheBust = st.poSha256 ? `&v=${encodeURIComponent(st.poSha256.slice(0, 8))}` : '';
         return `
           <div class="mini-scan-wrap" onclick="openModal('invoice')" title="Click to zoom 28 RapidOCR boxes">
-            <img src="/api/invoice-image?file=${encodeURIComponent(d.pngFile)}" alt="Tagged Invoice INV-25800" />
-            <div class="ocr-stamp">${st.wf4_ach_released ? 'PAID · CHK #10045' : 'OCR MATCHED'}</div>
+            <img src="/api/invoice-image?file=${encodeURIComponent(d.pngFile)}${cacheBust}" alt="Tagged Invoice INV-25800" />
+            ${isOcrScanningNow ? '<div class="ocr-laser-bar"></div>' : ''}
+            <div class="ocr-stamp ${isOcrScanningNow ? 'scanning' : ''}">${isOcrScanningNow ? 'OCR SCANNING…' : (st.wf4_ach_released ? 'PAID · CHK #10045' : 'OCR MATCHED')}</div>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;font-size:9.5px;">
-            <span style="font-family:var(--mono);color:var(--text-muted);">RapidOCR: ${ocr.boxCount} boxes (${(ocr.avgConfidence * 100).toFixed(1)}%)</span>
+            <span style="font-family:var(--mono);color:${isOcrScanningNow ? 'var(--blue)' : 'var(--text-muted)'};">${isOcrScanningNow ? 'Sweeping INV-25800 (:3591/scan)…' : `RapidOCR: ${ocr.boxCount} boxes (${(ocr.avgConfidence * 100).toFixed(1)}%)`}</span>
             <a href="/api/trade-pdf?file=${encodeURIComponent(d.pdfFile)}" target="_blank" style="color:var(--blue);font-weight:800;text-decoration:none;">INV PDF ↗</a>
           </div>
         `;

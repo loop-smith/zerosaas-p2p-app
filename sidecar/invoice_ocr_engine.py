@@ -124,12 +124,29 @@ class _TopDownPdfDoc:
         self._buf.close()
 
 
+def _create_warm_rapidocr():
+    from rapidocr_onnxruntime import RapidOCR
+    import numpy as np
+    from PIL import Image, ImageDraw
+
+    threads = min(4, max(1, os.cpu_count() or 4))
+    ocr = RapidOCR(intra_op_num_threads=threads, inter_op_num_threads=1)
+    # Pre-warm ONNX Runtime JIT kernels (det + rec) at startup so the first live /scan runs in <1s.
+    warm_img = Image.new("RGB", (200, 48), (255, 255, 255))
+    try:
+        draw = ImageDraw.Draw(warm_img)
+        draw.text((10, 14), "INV-25800 8000", fill=(0, 0, 0))
+        ocr(np.asarray(warm_img), use_cls=False)
+    finally:
+        warm_img.close()
+    return ocr
+
+
 def get_ocr_engine():
     global WARM_OCR_ENGINE
     with WARM_OCR_LOCK:
         if WARM_OCR_ENGINE is None:
-            from rapidocr_onnxruntime import RapidOCR
-            WARM_OCR_ENGINE = RapidOCR(intra_op_num_threads=1, inter_op_num_threads=1)
+            WARM_OCR_ENGINE = _create_warm_rapidocr()
         return WARM_OCR_ENGINE
 
 
@@ -510,7 +527,10 @@ def run_ocr_on_file(input_path, preview_png_path=None, *, ocr_callable=None):
         img_w, img_h = im.size
 
     runner = ocr_callable if ocr_callable is not None else get_ocr_engine()
-    result, _ = runner(img_path)
+    try:
+        result, _ = runner(img_path, use_cls=False)
+    except TypeError:
+        result, _ = runner(img_path)
     elapsed_ms = round((time.perf_counter() - t0) * 1000, 1)
 
     boxes = []
@@ -627,8 +647,7 @@ class InvoiceOCREngine:
         self.ocr = None
         if not fast_smoke:
             try:
-                from rapidocr_onnxruntime import RapidOCR
-                self.ocr = RapidOCR(intra_op_num_threads=1, inter_op_num_threads=1)
+                self.ocr = _create_warm_rapidocr()
             except Exception as exc:
                 raise Refusal(503, "OCR_UNAVAILABLE", "RapidOCR model initialization failed") from exc
 
@@ -751,7 +770,7 @@ class InvoiceOCREngine:
                 else:
                     try:
                         import numpy as np
-                        results, _ = self.ocr(np.asarray(image))
+                        results, _ = self.ocr(np.asarray(image), use_cls=False)
                     except Exception as exc:
                         raise Refusal(503, "OCR_UNAVAILABLE", "Invoice OCR failed") from exc
                     boxes = [{"box": [[float(x), float(y)] for x, y in polygon],
@@ -894,7 +913,7 @@ def make_server(engine: InvoiceOCREngine, port=3591):
                 self._respond(200, result)
             except Refusal as exc:
                 self._respond(exc.status, {"error": exc.code, "message": str(exc)})
-            except (ValueError, UnicodeError, TimeoutError):
+            except (ValueError, UnicodeError, TimeoutError, RecursionError):
                 self._respond(400, {"error": "INVALID_REQUEST", "message": "Invalid JSON request"})
             except OSError:
                 self._respond(503, {"error": "OCR_UNAVAILABLE", "message": "Document storage unavailable"})

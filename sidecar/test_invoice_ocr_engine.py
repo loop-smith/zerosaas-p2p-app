@@ -173,7 +173,7 @@ def test_live_http_generation_ocr_match_and_payment(server):
     ("/ocr", "{", 400, "INVALID_REQUEST"), ("/generate", '{"docs_dir":"/tmp/escape"}', 400, "INVALID_REQUEST"),
     ("/ocr", '{"fast_smoke":true}', 400, "INVALID_REQUEST"),
     ("/ocr", " " * 65537, 413, "REQUEST_TOO_LARGE"),
-])
+], ids=["not-found", "array-body", "malformed-json", "unexpected-docs-dir", "unexpected-fast-smoke", "oversized-body-413"])
 def test_http_refuses_bad_requests(server, path, body, status, code):
     actual, result = request(server, "POST", path, body)
     assert (actual, result["error"]) == (status, code)
