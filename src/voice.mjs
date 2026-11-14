@@ -76,6 +76,7 @@ export function normalizeKalSpeech(raw) {
     .replace(/➔|->/g, ', then ')
     .replace(/\bDR\s*===?\s*CR\b/gi, 'debits equal credits')
     .replace(/\b8090\b/g, 'eighty-ninety')
+    .replace(/\bBOSS\b/g, 'boss')
     .replace(/\$0(?:\.00)?\s+signing\s+limit/gi, 'zero-dollar signing limit')
     .replace(/\bZeroSaaS\b/gi, 'Zero-Sass')
     .replace(/\bSaaS\b/g, 'sass')

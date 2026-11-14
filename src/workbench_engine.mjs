@@ -1018,7 +1018,7 @@ export function createWorkbenchEngine({
       st.wf0_signal_routed = false;
       st.lastGuardrailBlock = null;
       st.activeVoiceRole = 'ops_steward';
-      st.lastVoiceBrief = 'Good day. Warehouse management triggered a stock-out alert on 2/0 AWG bare copper—0 feet on hand, below our 8,000-foot safety stock. We need 8,000 feet across 4 reels and are routing this signal to Supply Chain.';
+      st.lastVoiceBrief = 'Good day. This headless Procure-to-Pay workbench was compiled in 8090 Software Factory from our clean-room BOSS client discovery package—pairing zero-authority Binary Intelligence with four human signing officers. Right now, warehouse management shows 0 feet of 2/0 AWG bare copper on hand, below our 8,000-foot safety stock, ready for Supply Chain.';
       recordAuditEvent(
         dealId,
         'STEP-1-KAL-START',

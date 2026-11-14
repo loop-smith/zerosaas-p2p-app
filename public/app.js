@@ -18,7 +18,7 @@
     let currentTtsBlobUrl = null;
     let kalSpeaking = false;
     let kalMuted = false;
-    let kalSubtitle = 'Warehouse management triggered a stock-out alert on 2/0 AWG bare copper—0 feet on hand, below our 8,000-foot safety stock.';
+    let kalSubtitle = 'Compiled in 8090 Software Factory from our clean-room BOSS 8090 client discovery package — wake up KAL to begin.';
     let kalBadgeText = 'KAL · P2P STEWARD ($0 SIGNING LIMIT)';
     let dockScannedReels = new Set();
     let lastFlashedReelSeq = 0;
@@ -659,7 +659,7 @@
       const st = STATE?.runtimeState?.[selectedDeal];
       if (!st || !st.kal_started) {
         await executeStewardSequence([
-          { action: 'wf0_detect_stockout', label: 'KAL reading live WMS under-stock signal (0 FT < 8,000 FT min)…' },
+          { action: 'wf0_detect_stockout', label: 'Waking up KAL — reading BOSS 8090 lineage & live WMS stock-out signal…' },
         ]);
       } else {
         await askKalPreset('status');
@@ -987,7 +987,7 @@
         const res = await fetch('/api/reset', { method: 'POST' });
         STATE = await res.json();
         kalBadgeText = 'KAL · P2P STEWARD ($0 SIGNING LIMIT)';
-        kalSubtitle = 'Standing by at Step 1 — trigger the WMS stock-out sweep whenever you are ready.';
+        kalSubtitle = 'Compiled in 8090 Software Factory from our clean-room BOSS 8090 client discovery package — wake up KAL to begin.';
         renderAll();
       } finally {
         if (topBtn) topBtn.textContent = '↺ Reset Queue';
@@ -1046,7 +1046,7 @@
           startBtn.textContent = '🟢 KAL Steward Running';
         } else {
           startBtn.className = 'btn-kal-start';
-          startBtn.textContent = '▶ Start KAL · P2P Steward';
+          startBtn.textContent = '▶ Wake Up KAL · Start';
         }
       }
 
@@ -1539,17 +1539,23 @@
         `;
       }
 
-      // STEP 1 (stepIdx === 0): QUIET UNTIL TRIGGERED -> KAL SPEAKS IN BOX 1 -> ROUTES TO SUPPLY CHAIN!
+      // STEP 1 (stepIdx === 0): QUIET UNTIL KAL WOKEN UP -> KAL INTRODUCES BOSS -> 8090 APP + BOX 1 SIGNAL -> ROUTES TO SUPPLY CHAIN!
       if (stepIdx === 0) {
         const triggered = Boolean(st.kal_started);
         return `
           <div class="officer-desk">
-            <div class="desk-banner" style="background:linear-gradient(90deg, #fff1f2 0%, #eff6ff 100%);">
+            <div class="desk-banner" style="background:linear-gradient(90deg, ${triggered ? '#fff1f2 0%, #eff6ff 100%' : '#eff6ff 0%, #f8fafc 100%'});">
               <div>
-                <div class="cp-eyebrow" style="color:#b91c1c;">🚨 STEP 1 OF 8 · WMS STOCK-OUT SIGNAL (0 FT ON HAND &lt; 8,000 FT SAFETY STOCK · <code>WO-01</code>)</div>
-                <div class="cp-title">WMS Stock-Out Alert: 0 FT Bare Copper On Hand — Below 8,000 FT Safety Stock</div>
+                <div class="cp-eyebrow" style="color:${triggered ? '#b91c1c' : '#1d4ed8'};">${triggered
+                  ? '🚨 STEP 1 OF 8 · WMS STOCK-OUT SIGNAL (0 FT ON HAND &lt; 8,000 FT SAFETY STOCK · <code>WO-01</code>)'
+                  : '🏛️ BOSS 8090 CLIENT PACKAGE ➔ 8090 SOFTWARE FACTORY ➔ LIVE HEADLESS ERP (STEP 1 OF 8)'}</div>
+                <div class="cp-title">${triggered
+                  ? 'WMS Stock-Out Alert: 0 FT Bare Copper On Hand — Below 8,000 FT Safety Stock'
+                  : 'ZeroSaaS P2P — Compiled in 8090 Software Factory from Clean-Room BOSS Client Discovery'}</div>
                 <div class="cp-desc">
-                  Warehouse SQLite (<code>wms_inventree.sqlite3</code>) shows <strong>0 FT on hand</strong> against our <strong>8,000 FT safety stock</strong> — we need <strong>8,000 FT (4 reels)</strong> replenished through Supply Chain.
+                  ${triggered
+                    ? 'Warehouse SQLite (<code>wms_inventree.sqlite3</code>) shows <strong>0 FT on hand</strong> against our <strong>8,000 FT safety stock</strong> — we need <strong>8,000 FT (4 reels)</strong> replenished through Supply Chain.'
+                    : 'Clean-room client workshops, signing limits, and data spine packaged from <strong>BOSS 8090</strong> into <strong>8090 Software Factory</strong> — pairing <strong>$0.00 Binary Intelligence</strong> with <strong>4 Human Officers</strong>.'}
                 </div>
               </div>
               <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
@@ -1561,7 +1567,7 @@
                        ✓ Route Signal to Supply Chain ➔
                      </button>`
                   : `<button class="btn-approve blue" onclick="startKalSteward()">
-                       ⚡ Trigger WMS Stock-Out Sweep
+                       ▶ Wake Up KAL · Begin Demo
                      </button>`}
               </div>
             </div>
