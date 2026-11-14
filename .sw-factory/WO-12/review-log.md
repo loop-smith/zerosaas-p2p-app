@@ -100,3 +100,23 @@ That verdict covers the WO-12 evidence and the in-fence metadata alignment. It d
 ---
 
 <!-- Subsequent rounds: copy the structure above and increment the round number. -->
+
+## Round 2 — T20 rename follow-up
+
+Dedicated read-only review checked requirements, contract digest, generated journal, conventions, security, and fence compliance. Verdict: CHANGES_REQUESTED for unintended contract CRLF normalization. The correction restored the original bytes and replaced only the URL; no semantic contract change beyond targetRepo.
+
+## Round 3 — T20 correction verified
+
+Dedicated review confirmed byte equality to the original contract with only the requested URL replaced, preserved CRLF, matching canonical digest, unchanged 89 account declarations, and all changed paths inside the fence. No blocking findings. **Verdict: APPROVED.**
+
+Fresh verification after correction:
+
+- python3 seeds/build_seeds.py --check: exit 0, seeds OK.
+- python3 -m pytest seeds -q -p no:cacheprovider (Python subprocess with bytecode writes disabled): exit 0, 23 passed. This includes test_committed_seeds_match_contract.
+- python3 -m hara.blocks.configurator.manifest check --repo .: exit 1, No module named hara.
+- python3 -m pytest hara/blocks -q -p no:cacheprovider: exit 4, path not found; no tests ran.
+- git diff --check: flags the preserved CRLF on the changed contract line. git -c core.whitespace=cr-at-eol diff --check: exit 0.
+
+Red evidence: the existing committed-seed test in a temporary copied root with the URL changed but the old journal failed exactly on coa_seed.journal. The green suite uses the regenerated journal. No unit under test was mocked.
+
+T20-1 URL, T20-2 generated journal, and T20-3 fence/handoff constraints are satisfied. T20-4 commands were all run with actual results recorded; absent HARA infrastructure is not claimed green. No remote records were changed; MCP is unavailable. UI verification is skipped because this change only updates provenance metadata and a generated comment. Lean delta: runtime code +0/-0; contract +1/-1; journal +1/-1. No helpers, signatures, or refusal codes changed. No commit, push, or receipt was created.

@@ -59,3 +59,12 @@
 - [x] Implementation plan was followed (`implementation-plan.md`)
 - [x] All intended files are present in the working tree
 - [x] Work order status updated — local `context.md` reads `completed`, matching the Planner status. The remote record was not written from this seat (no MCP).
+
+## T20 follow-up: R10
+
+- [x] Scope, reuse, signatures, refusal codes, and requirements recorded before edits.
+- [x] Reproduce contract-only seed drift in a temporary root without mocking — existing test failed only on coa_seed.journal.
+- [x] Update targetRepo and regenerate only the in-fence journal — build() output generated in a temporary root; only the digest line changed.
+- [x] Run seed checks and required task-card checks — seeds OK; seeds pytest 23 passed; manifest exit 1 (hara absent); hara/blocks pytest exit 4 (path absent).
+- [x] Review fence compliance and update trace and execution evidence — dedicated review APPROVED after preserving CRLF; Round 3 records results and limitations.
+- [x] T20 certification: requirements tracked, seed tests green, missing HARA infrastructure disclosed, no commit/push/receipt.

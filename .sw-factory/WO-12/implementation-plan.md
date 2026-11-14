@@ -79,3 +79,13 @@ The edit was reverted so `main` stays green. The trace doc's Section 7 records t
 - Update `docs/software-factory-trace.md` and `README.md` to show 12/12 Completed Planner Work Orders and the full Validator round-trip `FB-1` + `FB-2` ➔ `THM-1` ➔ `SF WO-12`.
 - Create `.sw-factory/WO-12/{context.md,implementation-plan.md,checklist.md,review-log.md}` with SF WO-12, `THM-1`, `FB-1`, `FB-2` and commits `9094b2bb`, `fca1c225`, `cae71057`.
 - No forbidden internal strings; all tests pass.
+
+## T20 follow-up: resolve R10
+
+Scope: update only provenance.targetRepo to https://github.com/loop-smith/zerosaas-p2p-app and regenerate the journal stamp; close the stale rename exception in the trace document. Reuse seeds/build_seeds.py load_contract(), build(out_dir, contract_path), coa_journal(), drift(), and seeds/test_seeds.py::test_committed_seeds_match_contract. No new helpers, public signatures, schema changes, or refusal-code changes.
+
+Requirements: T20-1 correct repository URL; T20-2 generated journal matches the full contract; T20-3 all writes stay inside the task fence, with no commit, push, or receipt; T20-4 run seed checks and both task-card commands and record their actual results.
+
+Steps: reproduce the contract-only failure using the existing test in a temporary copied seed root; edit the URL; build all seeds into a temporary directory and copy only coa_seed.journal into the fence; update the trace; run seed drift check, seeds pytest, manifest check, and hara/blocks pytest; review the final diff. Runtime and UI code are untouched. Remote Software Factory records are outside this task; MCP is unavailable.
+
+T20 outcome: T20-1 and T20-2 verified by the seed drift check and 23 passing seed tests. T20-3 verified by the fenced diff. T20-4 executed; both HARA commands are unavailable in this checkout, as recorded in review Round 3. R10 is resolved; the earlier Deviation section is historical.

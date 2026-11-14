@@ -7,7 +7,7 @@
     "streamId": "WF-P2P-5A",
     "constellationHandoff": "P2M (WF-P2M-1A Supply Chain) -> P2P (WF-P2P-1A..1D + WF-P2P-2B Standard Cost & PPV)",
     "targetProject": "P2P Workflow App",
-    "targetRepo": "https://github.com/loop-smith/8090-p2p-app",
+    "targetRepo": "https://github.com/loop-smith/zerosaas-p2p-app",
     "aiSteward": {
       "id": "EMP-AI-KAL",
       "bossAgentId": "AGT-8090-KAL-01",

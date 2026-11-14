@@ -154,17 +154,8 @@ Every listed build commit is a fast-forward on `main`. Each landed with its fenc
 | 2 | `WO-05`: integrate `src/`, `sidecar/`, `public/` and `seeds/`; `npm test` runs the end-to-end suite (closes SF WO-11) | `11a63009` ➔ `cae71057`, `T19.f1.q` **PASS**. `npm test` runs `tests/test-sidecar-reply.mjs` then `tests/test-copper-e2e.mjs` | ✅ Resolved |
 | 3 | `WO-06`: red-team replay, tamper, spoof and negative-quantity regressions; final `.sw-factory` certification (closes SF WO-10) | `fca1c225`, `WO-06.q` **PASS** | ✅ Resolved |
 | 4 | Server-side OCR sourcing for Step 7 | `11a63009` + `cae71057`: with `OCR_URL` set, Step 7 reads `INV-25800.pdf` through the RapidOCR sidecar and holds a forged invoice at `409 MATCH_VARIANCE_HOLD` | ✅ Resolved |
-| 5 | Repository rename to `zerosaas-p2p-app` | `README.md`, this file, `package.json` `name`, and the kernel's COMEX `user-agent` and `/api/health` `service` strings now say `zerosaas-p2p-app` | ✅ Resolved, with one exception below |
+| 5 | Repository rename to `zerosaas-p2p-app` | `README.md`, this file, `package.json` `name`, and the kernel's COMEX `user-agent` and `/api/health` `service` strings now say `zerosaas-p2p-app` | ✅ Resolved |
 
-**Rename exception — `contracts/p2p-lineage-contract.json` `targetRepo`.** It still reads `https://github.com/loop-smith/8090-p2p-app`, for a technical reason:
+**Rename follow-up — resolved.** `contracts/p2p-lineage-contract.json` `provenance.targetRepo` now points to `https://github.com/loop-smith/zerosaas-p2p-app`. The journal was regenerated with the existing seed builder; its whole-contract `canonical-sha256` is now `57311e23ada34f45a8db4cbc71e1f3032f61b2c122b545edb531f2193410a5ac`. All 89 account declarations are unchanged.
 
-- `seeds/coa_seed.journal` records a `canonical-sha256` of the whole contract.
-- `seeds/test_seeds.py::test_committed_seeds_match_contract` fails when the contract changes and the seed does not.
-
-Changing `targetRepo` without regenerating the seed turns that test red. The change needs one work order fenced to both files:
-
-1. Edit `targetRepo`.
-2. Run `python3 seeds/build_seeds.py` to rebuild the seeds, which rewrites the `coa_seed.journal` digest.
-3. Run `python3 seeds/build_seeds.py --check` and `python3 -m pytest seeds -q`.
-
-A contract-only attempt (`WO-08.f1`) was refused `tests_failed` for this reason. A seed build from the edited contract succeeds and changes only the journal stamp, from `canonical-sha256=f8af589e…` to `canonical-sha256=57311e23…`.
+The earlier contract-only attempt (`WO-08.f1`) was refused `tests_failed` because the journal digest was stale. T20 updates both fenced files together. Use `python3 seeds/build_seeds.py --check` and `python3 -m pytest seeds -q -p no:cacheprovider` to verify drift and seed integrity.

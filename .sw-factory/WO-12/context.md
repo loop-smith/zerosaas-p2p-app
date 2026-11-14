@@ -55,3 +55,7 @@ Blueprints reached through `@…` mentions and links while reading linked bluepr
 - **Foundry Requirement `REQ-01`:** `1fc08c46-ed36-4a14-99a3-0eae8de04206`
 - **Foundry Agent Session:** `6efbe532-dc88-467d-89fd-db361b5d1f75`
 - **Matrix:** [`docs/software-factory-trace.md`](../../docs/software-factory-trace.md)
+
+## T20 rename follow-up
+
+R10 is now resolved in the working tree: targetRepo points to loop-smith/zerosaas-p2p-app and the journal stamp was regenerated with build() in a temporary root. No runtime or UI code changed. Earlier fence-blocked notes in the plan/checklist and review Round 1 describe the prior execution; the T20 addenda supersede that R10 status. Remote records were not changed.
